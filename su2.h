@@ -29,7 +29,7 @@ typedef unsigned short ushort;
 #define EVEN 0
 #define ODD 1
 
-// temp
+// nasty global...
 double waittime;
 
 typedef struct {
@@ -45,14 +45,14 @@ typedef struct {
 	uint *sliceL; // how many sites per slice in each direction
 	long sites; // how many sites in total in one hypercubic slice
 	long halos; // how many artificial sites are needed for haloing
-	// how many actual sites we have. This can be less than sites + halos, 
+	// how many actual sites we have. This can be less than sites + halos,
 	// because we remove halos that correspond to real sites in my the same node.
-	long sites_total;  
+	long sites_total;
 	// neighboring sites
 	//next[i][dir] gives the index of the next site after i in direction dir
 	long **next;
 	long **prev;
-	
+
 	// parity of a site is EVEN if the physical index x+y+z+... is even, ODD otherwise
 	char *parity;
 
@@ -62,6 +62,8 @@ typedef struct {
 	long interval;
 	FILE *resultsfile;
 	int run_checks;
+
+	int multicanonical;
 
 	// Parameters in the action
 	// possible generalization: make separate structures
@@ -95,7 +97,6 @@ typedef struct {
 	short update_su2doublet;
 	short update_su2triplet;
 
-
 } params;
 
 
@@ -112,7 +113,7 @@ typedef struct {
 
 	// keep track of evaluation time
 	double comms_time;
-	
+
 	// count metropolis updates
 	long total_su2link;
 	long total_doublet;
@@ -126,6 +127,21 @@ typedef struct {
 	long acc_overrelax_triplet;
 	long total_overrelax_triplet;
 } counters;
+
+
+// multicanonical weight:
+typedef struct {
+	long bins;
+	double min, max;
+	double dbin; // size (width) of one bin
+	double* pos; // weight "position", i.e. values of the order param in the given range
+	double* W; // value of the weight function at each position
+	double increment; // how much the weight is increased after visiting a bin
+	int* visited; // keep track of which bins we have visited
+	long visited_total;
+	char readonly;
+	char weightfile[100];
+} weight;
 
 // comms.c (move elsewhere later?)
 void make_comlists(params *p, comlist_struct *comlist, long** xphys);
@@ -145,6 +161,8 @@ double update_halo(comlist_struct* comlist, char parity, double** field, int dof
 void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs);
 void send_field(sendrecv_struct* send, MPI_Request* req, char parity, double** field, int dofs);
 #endif
+void test_comms(params p, comlist_struct comlist);
+void test_comms_individual(params p, comlist_struct comlist, long** xphys);
 
 // layout.c
 void layout(params *p, comlist_struct *comlist);
@@ -153,7 +171,8 @@ void sitemap(params *p, long** xphys, long* newindex);
 void calculate_neighbors(params *p, long** xphys, long* newindex);
 void set_parity(params *p, long** xphys);
 long findsite(params p, long* x, long** xphys, int include_halos);
-void test_layout(params p);
+void test_xphys(params p, long** xphys);
+void test_neighbors(params p, long** xphys);
 void indexToCoords(ushort dim, uint* L, long i, long* x);
 long coordsToIndex(ushort dim, uint* L, long* x);
 int coordsToRank(params p, long* xphys);
@@ -202,8 +221,8 @@ double localact_triplet(fields f, params p, long i);
 
 // metropolis.c
 int metro_su2link(fields f, params p, long i, int dir);
-int metro_doublet(fields f, params p, long i);
-int metro_triplet(fields f, params p, long i);
+int metro_doublet(fields f, params p, long i, int transverse);
+int metro_triplet(fields f, params p, long i, int transverse);
 
 // heatbath.c
 int heatbath_su2link(fields f, params p, long i, int dir);
@@ -215,8 +234,8 @@ int overrelax_triplet(fields f, params p, long i);
 // update.c
 void update_lattice(fields f, params p, comlist_struct comlist, counters* c, char metro);
 void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, int dir);
-void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro);
-void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro);
+void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro, char transverse);
+void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro, char transverse);
 
 // init.c
 void setsu2(fields f, params p);
@@ -228,6 +247,7 @@ void init_counters(counters* c);
 
 // parameters.c
 void get_parameters(char *filename, params *p);
+void get_weight_parameters(char *filename, params *p, weight* w);
 void print_parameters(params p);
 
 
@@ -235,5 +255,10 @@ void print_parameters(params p);
 void measure(fields f, params p, counters* c);
 double action_local(fields f, params p, long i);
 void print_labels();
+
+// multicanonical.c
+void load_weight(params p, weight *w);
+void save_weight(params p, weight w);
+void update_weight(weight* w, long bin);
 
 #endif

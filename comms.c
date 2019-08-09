@@ -1,11 +1,23 @@
+/** @file comms.c
+*
+*	Routines for constructing communication lookup tables,
+* and for halo communications and reducing numbers between the nodes.
+*
+* Performance goal: communications take max ~10% of all time (Kari has ~6% - 17% in the simulations I did)
+*
+* TODO optimize make_comlists. This routine is very very slow if the lattice is large AND only a few nodes are used.
+* Slowness is probably because of the xphys lookup when constructing send_to structure...
+* There is no problem when the volume/node ratio is good
+* 
+*/
+
 #include "su2.h"
 #include "comms.h"
 
 
 #ifdef MPI
 
-/* Routine for constructing MPI communication lookup tables.
-* Performance goal: communications take max ~10% of all time (Kari has ~6% - 17% in the simulations I did)
+/* 
 *
 */
 void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
@@ -582,7 +594,7 @@ void reorder_comlist(params* p, comlist_struct* comlist) {
 
 
 /* Quick routine for finding the largest amount of sites
-* we have to send at once. This is used for buffer allocation.
+* we have to send at once. NOT USED ATM
 */
 void find_max_sendrecv(comlist_struct* comlist) {
 	long max = 0;
@@ -601,6 +613,193 @@ void find_max_sendrecv(comlist_struct* comlist) {
 	}
 	comlist->max_sendrecv = max;
 }
+
+/* Test halo send and receive (specifically update_gaugehalo())
+* This routine first checks that individual parity EVEN or ODD updates
+* do not change sites of the opposite parity,
+* and that all halos are eventually updated while real sites are not. 
+*
+* See test_comms_individual() for another test routine.
+*/
+void test_comms(params p, comlist_struct comlist) {
+	
+	long i; 
+	int dir, dof;
+	
+	// field for testing purposes
+	int maxdof = 3;
+	double*** field = make_gaugefield(p.sites_total, p.dim, maxdof);
+	// give some values that are easily tracked 
+	for (i=0; i<p.sites_total; i++) {
+		for (dir=0; dir<p.dim; dir++) {
+			for (dof=0; dof<maxdof; dof++) {
+				field[i][dir][dof] = p.rank * p.sites_total + i * p.dim + dir + (double) dof / maxdof;
+			}
+		}
+	}
+	
+	// update EVEN links in some direction 
+	int testdir = p.dim - 1;
+	update_gaugehalo(&comlist, EVEN, field, maxdof, testdir);
+
+	// check that all EVEN halos changed in testdir, and that nothing else changed.
+	// since we work with doubles, need to be careful when comparing values. 
+	// precision 10^(-4) should be sufficient for small maxdof 
+	for (i=0; i<p.sites_total; i++) {
+		for (dir=0; dir<p.dim; dir++) {
+			if (i >= p.sites && p.parity[i] == EVEN && dir == testdir) {
+				// should have changed
+				for (dof=0; dof<maxdof; dof++) {		 
+					double oldval = p.rank * p.sites_total + i * p.dim + dir + (double) dof / maxdof;
+					if (fabs(field[i][dir][dof] - oldval) < 0.0001 ) {
+						printf("Node %d: Error in test_comms! Halo site %ld with EVEN parity was not updated \n", p.rank, i);
+						die(-120);
+					}
+				}
+			} else {
+				// should have no change
+				for (dof=0; dof<maxdof; dof++) {		 
+					double oldval = p.rank * p.sites_total + i * p.dim + dir + (double) dof / maxdof;
+					if (fabs(field[i][dir][dof] - oldval) > 0.0001 ) {
+						printf("Node %d: Error in test_comms! Site %ld was updated in EVEN sweep, when it should not have been \n", p.rank, i);
+						die(-121);
+					}
+				}
+			}
+		}
+	}
+	
+	// reset the field and repeat for ODD sites
+	for (i=0; i<p.sites_total; i++) {
+		for (dir=0; dir<p.dim; dir++) {
+			for (dof=0; dof<maxdof; dof++) {
+				field[i][dir][dof] = p.rank * p.sites_total + i * p.dim + dir + (double) dof / maxdof;
+			}
+		}
+	}
+	
+	update_gaugehalo(&comlist, ODD, field, maxdof, testdir);
+	
+	for (i=0; i<p.sites_total; i++) {
+		for (dir=0; dir<p.dim; dir++) {
+			if (i >= p.sites && p.parity[i] == ODD && dir == testdir) {
+				// should have changed
+				for (dof=0; dof<maxdof; dof++) {		 
+					double oldval = p.rank * p.sites_total + i * p.dim + dir + (double) dof / maxdof;
+					if (fabs(field[i][dir][dof] - oldval) < 0.0001 ) {
+						printf("Node %d: Error in test_comms! Halo site %ld with ODD parity was not updated \n", p.rank, i);
+						die(-122);
+					}
+				}
+			} else {
+				// should have no change
+				for (dof=0; dof<maxdof; dof++) {		 
+					double oldval = p.rank * p.sites_total + i * p.dim + dir + (double) dof / maxdof;
+					if (fabs(field[i][dir][dof] - oldval) > 0.0001 ) {
+						printf("Node %d: Error in test_comms! Site %ld was updated in ODD sweep, when it should not have been \n", p.rank, i);
+						die(-123);
+					}
+				}
+			}
+		}
+	}
+	
+	// update EVEN again and check that all halos have changed in testdir
+	update_gaugehalo(&comlist, EVEN, field, maxdof, testdir);
+	
+	for (i=p.sites; i<p.sites_total; i++) {
+		for (dir=0; dir<p.dim; dir++) {
+			if (dir == testdir) {
+				for (dof=0; dof<maxdof; dof++) {
+					double oldval = p.rank * p.sites_total + i * p.dim + dir + (double) dof / maxdof;
+					if (fabs(field[i][dir][dof] - oldval) < 0.0001 ) {
+						printf("Node %d: Error in test_comms! Halo site %ld was not updated in either EVEN nor ODD sweep \n", p.rank, i);
+						die(-124);
+					}
+				}
+			}
+		}
+	}
+	
+	// tests done, can free test field
+	free_gaugefield(p.sites_total, field);
+}
+
+
+/*
+* Perform a complete check on the comlist. By complete we mean that 
+* for each lattice site, we check that the field we send from our site actually ends up in their correct site.
+* Such check requires either: 
+* 	1) Exhaustive communications to know the physical coords of my real site in their halo 
+*			and values of the sent/received field at each site
+* or 
+*		2) A way to assign an unique value to the field at each site, based on the physical coordinates of the site. 
+* 
+* We perform 2), using a recursive generalization of the Cantor pairing function p(x,y) = 0.5*(x+y)*(x+y+1) + y. 
+* Speficially, if a site has coords (x1, x2, x3, ...), we calculate y1 = p(x1,x2),
+* then y2 = p(x3, y) etc. This gives an unique number for each site that we assign to the field, 
+* plus a decimal number for each component. It is then easy to use xphys to predict what the received value should be.
+* 
+* Uses update_field() instead of update_gaugefield() for simplicity.
+*/
+void test_comms_individual(params p, comlist_struct comlist, long** xphys) {
+	long i, x, y; 
+	int dir, dof;
+	
+	// field for testing purposes
+	int maxdof = 4;
+	double** field = make_field(p.sites_total, maxdof);
+	// give values according to the Cantor pairing function, but set halos to 0
+	for (i=0; i<p.sites_total; i++) {
+		
+		y = xphys[i][0];
+		for (dir=1; dir<p.dim; dir++) {
+			x = xphys[i][dir];
+			y = y + 0.5 * (x + y + 1) * (x + y);
+		}
+		
+		for (dof=0; dof<maxdof; dof++) {
+			if (i >= p.sites) {
+				field[i][dof] = 0;
+			} else {
+				// Obtain base number from Cantor, set different decimals for different components
+				field[i][dof] = y + (double) dof / maxdof;
+			}
+		}
+	}
+	
+	// now receive my halo fields from neighbors
+	update_halo(&comlist, EVEN, field, maxdof);
+	update_halo(&comlist, ODD, field, maxdof);
+	
+	/* use xphys to calculate what the field value should be in my halos,
+	* according to the Cantor pairing. This is a strong check on sitelist in sendrecv_structs,
+	* because the (x,y,z,...) coords of my halo site should match those of the real site
+	* in the node where we received the field value from.
+	*/
+	for (i=p.sites; i<p.sites_total; i++) {
+		
+		y = xphys[i][0];
+		for (dir=1; dir<p.dim; dir++) {
+			x = xphys[i][dir];
+			y = y + 0.5 * (x + y + 1) * (x + y);
+		}
+		
+		for (dof=0; dof<maxdof; dof++) {
+			long val = y + (double) dof / maxdof;
+			if (abs(val - field[i][dof]) > 0.001) {
+				// predicted value does not match what was sent...
+				// print error, but don't die
+				printf("Node %d: Error in test_comms! Halo site %ld did not receive correct value from update_halo() \n", p.rank, i);
+			}
+		}
+		
+	}
+	
+	// done, free test field
+	free_field(field);
+}
+
 
 #else // No MPI, dummy routines. comlist is not even needed in this case
 

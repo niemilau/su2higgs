@@ -42,6 +42,7 @@ void get_parameters(char *filename, params *p) {
   int set_su2DBalg = 0;
 	int set_su2triplet_alg = 0;
 
+	int set_multicanonical = 0;
 
   int set_seed = 0;
 
@@ -109,6 +110,10 @@ void get_parameters(char *filename, params *p) {
 		else if(!strcasecmp(key,"dim")) {
       p->dim = strtol(value,NULL,10);
       set_dim = 1;
+    }
+		else if(!strcasecmp(key,"multicanonical")) {
+      p->multicanonical = strtol(value,NULL,10);
+      set_multicanonical = 1;
     }
 		else if(!strcasecmp(key,"iterations")) {
       p->iterations = strtol(value,NULL,10);
@@ -276,7 +281,7 @@ void get_parameters(char *filename, params *p) {
 	}
 
 	check_set(set_L, "L");
-	
+
 
   // calculate total volume now that we know the side lengths
   p->vol = 1;
@@ -286,6 +291,8 @@ void get_parameters(char *filename, params *p) {
 				printf0(*p, "WARNING!! Lattice side length L%d is an odd number! Checkerboard updating is not well defined...\n", i);
 			}
   }
+
+	check_set(set_multicanonical, "multicanonical");
 
   check_set(set_iterations, "iterations");
 	check_set(set_interval, "measure interval");
@@ -320,6 +327,102 @@ void get_parameters(char *filename, params *p) {
 
 }
 
+
+/* Just like get_parameters(), but reads params related to
+* multicanonical weighting.
+*/
+void get_weight_parameters(char *filename, params *p, weight* w) {
+
+	if (!p->multicanonical) {
+		// no multicanonical, so just set dummy values
+		w->bins = 0;
+		w->min = 0;
+		w->max = 0;
+		w->readonly = 1;
+		w->increment = 0;
+		strcpy(w->weightfile,"weight");
+	} else {
+		// multicanonical run, read from config
+
+		int set_bins = 0;
+		int set_min = 0, set_max = 0;
+		int set_increment = 0;
+		int set_readonly = 0;
+		int set_weightfile = 0;
+
+    char key[100];
+    char value[100];
+    char total[200];
+    int ret;
+    int i;
+
+		FILE *config;
+
+		if(strlen(filename) == 1 && filename[0] == '-') {
+			fprintf(stderr,"reading config from stdin\n");
+			config = stdin;
+		} else {
+			if(access(filename,R_OK) != 0) {
+				fprintf(stderr,"unable to access config file %s\n", filename);
+				exit(101);
+			}
+
+			config = fopen(filename, "r");
+		}
+
+		while(!feof(config)) {
+
+			if(fgets(total,198,config) == NULL) {
+				// end of file?
+				break;
+			}
+
+			ret = sscanf(total,"%99s%99s",key,value);
+
+			if(ret == EOF) {
+				continue;
+			}
+
+			if(key[0] == '#') {
+				continue;
+			}
+
+			if(ret != 2)
+				fprintf(stderr,"Unable to read input line: %s",total);
+
+			else if(!strcasecmp(key,"bins")) {
+				w->bins = strtol(value,NULL,10);
+				set_bins = 1;
+			} else if(!strcasecmp(key,"min")) {
+				w->min = strtod(value,NULL);
+				set_min = 1;
+			} else if(!strcasecmp(key,"max")) {
+				w->max = strtod(value,NULL);
+				set_max = 1;
+			} else if(!strcasecmp(key,"increment")) {
+				w->increment = strtod(value,NULL);
+				set_increment = 1;
+			} else if(!strcasecmp(key,"readonly")) {
+				w->readonly = strtol(value,NULL,10);
+				set_readonly = 1;
+			} else if(!strcasecmp(key,"weightfile")) {
+				strcpy(w->weightfile,value);
+				set_weightfile = 1;
+			}
+
+		}
+
+		check_set(set_bins, "bins");
+		check_set(set_min, "min");
+		check_set(set_max, "max");
+		check_set(set_readonly, "readonly");
+		check_set(set_weightfile, "weightfile");
+
+		fclose(config);
+
+	}
+
+}
 
 /*
 /** Write a summary of the loaded parameters to stderr.

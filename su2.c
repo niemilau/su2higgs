@@ -27,10 +27,13 @@
 *
 *	Real SU(2) triplets are parametrized as:
 *		A = \frac12 A[a] sigma[a],  a = 1,2,3.
+* This matches ref. hep-ph/9704416 but is different from that of hep-lat/9504001,
+* which uses A = A[a] sigma[a] and has the action written in a slightly different,
+* but equal, form.
+*
 *
 *	My potential is  V = m^2 Tr A^2 + b4 (Tr A^2)^2 + 0.5 Tr(\Phi^+ \Phi) Tr A^2,
 *	where the normalization matches what is usually used in continuum for the A[a].
-* This matches ref. hep-ph/9704416 but is different from that of hep-lat/9504001.
 *
 //TODO
 *
@@ -395,7 +398,7 @@ double hopping_doublet_backward(fields f, params p, long i, int dir) {
 	return tot;
 }
 
-/* Calculate the covariant derivative for a SU(2) doublet at site i,
+/* Calculate the full covariant derivative for a SU(2) doublet at site i,
 * in the "forward" directions. Specifically, calculates
 *		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) ]
 */
@@ -520,7 +523,7 @@ double hopping_triplet_backward(fields f, params p, long i, int dir) {
 	return tot;
 }
 
-/* Calculate the covariant derivative for a SU(2) triplet at site i,
+/* Calculate the full covariant derivative for a SU(2) triplet at site i,
 * in the "forward" directions. Specifically, calculates
 *		2 \sum_j [ Tr A^2 - Tr A(x) U_j(x) A(x+j) U_j(x)^+ ]
 * using hopping_triplet_forward().
@@ -531,7 +534,7 @@ double covariant_triplet(fields f, params p, long i) {
 	for (int dir=0; dir<p.dim; dir++) {
 		tot += 2.0 * mod + hopping_triplet_forward(f, p, i, dir);
 	}
-	
+
 	return tot;
 }
 
@@ -554,7 +557,7 @@ double localact_triplet(fields f, params p, long i) {
 
 	// add potential
 	double mod = tripletsq(f.su2triplet[i]);
-	
+
 	tot += p.msq_triplet * mod + p.b4 * mod * mod;
 	#ifdef HIGGS
 		// add term 0.5 Tr \Phi^+ \Phi Tr A^2

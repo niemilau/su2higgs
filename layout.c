@@ -55,20 +55,22 @@ void layout(params *p, comlist_struct *comlist) {
 	make_comlists(p, comlist, xphys);
 	
 	// Run sanity checks on lattice layout and comms?
-	/*
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (p->run_checks) {
 		
 		start = clock();
-		printf0(*p, "Running sanity checks on lattice layout in %d dimensions.\n", p->dim);
 
-		test_sendrecv(*p, *comlist, xphys);
+		test_xphys(*p, xphys);
+		test_neighbors(*p, xphys);
+		test_comms(*p, *comlist);
+		test_comms_individual(*p, *comlist, xphys);
+		
 		end = clock();
 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
 		
-		printf0(*p, "All tests passed! Time taken: %lf seconds.\n", time);
+		printf0(*p, "All tests OK! Time taken: %lf seconds.\n", time);
 	}
-	*/
+	
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -508,6 +510,167 @@ long findsite(params p, long* x, long** xphys, int include_halos) {
 }
 
 
+/* Test that our mapping from site index to physical coordinates makes sense. 
+* This checks that basic indexing is OK, but does not check that neighboring sites 
+* have adjacent indices (which they should, apart from sites at hypercube sides).
+*/
+void test_xphys(params p, long** xphys) {
+	
+	long* xnode = malloc(p.size * sizeof(*xnode));
+	indexToCoords(p.dim, p.nslices, p.rank, xnode);
+	
+	int dir;
+	long i;
+	
+	// first site on the node?
+	for (dir=0; dir<p.dim; dir++) {
+		if (xphys[0][dir] != xnode[dir] * p.sliceL[dir]) {
+			printf("Node %d: Error in test_xphys! First site not where it should be \n", p.rank);
+			die(-111);
+		}
+	}
+	// last real site on the node?
+	for (dir=0; dir<p.dim; dir++) {
+		if (xphys[p.sites - 1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1) {
+			printf("Node %d: Error in test_xphys! Last site not where it should be \n", p.rank);
+			die(-112);
+		}
+	}
+	
+	// non-halo sites: coordinate x[j] should be in range 
+	// xnode[j] * p.sliceL[j] <= x[j] <= xnode[j] * p.sliceL[j] + p.sliceL[j] - 1
+	for (i=0; i<p.sites; i++) {
+		for (dir=0; dir<p.dim; dir++) {
+			if (xphys[i][dir] > (xnode[dir] + 1) * p.sliceL[dir] - 1 || xnode[dir] * p.sliceL[dir] > xphys[i][dir]) {
+				printf("Node %d: Error in test_xphys! Real site %ld not indexed properly \n", p.rank, i);
+				die(-113);
+			}
+		}
+	}
+	
+	// halo sites: should not find a halo site whose all coordinates x[j] 
+	// match a real site on our node
+	for (i=p.sites; i<p.sites_total; i++) {
+		int ok = 0;
+		for (dir=0; dir<p.dim; dir++) {
+			if (xphys[i][dir] > (xnode[dir] + 1) * p.sliceL[dir] - 1 || xnode[dir] * p.sliceL[dir] > xphys[i][dir]) {
+				ok = 1;
+			}
+		}
+		if (!ok) {
+			printf("Node %d: Error in test_xphys! Halo site %ld not indexed properly \n", p.rank, i);
+			die(-114);
+		}
+	}
+	
+	free(xnode);
+}
+
+/* Test for p.next and p.prev, and p.parity.
+* Uses xphys to check that the physical coordinates of the neighbor sites 
+* are what they should for each site and direction, including halos.
+*/
+void test_neighbors(params p, long** xphys) {
+	
+	int skip_parity = 0;
+	for (int dir=0; dir<p.dim; dir++) {
+		if (p.L[dir] % 2 != 0) {
+			// side lengths not even numbers, skip parity checks...
+			skip_parity = 1;
+		}
+	}
+	// first site in master node should have even parity
+	if (!skip_parity && p.rank == 0) {
+		if (p.parity[0] != EVEN) {
+			printf("Node 0: Error in test_neighbors! First site parity not is not EVEN \n");
+			// don't die; this may not be fatal 
+		}
+	}
+	
+	long x[p.dim];
+	
+	for (long i=0; i<p.sites_total; i++) {
+		
+		// first check neighbors in the positive directions
+		for (int dir=0; dir<p.dim; dir++) {
+			long next = p.next[i][dir];
+			if (next == -1) {
+				if (i < p.sites) {
+					// no neighbor assigned to a real lattice site, error!
+					printf("Node %d: Error in test_neighbors, site %ld! Next site in direction %d not assigned \n", p.rank, i, dir);
+					die(-116);
+				} 
+			} else {
+				// check that coordinates of the next site make sense.
+				// What we think they should be:
+				for (int d=0; d<p.dim; d++) {
+					x[d] = xphys[i][d];
+				}
+				x[dir]++;
+				// Periodicity?
+				if (x[dir] >= p.L[dir]) {
+					x[dir] = 0;
+				}
+	
+				// what they are according to xphys
+				for (int d=0; d<p.dim; d++) {
+					if (xphys[next][d] != x[d]) {
+						printf("Node %d: Error in test_neighbors, site %ld! Coordinates of next site in direction %d do not match! \n", p.rank, i, dir);
+						die(-117);
+					}
+				}
+				
+				// parity check
+				if (!skip_parity) {
+					if (p.parity[i] == p.parity[next]) {
+						printf("Node %d: Error in test_neighbors, site %ld! Next site in direction %d has same parity! \n", p.rank, i, dir);
+					}
+				}
+			}
+		}
+		
+		// then same checks for negative directions
+		for (int dir=0; dir<p.dim; dir++) {
+			long prev = p.prev[i][dir];
+			if (prev == -1) {
+				if (i < p.sites) {
+					// no neighbor assigned to a real lattice site, error!
+					printf("Node %d: Error in test_neighbors, site %ld! Previous site in direction %d not assigned \n", p.rank, i, dir);
+					die(-118);
+				} 
+			} else {
+				// check that coordinates of the next site make sense.
+				// What we think they should be:
+				for (int d=0; d<p.dim; d++) {
+					x[d] = xphys[i][d];
+				}
+				x[dir]--;
+				// Periodicity?
+				if (x[dir] < 0) {
+					x[dir] = p.L[dir] - 1;
+				}
+	
+				// what they are according to xphys
+				for (int d=0; d<p.dim; d++) {
+					if (xphys[prev][d] != x[d]) {
+						printf("Node %d: Error in test_neighbors, site %ld! Coordinates of previous site in direction %d do not match! \n", p.rank, i, dir);
+						die(-119);
+					}
+				}
+				
+				// parity check
+				if (!skip_parity) {
+					if (p.parity[i] == p.parity[prev]) {
+						printf("Node %d: Error in test_neighbors, site %ld! Previous site in direction %d has same parity! \n", p.rank, i, dir);
+					}
+				}
+				
+			}
+		}
+	}
+
+}
+
 /** Formatted printing function, root node only.
  *
  * Drop-in replacement for `fprintf(stderr,...)` that only
@@ -558,7 +721,7 @@ void layout(params *p, comlist_struct *comlist) {
 
 	long** xphys;
 	long* newindex;
-	// construct lookup tables for site neighbors:
+	// construct lookup tables for site neighbors and parity:
 	calculate_neighbors(p, xphys, newindex);
 
 	comlist->neighbors = 0;

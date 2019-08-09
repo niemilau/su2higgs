@@ -2,7 +2,7 @@
 *
 * Routines for memory allocation.
 
-//TODO allocate contagious memory, modify for parallelization
+//TODO
 *
 */
 
