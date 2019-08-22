@@ -3,8 +3,6 @@
 * Routines for implementing Kennedy-Pendleton heatbath algorithm
 *	for gauge links (Phys.Lett. 156B (1985) 393-399).
 *
-* TODO make a documentation for the logic
-*
 */
 
 #include "su2.h"
@@ -15,9 +13,9 @@
 int heatbath_su2link(fields f, params p, long i, int dir) {
 
 	// only used if accept/reject step is needed
-	double oldlink[4]; 
+	double oldlink[4];
 	double oldact = 0.0;
-	// ATTEMPT AT ACCOUNTING FOR TRIPLET
+
 	#ifdef TRIPLET
 		oldlink[0] = f.su2link[i][dir][0];
 		oldlink[1] = f.su2link[i][dir][1];
@@ -25,8 +23,8 @@ int heatbath_su2link(fields f, params p, long i, int dir) {
 		oldlink[3] = f.su2link[i][dir][3];
 		oldact += hopping_triplet_forward(f, p, i, dir);
 	#endif
-	
-	
+
+
 	// calculate the staple and its determinant
 	double V[4];
 	su2link_staple(f, p, i, dir, V);
@@ -85,9 +83,9 @@ int heatbath_su2link(fields f, params p, long i, int dir) {
 		r3 = 1.0 - 2.0*drand48();
 		d = sqrt(r1*r1 + r2*r2 + r3*r3);
 	}
-	d = 1.0/d; 
+	d = 1.0/d;
 
-	
+
 	f.su2link[i][dir][0] = a0;
 	f.su2link[i][dir][1] = r1*rad*d;
 	f.su2link[i][dir][2] = r2*rad*d;
@@ -101,7 +99,7 @@ int heatbath_su2link(fields f, params p, long i, int dir) {
 	su2rot(f.su2link[i][dir], V);
 
 	#ifdef TRIPLET
-		double newact = 0.0; 
+		double newact = 0.0;
 		newact += hopping_triplet_forward(f, p, i, dir);
 		double diff = oldact - newact;
 		if (drand48() < exp(diff)) {
@@ -114,7 +112,7 @@ int heatbath_su2link(fields f, params p, long i, int dir) {
 			return 0;
 		}
 	#endif
-	
+
 	return 1;
 
 }

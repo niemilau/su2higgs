@@ -32,7 +32,7 @@
 * but equal, form.
 *
 *
-*	My potential is  V = m^2 Tr A^2 + b4 (Tr A^2)^2 + 0.5 Tr(\Phi^+ \Phi) Tr A^2,
+*	My potential is  V = m^2 Tr A^2 + b4 (Tr A^2)^2 + 0.5 a2 Tr(\Phi^+ \Phi) Tr A^2,
 *	where the normalization matches what is usually used in continuum for the A[a].
 *
 //TODO
@@ -344,7 +344,7 @@ double doubletsq(double* a) {
 
 /* Calculate trace of two SU(2) doublets and a SU(2) link. Used in hopping terms.
 * Specifically, calculates:
-*		Tr \Phi_1^+ U_ \Phi_2.
+*		Tr \Phi_1^+ U \Phi_2.
 * Note that this is always real.
 */
 inline double hopping_trace(double* phi1, double* u, double* phi2) {

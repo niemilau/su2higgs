@@ -50,13 +50,14 @@ int metro_su2link(fields f, params p, long i, int dir) {
 * runs that use phisq as the order parameter.
 * Returns 1 if update was accepted and 0 if rejected.
 */
-int metro_doublet(fields f, params p, long i, int transverse) {
+int metro_doublet(fields f, params p, long i) {
 
 	double oldfield[4];
 	oldfield[0] = f.su2doublet[i][0];
 	oldfield[1] = f.su2doublet[i][1];
 	oldfield[2] = f.su2doublet[i][2];
 	oldfield[3] = f.su2doublet[i][3];
+
 
 	double act_old = localact_doublet(f, p, i);
 
@@ -66,33 +67,28 @@ int metro_doublet(fields f, params p, long i, int transverse) {
 	f.su2doublet[i][2] += 1.0*(drand48() - 0.5);
 	f.su2doublet[i][3] += 1.0*(drand48() - 0.5);
 
-	if (transverse) {
-		// keep Phi norm invariant
-		double norm_old = doubletsq(oldfield);
-		double norm_new = doubletsq(f.su2doublet[i]);
-
-		for (int d=0; d<SU2DB; d++) {
-			f.su2doublet[i][d] = f.su2doublet[i][d] * norm_old / norm_new;
-		}
-	}
 
 	double act_new = localact_doublet(f, p, i);
 
+	int accept;
 	double diff = act_new - act_old;
 	if (diff < 0) {
-		return 1;
+		accept = 1;
 	}
 	else if (diff > 0 && ( exp(-(diff)) > drand48() )) {
-		return 1;
+		accept = 1;
 	}
 	else {
 		f.su2doublet[i][0] = oldfield[0];
 		f.su2doublet[i][1] = oldfield[1];
 		f.su2doublet[i][2] = oldfield[2];
 		f.su2doublet[i][3] = oldfield[3];
-		return 0;
+		accept = 0;
 	}
+
+	return accept;
 }
+
 
 /*
 * Update a single SU(2) scalar triplet using Metropolis.
@@ -100,7 +96,7 @@ int metro_doublet(fields f, params p, long i, int transverse) {
 * keeps Tr A^2 constant.
 * Returns 1 if update was accepted and 0 if rejected.
 */
-int metro_triplet(fields f, params p, long i, int transverse) {
+int metro_triplet(fields f, params p, long i) {
 
 	double oldfield[3];
 	oldfield[0] = f.su2triplet[i][0];
@@ -114,15 +110,6 @@ int metro_triplet(fields f, params p, long i, int transverse) {
 	f.su2triplet[i][1] += 1.0*(drand48() - 0.5);
 	f.su2triplet[i][2] += 1.0*(drand48() - 0.5);
 
-	if (transverse) {
-		// keep Phi norm invariant
-		double norm_old = tripletsq(oldfield);
-		double norm_new = tripletsq(f.su2triplet[i]);
-
-		for (int d=0; d<SU2TRIP; d++) {
-			f.su2triplet[i][d] = f.su2triplet[i][d] * norm_old / norm_new;
-		}
-	}
 
 	double act_new = localact_triplet(f, p, i);
 

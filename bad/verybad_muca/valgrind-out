@@ -1,0 +1,1816 @@
+==16783== Memcheck, a memory error detector
+==16783== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==16783== Using Valgrind-3.11.0 and LibVEX; rerun with -h for copyright info
+==16783== Command: ./su2 config
+==16783== Parent PID: 16782
+==16783== 
+--16783-- 
+--16783-- Valgrind options:
+--16783--    --leak-check=full
+--16783--    --show-leak-kinds=all
+--16783--    --track-origins=yes
+--16783--    --verbose
+--16783--    --log-file=valgrind-out
+--16783-- Contents of /proc/version:
+--16783--   Linux version 4.15.0-55-generic (buildd@lgw01-amd64-038) (gcc version 5.4.0 20160609 (Ubuntu 5.4.0-6ubuntu1~16.04.10)) #60~16.04.2-Ubuntu SMP Thu Jul 4 09:03:09 UTC 2019
+--16783-- 
+--16783-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-avx-avx2-bmi
+--16783-- Page sizes: currently 4096, max supported 4096
+--16783-- Valgrind library directory: /usr/lib/valgrind
+--16783-- Reading syms from /home/local/lani/Dropbox/coodi_parallel/su2
+--16783-- Reading syms from /lib/x86_64-linux-gnu/ld-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/ld-2.23.so ..
+--16783--   .. CRC mismatch (computed aa979a42 wanted 9019bbb7)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/ld-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /usr/lib/valgrind/memcheck-amd64-linux
+--16783--   Considering /usr/lib/valgrind/memcheck-amd64-linux ..
+--16783--   .. CRC mismatch (computed eea41ea9 wanted 2009db78)
+--16783--    object doesn't have a symbol table
+--16783--    object doesn't have a dynamic symbol table
+--16783-- Scheduler: using generic scheduler lock implementation.
+--16783-- Reading suppressions file: /usr/lib/valgrind/default.supp
+==16783== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-16783-by-lani-on-???
+==16783== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-16783-by-lani-on-???
+==16783== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-16783-by-lani-on-???
+==16783== 
+==16783== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==16783== don't want to do, unless you know exactly what you're doing,
+==16783== or are doing some strange experiment):
+==16783==   /usr/lib/valgrind/../../bin/vgdb --pid=16783 ...command...
+==16783== 
+==16783== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==16783==   /path/to/gdb ./su2
+==16783== and then give GDB the following command
+==16783==   target remote | /usr/lib/valgrind/../../bin/vgdb --pid=16783
+==16783== --pid is optional if only one valgrind process is running
+==16783== 
+--16783-- REDIR: 0x401cfd0 (ld-linux-x86-64.so.2:strlen) redirected to 0x3809e181 (???)
+--16783-- Reading syms from /usr/lib/valgrind/vgpreload_core-amd64-linux.so
+--16783--   Considering /usr/lib/valgrind/vgpreload_core-amd64-linux.so ..
+--16783--   .. CRC mismatch (computed 2567ccf6 wanted 49420590)
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so
+--16783--   Considering /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so ..
+--16783--   .. CRC mismatch (computed 0e27c9a8 wanted ac585421)
+--16783--    object doesn't have a symbol table
+==16783== WARNING: new redirection conflicts with existing -- ignoring it
+--16783--     old: 0x0401cfd0 (strlen              ) R-> (0000.0) 0x3809e181 ???
+--16783--     new: 0x0401cfd0 (strlen              ) R-> (2007.0) 0x04c31020 strlen
+--16783-- REDIR: 0x401b920 (ld-linux-x86-64.so.2:index) redirected to 0x4c30bc0 (index)
+--16783-- REDIR: 0x401bb40 (ld-linux-x86-64.so.2:strcmp) redirected to 0x4c320d0 (strcmp)
+--16783-- REDIR: 0x401dd30 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x4c35270 (mempcpy)
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libm-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libm-2.23.so ..
+--16783--   .. CRC mismatch (computed e8c3647b wanted c3efddac)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libm-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /usr/lib/openmpi/lib/libmpi.so.12.0.2
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libpthread-2.23.so
+--16783--   Considering /usr/lib/debug/.build-id/ce/17e023542265fc11d9bc8f534bb4f070493d30.debug ..
+--16783--   .. build-id is valid
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libc-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libc-2.23.so ..
+--16783--   .. CRC mismatch (computed 7a8ee3e4 wanted a5190ac4)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libc-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /usr/lib/libibverbs.so.1.0.0
+--16783--   Considering /usr/lib/libibverbs.so.1.0.0 ..
+--16783--   .. CRC mismatch (computed 5350383d wanted a2778c99)
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/libopen-rte.so.12.0.2
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/libopen-pal.so.13.0.2
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libdl-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libdl-2.23.so ..
+--16783--   .. CRC mismatch (computed 39227170 wanted ab6e2c22)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libdl-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /lib/x86_64-linux-gnu/librt-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/librt-2.23.so ..
+--16783--   .. CRC mismatch (computed 734d0439 wanted 09d6393c)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/librt-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libutil-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libutil-2.23.so ..
+--16783--   .. CRC mismatch (computed f9b2466b wanted 43d0dfe5)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libutil-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1
+--16783--   Considering /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1 ..
+--16783--   .. CRC mismatch (computed 8f61a187 wanted cdc1b5b4)
+--16783--    object doesn't have a symbol table
+--16783-- REDIR: 0x56c5a00 (libc.so.6:strcasecmp) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56c1280 (libc.so.6:strcspn) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56c7cf0 (libc.so.6:strncasecmp) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56c36f0 (libc.so.6:strpbrk) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56c3a80 (libc.so.6:strspn) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56c514b (libc.so.6:memcpy@GLIBC_2.2.5) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56c3400 (libc.so.6:rindex) redirected to 0x4c308a0 (rindex)
+--16783-- REDIR: 0x56ba130 (libc.so.6:malloc) redirected to 0x4c2db20 (malloc)
+--16783-- REDIR: 0x56c4060 (libc.so.6:__GI_strstr) redirected to 0x4c354d0 (__strstr_sse2)
+--16783-- REDIR: 0x56c4860 (libc.so.6:memchr) redirected to 0x4c32170 (memchr)
+--16783-- REDIR: 0x56ca470 (libc.so.6:__GI_memcpy) redirected to 0x4c32b00 (__GI_memcpy)
+--16783-- REDIR: 0x56ba6c0 (libc.so.6:realloc) redirected to 0x4c2fce0 (realloc)
+--16783-- REDIR: 0x56ba4f0 (libc.so.6:free) redirected to 0x4c2ed80 (free)
+--16783-- REDIR: 0x56bad10 (libc.so.6:calloc) redirected to 0x4c2faa0 (calloc)
+--16783-- REDIR: 0x56c1720 (libc.so.6:strlen) redirected to 0x4c30f60 (strlen)
+--16783-- REDIR: 0x56c4ff0 (libc.so.6:__GI_memmove) redirected to 0x4c347e0 (__GI_memmove)
+--16783-- REDIR: 0x56cc760 (libc.so.6:strchrnul) redirected to 0x4c34da0 (strchrnul)
+--16783-- REDIR: 0x56c53b0 (libc.so.6:__GI_mempcpy) redirected to 0x4c34fa0 (__GI_mempcpy)
+--16783-- REDIR: 0x56cb480 (libc.so.6:strcasestr) redirected to 0x4c356e0 (strcasestr)
+--16783-- REDIR: 0x56c4630 (libc.so.6:strstr) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56e0070 (libc.so.6:__strstr_sse2_unaligned) redirected to 0x4c35460 (strstr)
+--16783-- REDIR: 0x56c1b70 (libc.so.6:__GI_strncmp) redirected to 0x4c31710 (__GI_strncmp)
+--16783-- REDIR: 0x56c33c0 (libc.so.6:strncpy) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56dc000 (libc.so.6:__strncpy_sse2_unaligned) redirected to 0x4c31570 (__strncpy_sse2_unaligned)
+--16783-- REDIR: 0x56c1ae0 (libc.so.6:strncat) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56df0e0 (libc.so.6:__strncat_sse2_unaligned) redirected to 0x4c30dc0 (strncat)
+--16783-- REDIR: 0x56ca3f0 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x5783ea0 (libc.so.6:__memcpy_avx_unaligned) redirected to 0x4c324a0 (memcpy@@GLIBC_2.14)
+--16783-- REDIR: 0x56c4bb0 (libc.so.6:bcmp) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x57a4430 (libc.so.6:__memcmp_sse4_1) redirected to 0x4c33cd0 (__memcmp_sse4_1)
+--16783-- REDIR: 0x56d5520 (libc.so.6:__GI_strncpy) redirected to 0x4c31310 (__GI_strncpy)
+--16783-- REDIR: 0x56cc550 (libc.so.6:rawmemchr) redirected to 0x4c34dd0 (rawmemchr)
+--16783-- REDIR: 0x56bfcd0 (libc.so.6:strcmp) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56d5570 (libc.so.6:__strcmp_sse2_unaligned) redirected to 0x4c31f90 (strcmp)
+--16783-- REDIR: 0x566f850 (libc.so.6:putenv) redirected to 0x4c35960 (putenv)
+--16783-- REDIR: 0x56bfab0 (libc.so.6:__GI_strchr) redirected to 0x4c30a00 (__GI_strchr)
+--16783-- REDIR: 0x56c18c0 (libc.so.6:strnlen) redirected to 0x4c30ee0 (strnlen)
+--16783-- REDIR: 0x56bfa80 (libc.so.6:index) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x5780980 (libc.so.6:__strcasecmp_avx) redirected to 0x4c31860 (strcasecmp)
+--16783-- REDIR: 0x5781ff0 (libc.so.6:__strncasecmp_avx) redirected to 0x4c31940 (strncasecmp)
+--16783-- REDIR: 0x56c1b20 (libc.so.6:strncmp) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x577ba90 (libc.so.6:__strncmp_sse42) redirected to 0x4c317f0 (__strncmp_sse42)
+--16783-- REDIR: 0x56baaa0 (libc.so.6:memalign) redirected to 0x4c2ff20 (memalign)
+--16783-- REDIR: 0x56c51b0 (libc.so.6:memset) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x57a8970 (libc.so.6:__memset_avx2) redirected to 0x4c344c0 (memset)
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_shmem_sysv.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_shmem_posix.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_shmem_mmap.so
+--16783--    object doesn't have a symbol table
+--16783-- REDIR: 0x56c5330 (libc.so.6:mempcpy) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x5784240 (libc.so.6:__mempcpy_avx_unaligned) redirected to 0x4c34eb0 (mempcpy)
+--16783-- Discarding syms at 0x7986b80-0x7987363 in /usr/lib/openmpi/lib/openmpi/mca_shmem_sysv.so due to munmap()
+--16783-- Discarding syms at 0x7b89d70-0x7b8a863 in /usr/lib/openmpi/lib/openmpi/mca_shmem_posix.so due to munmap()
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_sec_basic.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_ess_hnp.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_ess_slurm.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_ess_env.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_ess_tool.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_ess_singleton.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0x7f941b0-0x7f95ebd in /usr/lib/openmpi/lib/openmpi/mca_ess_hnp.so due to munmap()
+--16783-- Discarding syms at 0x7b88f60-0x7b89487 in /usr/lib/openmpi/lib/openmpi/mca_ess_slurm.so due to munmap()
+--16783-- Discarding syms at 0x81991e0-0x819981a in /usr/lib/openmpi/lib/openmpi/mca_ess_env.so due to munmap()
+--16783-- Discarding syms at 0x839bac0-0x839bd2c in /usr/lib/openmpi/lib/openmpi/mca_ess_tool.so due to munmap()
+--16783-- REDIR: 0x56bfd10 (libc.so.6:__GI_strcmp) redirected to 0x4c31fe0 (__GI_strcmp)
+--16783-- REDIR: 0x56c5890 (libc.so.6:__GI_stpcpy) redirected to 0x4c33f80 (__GI_stpcpy)
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libnss_compat-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libnss_compat-2.23.so ..
+--16783--   .. CRC mismatch (computed 45e1d383 wanted 584dcc9d)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libnss_compat-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libnsl-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libnsl-2.23.so ..
+--16783--   .. CRC mismatch (computed 824f4d52 wanted 959e8ba1)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libnsl-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- REDIR: 0x56c11a0 (libc.so.6:__GI_strcpy) redirected to 0x4c31110 (__GI_strcpy)
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libnss_nis-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libnss_nis-2.23.so ..
+--16783--   .. CRC mismatch (computed 97375782 wanted 3001fa61)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libnss_nis-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libnss_files-2.23.so
+--16783--   Considering /lib/x86_64-linux-gnu/libnss_files-2.23.so ..
+--16783--   .. CRC mismatch (computed bbddf769 wanted cc29886c)
+--16783--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libnss_files-2.23.so ..
+--16783--   .. CRC is valid
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libnss_sss.so.2
+--16783--    object doesn't have a symbol table
+--16783-- REDIR: 0x56bf880 (libc.so.6:strcat) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56de7f0 (libc.so.6:__strcat_sse2_unaligned) redirected to 0x4c30c00 (strcat)
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_dvm.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_staged_orted.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_orted.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_hnp.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_staged_hnp.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_novm.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_app.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_state_tool.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0x7b899b0-0x7b8a971 in /usr/lib/openmpi/lib/openmpi/mca_state_dvm.so due to munmap()
+--16783-- Discarding syms at 0x95ce2f0-0x95cefe9 in /usr/lib/openmpi/lib/openmpi/mca_state_staged_orted.so due to munmap()
+--16783-- Discarding syms at 0x97d22d0-0x97d35ce in /usr/lib/openmpi/lib/openmpi/mca_state_orted.so due to munmap()
+--16783-- Discarding syms at 0x99d6450-0x99d6937 in /usr/lib/openmpi/lib/openmpi/mca_state_hnp.so due to munmap()
+--16783-- Discarding syms at 0x9bd99b0-0x9bda827 in /usr/lib/openmpi/lib/openmpi/mca_state_staged_hnp.so due to munmap()
+--16783-- Discarding syms at 0x9dde6f0-0x9ddefa3 in /usr/lib/openmpi/lib/openmpi/mca_state_novm.so due to munmap()
+--16783-- Discarding syms at 0xa1e4cb0-0xa1e5062 in /usr/lib/openmpi/lib/openmpi/mca_state_tool.so due to munmap()
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_app.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_orted.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_hnp.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_tool.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_oob_tcp.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_rml_oob.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0x95ce3b0-0x95d00a5 in /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_orted.so due to munmap()
+--16783-- Discarding syms at 0x97d3220-0x97d40c6 in /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_hnp.so due to munmap()
+--16783-- Discarding syms at 0x99d6b50-0x99d6e77 in /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_tool.so due to munmap()
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_routed_radix.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_routed_binomial.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_routed_direct.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_routed_debruijn.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0x95ce5b0-0x95cf97b in /usr/lib/openmpi/lib/openmpi/mca_routed_radix.so due to munmap()
+--16783-- Discarding syms at 0x97d3530-0x97d48d3 in /usr/lib/openmpi/lib/openmpi/mca_routed_binomial.so due to munmap()
+--16783-- Discarding syms at 0xa5ec340-0xa5ed563 in /usr/lib/openmpi/lib/openmpi/mca_routed_debruijn.so due to munmap()
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_db_print.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_db_hash.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_grpcomm_bad.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_dfs_orted.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_dfs_app.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_dfs_test.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0xaded8b0-0xadf4615 in /usr/lib/openmpi/lib/openmpi/mca_dfs_orted.so due to munmap()
+--16783-- Discarding syms at 0xaff8210-0xaffbaab in /usr/lib/openmpi/lib/openmpi/mca_dfs_app.so due to munmap()
+--16783-- Discarding syms at 0xb1ff090-0xb2022dd in /usr/lib/openmpi/lib/openmpi/mca_dfs_test.so due to munmap()
+--16783-- REDIR: 0x566fca0 (libc.so.6:setenv) redirected to 0x4c35aa0 (setenv)
+--16783-- REDIR: 0x56c1160 (libc.so.6:strcpy) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56db9d0 (libc.so.6:__strcpy_sse2_unaligned) redirected to 0x4c31040 (strcpy)
+--16783-- REDIR: 0x56c5850 (libc.so.6:stpcpy) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x56dcfe0 (libc.so.6:__stpcpy_sse2_unaligned) redirected to 0x4c34120 (__stpcpy_sse2_unaligned)
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/hwloc/hwloc_opencl.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libOpenCL.so.1.0.0
+--16783--    object doesn't have a symbol table
+--16783-- REDIR: 0x401de80 (ld-linux-x86-64.so.2:stpcpy) redirected to 0x4c342c0 (stpcpy)
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/hwloc/hwloc_pci.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libpciaccess.so.0.11.1
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libz.so.1.2.8
+--16783--   Considering /usr/lib/debug/.build-id/8d/9bd4ce26e45ef16075c67d5f5eeafd8b562832.debug ..
+--16783--   .. build-id is valid
+--16783-- WARNING: Serious error when reading debug info
+--16783-- When reading debug info from /lib/x86_64-linux-gnu/libz.so.1.2.8:
+--16783-- Ignoring non-Dwarf2/3/4 block in .debug_info
+--16783-- WARNING: Serious error when reading debug info
+--16783-- When reading debug info from /lib/x86_64-linux-gnu/libz.so.1.2.8:
+--16783-- Last block truncated in .debug_info; ignoring
+--16783-- WARNING: Serious error when reading debug info
+--16783-- When reading debug info from /lib/x86_64-linux-gnu/libz.so.1.2.8:
+--16783-- parse_CU_Header: is neither DWARF2 nor DWARF3 nor DWARF4
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/hwloc/hwloc_xml_libxml.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libxml2.so.2.9.3
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libicuuc.so.55.1
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /lib/x86_64-linux-gnu/liblzma.so.5.0.0
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libicudata.so.55.1
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21
+--16783--   Considering /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21 ..
+--16783--   .. CRC mismatch (computed 3d999b0e wanted 70646140)
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /lib/x86_64-linux-gnu/libgcc_s.so.1
+--16783--   Considering /lib/x86_64-linux-gnu/libgcc_s.so.1 ..
+--16783--   .. CRC mismatch (computed b9a68419 wanted 29d51b00)
+--16783--    object doesn't have a symbol table
+--16783-- REDIR: 0x574c2a0 (libc.so.6:__memmove_chk) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x574c210 (libc.so.6:__memcpy_chk) redirected to 0x4a286f0 (_vgnU_ifunc_wrapper)
+--16783-- REDIR: 0x57839b0 (libc.so.6:__memmove_avx_unaligned) redirected to 0x4c32230 (memcpy@GLIBC_2.2.5)
+--16783-- REDIR: 0x574c3c0 (libc.so.6:__stpcpy_chk) redirected to 0x4c34e60 (__stpcpy_chk)
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_allocator_bucket.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_allocator_basic.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_rcache_vma.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_mpool_grdma.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_mpool_sm.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/libmca_common_sm.so.4.0.4
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_bml_r2.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_btl_openib.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/libmca_common_verbs.so.7.0.0
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_btl_self.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_btl_tcp.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_btl_vader.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_btl_sm.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_pml_cm.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_pml_bfo.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_pml_ob1.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_vprotocol_pessimist.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0x112d5970-0x112d94cb in /usr/lib/openmpi/lib/openmpi/mca_pml_cm.so due to munmap()
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_tuned.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_sm.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_self.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_ml.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_hierarch.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_basic.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_inter.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_coll_libnbc.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0x11f44420-0x11f6aca0 in /usr/lib/openmpi/lib/openmpi/mca_coll_ml.so due to munmap()
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_osc_pt2pt.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_osc_sm.so
+--16783--    object doesn't have a symbol table
+--16783-- Discarding syms at 0x10607d90-0x1062322c in /usr/lib/openmpi/lib/openmpi/mca_btl_openib.so due to munmap()
+--16783-- Discarding syms at 0x10830750-0x10832021 in /usr/lib/openmpi/lib/libmca_common_verbs.so.7.0.0 due to munmap()
+--16783-- Discarding syms at 0x10ec65d0-0x10ec9f2b in /usr/lib/openmpi/lib/openmpi/mca_btl_vader.so due to munmap()
+--16783-- Discarding syms at 0x110cedb0-0x110d1dbc in /usr/lib/openmpi/lib/openmpi/mca_btl_sm.so due to munmap()
+--16783-- Discarding syms at 0x114dfa00-0x114f5b50 in /usr/lib/openmpi/lib/openmpi/mca_pml_bfo.so due to munmap()
+--16783-- Discarding syms at 0x112d5430-0x112d8157 in /usr/lib/openmpi/lib/openmpi/mca_coll_sm.so due to munmap()
+--16783-- REDIR: 0x56bd600 (libc.so.6:posix_memalign) redirected to 0x4c300a0 (posix_memalign)
+--16783-- Discarding syms at 0x11917030-0x1191ab99 in /usr/lib/openmpi/lib/openmpi/mca_vprotocol_pessimist.so due to munmap()
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_pubsub_orte.so
+--16783--    object doesn't have a symbol table
+--16783-- Reading syms from /usr/lib/openmpi/lib/openmpi/mca_dpm_orte.so
+--16783--    object doesn't have a symbol table
+--16783-- REDIR: 0x574c480 (libc.so.6:__strcpy_chk) redirected to 0x4c34e10 (__strcpy_chk)
+--16783-- Discarding syms at 0x116ff250-0x117117c0 in /usr/lib/openmpi/lib/openmpi/mca_pml_ob1.so due to munmap()
+--16783-- Discarding syms at 0x10601f50-0x106034a3 in /usr/lib/openmpi/lib/openmpi/mca_pubsub_orte.so due to munmap()
+--16783-- Discarding syms at 0x10806e20-0x10809ff3 in /usr/lib/openmpi/lib/openmpi/mca_dpm_orte.so due to munmap()
+--16783-- Discarding syms at 0x11b21020-0x11b340fc in /usr/lib/openmpi/lib/openmpi/mca_coll_tuned.so due to munmap()
+--16783-- Discarding syms at 0x11d3dde0-0x11d3e5b3 in /usr/lib/openmpi/lib/openmpi/mca_coll_self.so due to munmap()
+--16783-- Discarding syms at 0x12173640-0x121766ef in /usr/lib/openmpi/lib/openmpi/mca_coll_hierarch.so due to munmap()
+--16783-- Discarding syms at 0x1237aa60-0x12384169 in /usr/lib/openmpi/lib/openmpi/mca_coll_basic.so due to munmap()
+--16783-- Discarding syms at 0x12588e60-0x1258a7b2 in /usr/lib/openmpi/lib/openmpi/mca_coll_inter.so due to munmap()
+--16783-- Discarding syms at 0x127900c0-0x127a26e2 in /usr/lib/openmpi/lib/openmpi/mca_coll_libnbc.so due to munmap()
+--16783-- Discarding syms at 0x103fd130-0x103fe943 in /usr/lib/openmpi/lib/openmpi/mca_bml_r2.so due to munmap()
+--16783-- Discarding syms at 0x10a35200-0x10a36239 in /usr/lib/openmpi/lib/openmpi/mca_btl_self.so due to munmap()
+--16783-- Discarding syms at 0x10c3af60-0x10c41513 in /usr/lib/openmpi/lib/openmpi/mca_btl_tcp.so due to munmap()
+--16783-- Discarding syms at 0xfdf2140-0xfdf351c in /usr/lib/openmpi/lib/openmpi/mca_mpool_grdma.so due to munmap()
+--16783-- Discarding syms at 0xfff5c50-0xfff62ef in /usr/lib/openmpi/lib/openmpi/mca_mpool_sm.so due to munmap()
+--16783-- Discarding syms at 0x101f8e20-0x101f9b4b in /usr/lib/openmpi/lib/libmca_common_sm.so.4.0.4 due to munmap()
+--16783-- Discarding syms at 0xfbece80-0xfbee8a9 in /usr/lib/openmpi/lib/openmpi/mca_rcache_vma.so due to munmap()
+--16783-- Discarding syms at 0xf7e6b30-0xf7e73cf in /usr/lib/openmpi/lib/openmpi/mca_allocator_bucket.so due to munmap()
+--16783-- Discarding syms at 0xf9e9c00-0xf9ea4d3 in /usr/lib/openmpi/lib/openmpi/mca_allocator_basic.so due to munmap()
+--16783-- Discarding syms at 0xadecd70-0xaded7b7 in /usr/lib/x86_64-linux-gnu/hwloc/hwloc_opencl.so due to munmap()
+--16783-- Discarding syms at 0xaff32a0-0xaff59c6 in /usr/lib/x86_64-linux-gnu/libOpenCL.so.1.0.0 due to munmap()
+--16783-- Discarding syms at 0xb1fb230-0xb1fbad8 in /usr/lib/x86_64-linux-gnu/hwloc/hwloc_pci.so due to munmap()
+--16783-- Discarding syms at 0xb4000d0-0xb404645 in /usr/lib/x86_64-linux-gnu/libpciaccess.so.0.11.1 due to munmap()
+--16783-- Discarding syms at 0xb823240-0xb8240c2 in /usr/lib/x86_64-linux-gnu/hwloc/hwloc_xml_libxml.so due to munmap()
+--16783-- Discarding syms at 0xba536f0-0xbb82fce in /usr/lib/x86_64-linux-gnu/libxml2.so.2.9.3 due to munmap()
+--16783-- Discarding syms at 0xb609db0-0xb61a810 in /lib/x86_64-linux-gnu/libz.so.1.2.8 due to munmap()
+--16783-- Discarding syms at 0xbe364d0-0xbef0f13 in /usr/lib/x86_64-linux-gnu/libicuuc.so.55.1 due to munmap()
+--16783-- Discarding syms at 0xc1770d0-0xc18b24d in /lib/x86_64-linux-gnu/liblzma.so.5.0.0 due to munmap()
+--16783-- Discarding syms at 0xc397530-0xc397630 in /usr/lib/x86_64-linux-gnu/libicudata.so.55.1 due to munmap()
+--16783-- Discarding syms at 0x7b88e30-0x7b892cc in /usr/lib/openmpi/lib/openmpi/mca_errmgr_default_app.so due to munmap()
+--16783-- Discarding syms at 0x99d4e20-0x99d5933 in /usr/lib/openmpi/lib/openmpi/mca_grpcomm_bad.so due to munmap()
+--16783-- Discarding syms at 0x95cde90-0x95ce5bf in /usr/lib/openmpi/lib/openmpi/mca_db_print.so due to munmap()
+--16783-- Discarding syms at 0x97d1040-0x97d267e in /usr/lib/openmpi/lib/openmpi/mca_db_hash.so due to munmap()
+--16783-- Discarding syms at 0xa3e8c00-0xa3e92d1 in /usr/lib/openmpi/lib/openmpi/mca_routed_direct.so due to munmap()
+--16783-- Discarding syms at 0xa1e55b0-0xa1e672f in /usr/lib/openmpi/lib/openmpi/mca_rml_oob.so due to munmap()
+--16783-- Discarding syms at 0x9bdc9e0-0x9be774c in /usr/lib/openmpi/lib/openmpi/mca_oob_tcp.so due to munmap()
+--16783-- Discarding syms at 0x9fe1cb0-0x9fe2062 in /usr/lib/openmpi/lib/openmpi/mca_state_app.so due to munmap()
+--16783-- Discarding syms at 0x859ef50-0x859f673 in /usr/lib/openmpi/lib/openmpi/mca_ess_singleton.so due to munmap()
+--16783-- Discarding syms at 0x79867b0-0x7986a5c in /usr/lib/openmpi/lib/openmpi/mca_sec_basic.so due to munmap()
+--16783-- Discarding syms at 0x7d8dfe0-0x7d8ec73 in /usr/lib/openmpi/lib/openmpi/mca_shmem_mmap.so due to munmap()
+--16783-- Discarding syms at 0x11f431a0-0x11f51e3c in /usr/lib/openmpi/lib/openmpi/mca_osc_pt2pt.so due to munmap()
+--16783-- Discarding syms at 0x129a8ea0-0x129aaf53 in /usr/lib/openmpi/lib/openmpi/mca_osc_sm.so due to munmap()
+--16783-- Discarding syms at 0x7f922d0-0x7f97bf1 in /lib/x86_64-linux-gnu/libnss_compat-2.23.so due to munmap()
+--16783-- Discarding syms at 0x87a30b0-0x87a98aa in /lib/x86_64-linux-gnu/libnss_nis-2.23.so due to munmap()
+--16783-- Discarding syms at 0x819dff0-0x81ab1e1 in /lib/x86_64-linux-gnu/libnsl-2.23.so due to munmap()
+--16783-- Discarding syms at 0x89af1b0-0x89b52a1 in /lib/x86_64-linux-gnu/libnss_files-2.23.so due to munmap()
+--16783-- Discarding syms at 0x8bc07f0-0x8bc5518 in /lib/x86_64-linux-gnu/libnss_sss.so.2 due to munmap()
+==16783== 
+==16783== HEAP SUMMARY:
+==16783==     in use at exit: 561,187 bytes in 6,603 blocks
+==16783==   total heap usage: 29,332 allocs, 22,729 frees, 807,149,772 bytes allocated
+==16783== 
+==16783== Searching for pointers to 6,603 not-freed blocks
+==16783== Checked 378,712 bytes
+==16783== 
+==16783== 1 bytes in 1 blocks are definitely lost in loss record 1 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x97D172C: ???
+==16783==    by 0x5EDBCC6: opal_db_base_store (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5186702: ompi_modex_send_string (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183AED: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 4 bytes in 1 blocks are still reachable in loss record 2 of 124
+==16783==    at 0x4C2FFC6: memalign (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4012FF7: allocate_and_init (dl-tls.c:603)
+==16783==    by 0x4012FF7: tls_get_addr_tail (dl-tls.c:791)
+==16783==    by 0xAFF38EC: ???
+==16783==    by 0xAFF4232: ???
+==16783==    by 0xADED2F4: ???
+==16783==    by 0x633C010: hwloc_backends_notify_new_object (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x63401FB: ??? (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x63402B8: hwloc_insert_pci_device_list (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0xB1FB9A4: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 12 bytes in 1 blocks are definitely lost in loss record 3 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x56C1489: strdup (strdup.c:42)
+==16783==    by 0x97D1655: ???
+==16783==    by 0x5EDBCC6: opal_db_base_store (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x859F49B: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 13 bytes in 2 blocks are still reachable in loss record 4 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x56C1489: strdup (strdup.c:42)
+==16783==    by 0x5EE3493: opal_libevent2021_event_config_avoid_method (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCD2A: opal_event_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9C5: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 16 bytes in 1 blocks are still reachable in loss record 5 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x99D5417: ???
+==16783==    by 0x5183E07: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 17 bytes in 1 blocks are definitely lost in loss record 6 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x574EA17: __vasprintf_chk (vasprintf_chk.c:80)
+==16783==    by 0x574E8F1: __asprintf_chk (asprintf_chk.c:32)
+==16783==    by 0x5183B69: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 19 bytes in 1 blocks are definitely lost in loss record 7 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x574EA17: __vasprintf_chk (vasprintf_chk.c:80)
+==16783==    by 0x574E8F1: __asprintf_chk (asprintf_chk.c:32)
+==16783==    by 0x5183BB1: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 24 bytes in 1 blocks are still reachable in loss record 8 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ED398F: opal_output_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAA9DB: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 24 bytes in 1 blocks are still reachable in loss record 9 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C45020: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 24 bytes in 1 blocks are still reachable in loss record 10 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51CEBF9: ompi_op_base_op_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x517F471: ompi_op_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183C65: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 24 bytes in 1 blocks are still reachable in loss record 11 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x516C0DB: ompi_attr_set_fortran_mpi1 (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x516D57B: ompi_attr_create_predefined (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x518409E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 24 bytes in 1 blocks are still reachable in loss record 12 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x11D3E32F: ???
+==16783==    by 0x51C1110: mca_coll_base_comm_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184573: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 24 bytes in 1 blocks are definitely lost in loss record 13 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x97D172C: ???
+==16783==    by 0x5EDBCC6: opal_db_base_store (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5186589: ompi_modex_send (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x10C3D8A7: ???
+==16783==    by 0x51C0952: mca_btl_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FE901: ???
+==16783==    by 0x51C012B: mca_bml_base_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x11700FA9: ???
+==16783==    by 0x51D0A38: mca_pml_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183D78: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 28 bytes in 1 blocks are still reachable in loss record 14 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE5166: opal_libevent2021_evmap_io_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE24A6: opal_libevent2021_event_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE42CE: opal_libevent2021_event_base_new_with_config (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCBFC: opal_event_base_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D9: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 28 bytes in 1 blocks are still reachable in loss record 15 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x56C1489: strdup (strdup.c:42)
+==16783==    by 0x5ED3471: opal_output_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51D14FB: pml_v_output_open (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51D1075: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5EC1CAA: mca_base_framework_components_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51D03B6: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183D07: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 28 bytes in 1 blocks are still reachable in loss record 16 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE5166: opal_libevent2021_evmap_io_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE24A6: opal_libevent2021_event_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x10C3D716: ???
+==16783==    by 0x51C0952: mca_btl_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FE901: ???
+==16783==    by 0x51C012B: mca_bml_base_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x11700FA9: ???
+==16783==    by 0x51D0A38: mca_pml_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183D78: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 17 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ED3982: opal_output_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAA9DB: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 18 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC0BF4: mca_base_component_find (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC1C05: mca_base_framework_components_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EF2DE1: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAA9E9: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 19 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC2B77: mca_base_param_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAAB7: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 20 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC583F: mca_base_var_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAAB7: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 21 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC5CC7: mca_base_var_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAAB7: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 22 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECA15F: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC60EC: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC58F3: mca_base_var_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAAB7: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 23 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC6827: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC58F3: mca_base_var_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAAB7: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 24 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC9847: mca_base_var_enum_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EB5746: opal_dss_register_vars (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAB065: opal_register_params (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAAD2: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 25 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EBA41B: opal_datatype_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAB34: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 26 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EB213B: opal_dss_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EB59D4: opal_dss_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAB79: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 27 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EDF102: opal_libevent2021_event_config_new (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCC7D: opal_event_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9C5: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 28 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EEA247: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE436B: opal_libevent2021_event_base_new_with_config (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCBFC: opal_event_base_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D9: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 29 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC0FD4: mca_base_component_find (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAA60: mca_base_framework_components_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAEBF: mca_base_framework_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF11: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD4B: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 30 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x6127626: _dlerror_run (dlerror.c:141)
+==16783==    by 0x6126FA0: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==16783==    by 0x5EDC893: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EBFBF3: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC105E: mca_base_component_find (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAA60: mca_base_framework_components_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAEBF: mca_base_framework_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF11: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD4B: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 31 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C3007F: orte_proc_info (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C2358D: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 32 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C65AB7: ??? (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C44EBB: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 33 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDBB87: opal_db_base_select (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C44F55: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 34 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0xA1E5D47: ???
+==16783==    by 0x5C49B97: orte_grpcomm_base_comm_start (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x99D4F38: ???
+==16783==    by 0x5C48270: orte_grpcomm_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44FD0: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 35 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EEE595: opal_hwloc_base_filter_cpus (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EF03DE: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 36 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C44207: orte_errmgr_base_register_error_callback (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183AAA: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 37 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EB6487: opal_convertor_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518E443: ompi_datatype_default_convertors_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5190AA4: ompi_datatype_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183BF6: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 38 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x517FF5F: ompi_op_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183C65: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 39 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51C8A57: mca_mpool_base_tree_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C7D41: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183CC9: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 40 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EA9127: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5169038: ompi_rb_tree_construct (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C8940: mca_mpool_base_tree_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C7D41: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183CC9: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 41 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168B47: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5169038: ompi_rb_tree_construct (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C8940: mca_mpool_base_tree_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C7D41: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183CC9: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 42 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168DB5: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5169E6B: ompi_rb_tree_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C7D41: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183CC9: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 43 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5169E6B: ompi_rb_tree_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C7D41: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183CC9: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 44 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC8117: mca_base_pvar_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x117016EB: ???
+==16783==    by 0x5ECAB78: mca_base_framework_components_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAEBF: mca_base_framework_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF11: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183D07: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 45 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51C0A7F: mca_btl_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FE901: ???
+==16783==    by 0x51C012B: mca_bml_base_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x11700FA9: ???
+==16783==    by 0x51D0A38: mca_pml_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183D78: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 46 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51750E7: ompi_errhandler_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184004: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 47 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5178A67: ompi_mpi_errcode_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x518401A: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 48 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x517AFF7: ompi_errcode_intern_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184030: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 49 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x517CF37: ompi_group_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184046: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 50 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x516E27F: ompi_comm_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x518405C: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 51 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x517B7A7: ompi_file_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184072: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 52 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5187897: ompi_win_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184088: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 53 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x516BBD7: ompi_attr_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x518409E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 54 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x516B9AB: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x516BD26: ompi_attr_create_keyval (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x516D354: ompi_attr_create_predefined (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x518409E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 55 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x116FF66D: ???
+==16783==    by 0x51D10B9: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51840DC: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 56 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x116FF6FE: ???
+==16783==    by 0x51D10B9: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51840DC: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 57 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x116FF786: ???
+==16783==    by 0x51D10B9: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51840DC: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 58 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x116FF868: ???
+==16783==    by 0x51D10B9: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51840DC: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 59 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x103FDE7F: ???
+==16783==    by 0x116FFC19: ???
+==16783==    by 0x5184108: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 60 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51C0077: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FDC00: ???
+==16783==    by 0x116FFC19: ???
+==16783==    by 0x5184108: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 61 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x116FFE6F: ???
+==16783==    by 0x5184138: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 62 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x11700E4B: ???
+==16783==    by 0x116FFE8A: ???
+==16783==    by 0x5184138: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 32 bytes in 1 blocks are still reachable in loss record 63 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51C1163: mca_coll_base_comm_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184573: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 64 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC0BD7: mca_base_component_find (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC1C05: mca_base_framework_components_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EF2DE1: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAA9E9: opal_init_util (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518390B: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 65 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE64F1: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE4A72: event_global_setup_locks_ (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE66CA: opal_libevent2021_evthread_use_pthreads (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D4: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 66 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE64F1: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EEB0F3: evsig_global_setup_locks_ (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE4A85: event_global_setup_locks_ (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE66CA: opal_libevent2021_evthread_use_pthreads (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D4: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 67 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE64F1: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE93D3: opal_libevent2021_evutil_secure_rng_global_setup_locks_ (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE4A90: event_global_setup_locks_ (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE66CA: opal_libevent2021_evthread_use_pthreads (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D4: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 68 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE64F1: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE429B: opal_libevent2021_event_base_new_with_config (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCBFC: opal_event_base_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D9: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 69 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C6B60F: orte_state_base_add_job_state (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x9FE1FF8: ???
+==16783==    by 0x5C6B29D: orte_state_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44C84: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 70 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EF2A99: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC1CAA: mca_base_framework_components_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ED0CA1: opal_ifbegin (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x9BDD579: ???
+==16783==    by 0x5C53190: orte_oob_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44DE4: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 71 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C645F7: ??? (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0xA1E5C88: ???
+==16783==    by 0x5C49B97: orte_grpcomm_base_comm_start (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x99D4F38: ???
+==16783==    by 0x5C48270: orte_grpcomm_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44FD0: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 72 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5169087: ompi_rb_tree_construct (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C8940: mca_mpool_base_tree_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51C7D41: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183CC9: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 73 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x11F49C09: ???
+==16783==    by 0x51CEC75: ompi_osc_base_find_available (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183FB3: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 74 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EA56ED: opal_free_list_grow (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x517EDD8: ompi_message_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183FD8: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 75 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x1237E4C7: ???
+==16783==    by 0x51C1110: mca_coll_base_comm_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184573: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 40 bytes in 1 blocks are still reachable in loss record 76 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x127908E7: ???
+==16783==    by 0x51C1110: mca_coll_base_comm_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184573: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 77 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE644A: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE42BF: opal_libevent2021_event_base_new_with_config (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCBFC: opal_event_base_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D9: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 78 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC17FB: mca_base_component_repository_retain (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EBFD71: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC105E: mca_base_component_find (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAA60: mca_base_framework_components_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAEBF: mca_base_framework_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF11: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD4B: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 79 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x97D18B7: ???
+==16783==    by 0x5EDBCC6: opal_db_base_store (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x859F477: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 80 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x97D16F7: ???
+==16783==    by 0x5EDBCC6: opal_db_base_store (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x859F477: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 81 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x518CB57: ompi_datatype_create (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x518CC84: ompi_datatype_create_contiguous (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x518E672: ompi_datatype_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183BF6: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 82 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51806A7: ompi_proc_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183C0C: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 83 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x110D0C67: ???
+==16783==    by 0x5EC1CAA: mca_base_framework_components_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51C0514: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183CE8: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 84 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x51686EB: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183DE4: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 85 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5182227: ompi_request_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183FC2: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 86 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x517E43F: ompi_info_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183FEE: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are still reachable in loss record 87 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x517E0F8: ompi_info_set (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x517E22B: ompi_info_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183FEE: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 2 blocks are still reachable in loss record 88 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE3483: opal_libevent2021_event_config_avoid_method (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCD2A: opal_event_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9C5: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are indirectly lost in loss record 89 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4C2FDEF: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x51BFEA1: mca_bml_base_btl_array_reserve (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FDC22: ???
+==16783==    by 0x116FFC19: ???
+==16783==    by 0x5184108: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are indirectly lost in loss record 90 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4C2FDEF: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x51BFEA1: mca_bml_base_btl_array_reserve (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FDC37: ???
+==16783==    by 0x116FFC19: ???
+==16783==    by 0x5184108: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 48 bytes in 1 blocks are indirectly lost in loss record 91 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4C2FDEF: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x51BFEA1: mca_bml_base_btl_array_reserve (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FDC4F: ???
+==16783==    by 0x116FFC19: ???
+==16783==    by 0x5184108: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 50 bytes in 2 blocks are indirectly lost in loss record 92 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x56C1489: strdup (strdup.c:42)
+==16783==    by 0xB401E32: ???
+==16783==    by 0xB401F5E: ???
+==16783==    by 0xB1FB5A9: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 56 bytes in 1 blocks are still reachable in loss record 93 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x10C3D386: ???
+==16783==    by 0x51C0952: mca_btl_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FE901: ???
+==16783==    by 0x51C012B: mca_bml_base_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x11700FA9: ???
+==16783==    by 0x51D0A38: mca_pml_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183D78: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 56 bytes in 1 blocks are still reachable in loss record 94 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x10C3D3CE: ???
+==16783==    by 0x51C0952: mca_btl_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FE901: ???
+==16783==    by 0x51C012B: mca_bml_base_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x11700FA9: ???
+==16783==    by 0x51D0A38: mca_pml_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183D78: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 56 bytes in 1 blocks are still reachable in loss record 95 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x10C3D40F: ???
+==16783==    by 0x51C0952: mca_btl_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x103FE901: ???
+==16783==    by 0x51C012B: mca_bml_base_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x11700FA9: ???
+==16783==    by 0x51D0A38: mca_pml_base_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5183D78: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 64 bytes in 1 blocks are still reachable in loss record 96 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EDB92B: opal_db_base_select (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C44F55: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 64 bytes in 1 blocks are still reachable in loss record 97 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EDB9E6: opal_db_base_select (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C44F55: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 64 bytes in 2 blocks are still reachable in loss record 98 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4016960: _dl_close_worker.part.0 (dl-close.c:393)
+==16783==    by 0x40171F9: _dl_close_worker (dl-close.c:125)
+==16783==    by 0x40171F9: _dl_close (dl-close.c:822)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x6127570: _dlerror_run (dlerror.c:163)
+==16783==    by 0x6126FFE: dlclose (dlclose.c:46)
+==16783==    by 0x6B8005B: ??? (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0x6B7DF11: lt_dlclose (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0x633AD0C: ??? (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x633B5AC: ??? (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x6334D80: hwloc_topology_destroy (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5C3A67E: orte_util_nidmap_finalize (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783== 
+==16783== 77 bytes in 2 blocks are still reachable in loss record 99 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x401CF99: strdup (strdup.c:42)
+==16783==    by 0x40187DE: _dl_load_cache_lookup (dl-cache.c:311)
+==16783==    by 0x4009168: _dl_map_object (dl-load.c:2364)
+==16783==    by 0x400DBA1: openaux (dl-deps.c:63)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x400E1E1: _dl_map_object_deps (dl-deps.c:254)
+==16783==    by 0x40155E1: dl_open_worker (dl-open.c:280)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x4014DA8: _dl_open (dl-open.c:660)
+==16783==    by 0x6126F08: dlopen_doit (dlopen.c:66)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783== 
+==16783== 77 bytes in 2 blocks are still reachable in loss record 100 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x400BEF3: _dl_new_object (dl-object.c:165)
+==16783==    by 0x400650C: _dl_map_object_from_fd (dl-load.c:1028)
+==16783==    by 0x4008C26: _dl_map_object (dl-load.c:2498)
+==16783==    by 0x400DBA1: openaux (dl-deps.c:63)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x400E1E1: _dl_map_object_deps (dl-deps.c:254)
+==16783==    by 0x40155E1: dl_open_worker (dl-open.c:280)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x4014DA8: _dl_open (dl-open.c:660)
+==16783==    by 0x6126F08: dlopen_doit (dlopen.c:66)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783== 
+==16783== 88 bytes in 1 blocks are definitely lost in loss record 101 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x6B7C4A8: lt__malloc (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0x6B7C4DD: lt__zalloc (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0x6B7E719: ??? (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0x6B7F0A0: lt_dlopenadvise (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0xADECEFF: ???
+==16783==    by 0x633B2FC: ??? (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x63349C6: hwloc_topology_init (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03B5: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 96 bytes in 1 blocks are still reachable in loss record 102 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x116FFA28: ???
+==16783==    by 0x51D10B9: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51840DC: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 96 bytes in 1 blocks are still reachable in loss record 103 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7D39: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5168D7C: ompi_free_list_grow (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x116FFA7B: ???
+==16783==    by 0x51D10B9: ??? (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51840DC: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 96 bytes in 2 blocks are still reachable in loss record 104 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EC0B5A: mca_base_component_find (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAA60: mca_base_framework_components_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAEBF: mca_base_framework_register (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF11: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ED0CA1: opal_ifbegin (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x9BDD579: ???
+==16783==    by 0x5C53190: orte_oob_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44DE4: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 96 bytes in 3 blocks are indirectly lost in loss record 105 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0xB401A7E: ???
+==16783==    by 0xB401F20: ???
+==16783==    by 0xB1FB5A9: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 128 bytes in 1 blocks are still reachable in loss record 106 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE3524: opal_libevent2021_event_base_priority_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9F5: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 136 bytes in 1 blocks are still reachable in loss record 107 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5C2EAB1: orte_util_print_jobids (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C2F05A: orte_util_print_name_args (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x9BDD8B8: ???
+==16783==    by 0x5C53190: orte_oob_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44DE4: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 256 bytes in 1 blocks are still reachable in loss record 108 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4C2FDEF: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE4E6A: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE508B: opal_libevent2021_evmap_io_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE24A6: opal_libevent2021_event_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE42CE: opal_libevent2021_event_base_new_with_config (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCBFC: opal_event_base_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D9: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 256 bytes in 1 blocks are still reachable in loss record 109 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4C2FDEF: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EEA058: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE50B8: opal_libevent2021_evmap_io_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE24A6: opal_libevent2021_event_add (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE42CE: opal_libevent2021_event_base_new_with_config (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCBFC: opal_event_base_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D9: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 256 bytes in 1 blocks are still reachable in loss record 110 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x4C2FDEF: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE9F21: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EE06FA: opal_libevent2021_event_base_loop (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAA237: opal_progress (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E56: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 376 (232 direct, 144 indirect) bytes in 1 blocks are definitely lost in loss record 111 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x103FDBB4: ???
+==16783==    by 0x116FFC19: ???
+==16783==    by 0x5184108: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 448 bytes in 2 blocks are still reachable in loss record 112 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EF28ED: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EC1CAA: mca_base_framework_components_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ED0CA1: opal_ifbegin (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x9BDD579: ???
+==16783==    by 0x5C53190: orte_oob_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44DE4: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783== 
+==16783== 640 bytes in 1 blocks are still reachable in loss record 113 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EE40B9: opal_libevent2021_event_base_new_with_config (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDCBFC: opal_event_base_create (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EDC9D9: ??? (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5ECAF65: mca_base_framework_open (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5EAAD11: opal_init (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5C234D4: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 640 bytes in 1 blocks are still reachable in loss record 114 of 124
+==16783==    at 0x4C2FD5F: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5EA7E09: opal_class_initialize (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x11D3E32F: ???
+==16783==    by 0x51C1110: mca_coll_base_comm_select (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x5184573: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 816 bytes in 16 blocks are still reachable in loss record 115 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x5C2EACD: orte_util_print_jobids (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C2F05A: orte_util_print_name_args (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x9BDD8B8: ???
+==16783==    by 0x5C53190: orte_oob_base_select (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5C44DE4: orte_ess_base_app_setup (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x859F396: ???
+==16783==    by 0x5C23605: orte_init (in /usr/lib/openmpi/lib/libopen-rte.so.12.0.2)
+==16783==    by 0x5183A5E: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 1,088 bytes in 8 blocks are indirectly lost in loss record 116 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0xB401A4C: ???
+==16783==    by 0xB401F20: ???
+==16783==    by 0xB1FB5A9: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 1,536 bytes in 2 blocks are still reachable in loss record 117 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x40120BD: _dl_check_map_versions (dl-version.c:293)
+==16783==    by 0x4015B18: dl_open_worker (dl-open.c:286)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x4014DA8: _dl_open (dl-open.c:660)
+==16783==    by 0x6126F08: dlopen_doit (dlopen.c:66)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x6127570: _dlerror_run (dlerror.c:163)
+==16783==    by 0x6126FA0: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==16783==    by 0x6B800A1: ??? (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0x6B7CC57: ??? (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783==    by 0x6B7E873: ??? (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783== 
+==16783== 2,365 bytes in 2 blocks are still reachable in loss record 118 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x400BBF5: _dl_new_object (dl-object.c:75)
+==16783==    by 0x400650C: _dl_map_object_from_fd (dl-load.c:1028)
+==16783==    by 0x4008C26: _dl_map_object (dl-load.c:2498)
+==16783==    by 0x400DBA1: openaux (dl-deps.c:63)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x400E1E1: _dl_map_object_deps (dl-deps.c:254)
+==16783==    by 0x40155E1: dl_open_worker (dl-open.c:280)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x4014DA8: _dl_open (dl-open.c:660)
+==16783==    by 0x6126F08: dlopen_doit (dlopen.c:66)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783== 
+==16783== 4,064 bytes in 1 blocks are still reachable in loss record 119 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x400A6C9: do_lookup_unique (dl-lookup.c:268)
+==16783==    by 0x400A6C9: do_lookup_x (dl-lookup.c:540)
+==16783==    by 0x400AB1E: _dl_lookup_symbol_x (dl-lookup.c:829)
+==16783==    by 0x400C77C: elf_machine_rela (dl-machine.h:301)
+==16783==    by 0x400C77C: elf_dynamic_do_Rela (do-rel.h:137)
+==16783==    by 0x400C77C: _dl_relocate_object (dl-reloc.c:258)
+==16783==    by 0x4015850: dl_open_worker (dl-open.c:435)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x4014DA8: _dl_open (dl-open.c:660)
+==16783==    by 0x6126F08: dlopen_doit (dlopen.c:66)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x6127570: _dlerror_run (dlerror.c:163)
+==16783==    by 0x6126FA0: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==16783==    by 0x6B800A1: ??? (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783== 
+==16783== 72,704 bytes in 1 blocks are still reachable in loss record 120 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0xDED7EFF: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.21)
+==16783==    by 0x40106B9: call_init.part.0 (dl-init.c:72)
+==16783==    by 0x40107CA: call_init (dl-init.c:30)
+==16783==    by 0x40107CA: _dl_init (dl-init.c:120)
+==16783==    by 0x40158E1: dl_open_worker (dl-open.c:575)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x4014DA8: _dl_open (dl-open.c:660)
+==16783==    by 0x6126F08: dlopen_doit (dlopen.c:66)
+==16783==    by 0x4010563: _dl_catch_error (dl-error.c:187)
+==16783==    by 0x6127570: _dlerror_run (dlerror.c:163)
+==16783==    by 0x6126FA0: dlopen@@GLIBC_2.2.5 (dlopen.c:87)
+==16783==    by 0x6B800A1: ??? (in /usr/lib/x86_64-linux-gnu/libltdl.so.7.3.1)
+==16783== 
+==16783== 74,597 bytes in 3,288 blocks are indirectly lost in loss record 121 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x56C1489: strdup (strdup.c:42)
+==16783==    by 0xB401D29: ???
+==16783==    by 0xB401EF1: ???
+==16783==    by 0xB402093: ???
+==16783==    by 0xB1FB881: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 138,959 bytes in 3,158 blocks are indirectly lost in loss record 122 of 124
+==16783==    at 0x4C2DB8F: malloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0x56C1489: strdup (strdup.c:42)
+==16783==    by 0xB401E1A: ???
+==16783==    by 0xB401EF1: ???
+==16783==    by 0xB402093: ???
+==16783==    by 0xB1FB881: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 257,840 bytes in 2 blocks are indirectly lost in loss record 123 of 124
+==16783==    at 0x4C2FD5F: realloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0xB401C95: ???
+==16783==    by 0xB401EF1: ???
+==16783==    by 0xB402093: ???
+==16783==    by 0xB1FB881: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== 472,766 (136 direct, 472,630 indirect) bytes in 1 blocks are definitely lost in loss record 124 of 124
+==16783==    at 0x4C2FB55: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==16783==    by 0xB401A9D: ???
+==16783==    by 0xB401F20: ???
+==16783==    by 0xB1FB5A9: ???
+==16783==    by 0x633623C: hwloc_topology_load (in /usr/lib/x86_64-linux-gnu/libhwloc.so.5.6.8)
+==16783==    by 0x5EF03D2: opal_hwloc_base_get_topology (in /usr/lib/openmpi/lib/libopen-pal.so.13.0.2)
+==16783==    by 0x5183E64: ompi_mpi_init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x51A254C: PMPI_Init (in /usr/lib/openmpi/lib/libmpi.so.12.0.2)
+==16783==    by 0x4014E5: main (main.c:31)
+==16783== 
+==16783== LEAK SUMMARY:
+==16783==    definitely lost: 529 bytes in 8 blocks
+==16783==    indirectly lost: 472,774 bytes in 6,464 blocks
+==16783==      possibly lost: 0 bytes in 0 blocks
+==16783==    still reachable: 87,884 bytes in 131 blocks
+==16783==         suppressed: 0 bytes in 0 blocks
+==16783== 
+==16783== ERROR SUMMARY: 8 errors from 8 contexts (suppressed: 0 from 0)
+==16783== ERROR SUMMARY: 8 errors from 8 contexts (suppressed: 0 from 0)

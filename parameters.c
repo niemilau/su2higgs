@@ -15,9 +15,7 @@ inline void check_set(int set, char *name) {
 	    "Not set parameter \"%s\"! Exiting...\n", name);
     die(1);
   }
-
 }
-
 
 /** Load parameters into struct from file.
  *
@@ -27,6 +25,7 @@ inline void check_set(int set, char *name) {
  * beginning with # is treated as a comment and ignored.
  *
  * This routine also checks that no essential parameters are missing.
+ * Original implementation by David Weir.
  */
 void get_parameters(char *filename, params *p) {
 
@@ -131,14 +130,6 @@ void get_parameters(char *filename, params *p) {
       p->run_checks = strtol(value,NULL,10);
       set_checks = 1;
     }
-    else if(!strcasecmp(key,"update_doublet")) {
-      p->update_su2doublet = strtol(value,NULL,10);
-      set_update_doublet = 1;
-    }
-		else if(!strcasecmp(key,"update_triplet")) {
-      p->update_su2triplet = strtol(value,NULL,10);
-      set_update_triplet = 1;
-    }
 		else if(!strcasecmp(key,"betasu2")) {
       p->betasu2 = strtod(value,NULL);
       set_betasu2 = 1;
@@ -202,30 +193,40 @@ void get_parameters(char *filename, params *p) {
       }
       set_su2alg = 1;
     }
-		// doublet
-    else if(!strcasecmp(key,"algorithm_su2doublet")) {
-      if(!strcasecmp(value,"metropolis")) {
-	       p->algorithm_su2doublet = METROPOLIS;
-      } else if(!strcasecmp(value,"overrelax")) {
-	       p->algorithm_su2doublet = OVERRELAX;
-      } else {
-        printf("Unknown algorithm for SU(2) doublets, using metropolis\n");
-        p->algorithm_su2doublet = METROPOLIS;
+
+    #ifdef HIGGS
+      else if(!strcasecmp(key,"algorithm_su2doublet")) {
+        if(!strcasecmp(value,"metropolis")) {
+  	       p->algorithm_su2doublet = METROPOLIS;
+        } else if(!strcasecmp(value,"overrelax")) {
+  	       p->algorithm_su2doublet = OVERRELAX;
+        } else {
+          printf("Unknown algorithm for SU(2) doublets, using metropolis\n");
+          p->algorithm_su2doublet = METROPOLIS;
+        }
+        set_su2DBalg = 1;
+      } else if(!strcasecmp(key,"update_doublet")) {
+        p->update_su2doublet = strtol(value,NULL,10);
+        set_update_doublet = 1;
       }
-      set_su2DBalg = 1;
-    }
-		// triplet
-		else if(!strcasecmp(key,"algorithm_su2triplet")) {
-      if(!strcasecmp(value,"metropolis")) {
-	       p->algorithm_su2triplet = METROPOLIS;
-      } else if(!strcasecmp(value,"overrelax")) {
-	       p->algorithm_su2triplet = OVERRELAX;
-      } else {
-        printf("Unknown algorithm for SU(2) triplets, using metropolis\n");
-        p->algorithm_su2triplet = METROPOLIS;
+    #endif
+
+    #ifdef TRIPLET
+  		else if(!strcasecmp(key,"algorithm_su2triplet")) {
+        if(!strcasecmp(value,"metropolis")) {
+  	       p->algorithm_su2triplet = METROPOLIS;
+        } else if(!strcasecmp(value,"overrelax")) {
+  	       p->algorithm_su2triplet = OVERRELAX;
+        } else {
+          printf("Unknown algorithm for SU(2) triplets, using metropolis\n");
+          p->algorithm_su2triplet = METROPOLIS;
+        }
+        set_su2triplet_alg = 1;
+      } else if(!strcasecmp(key,"update_triplet")) {
+        p->update_su2triplet = strtol(value,NULL,10);
+        set_update_triplet = 1;
       }
-      set_su2triplet_alg = 1;
-    }
+    #endif
     // end reading update algorithms
   }
 
@@ -316,7 +317,7 @@ void get_parameters(char *filename, params *p) {
 	check_set(set_b4, "b4");
 	check_set(set_msq_triplet, "msq_triplet");
 	#endif
-  #if defined TRIPLET && defined DOUBLET
+  #if defined (TRIPLET) && defined (HIGGS)
   check_set(set_a2, "a2");
   #endif
 
@@ -349,6 +350,8 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		int set_increment = 0;
 		int set_readonly = 0;
 		int set_weightfile = 0;
+		int set_absolute_bounds = 0;
+    int set_orderparam = 0;
 
     char key[100];
     char value[100];
@@ -402,6 +405,9 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 			} else if(!strcasecmp(key,"increment")) {
 				w->increment = strtod(value,NULL);
 				set_increment = 1;
+			} else if(!strcasecmp(key,"absolute_bounds")) {
+				w->absolute_bounds = strtol(value,NULL, 10);
+				set_absolute_bounds = 1;
 			} else if(!strcasecmp(key,"readonly")) {
 				w->readonly = strtol(value,NULL,10);
 				set_readonly = 1;
@@ -409,14 +415,41 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 				strcpy(w->weightfile,value);
 				set_weightfile = 1;
 			}
+      // read multicanonical order parameter
+      else if(!strcasecmp(key,"orderparam")) {
+				if (!strcasecmp(value,"wilson")) {
+					// TODO
+					w->orderparam = 0;
+				}
+				#ifdef HIGGS
+        else if(!strcasecmp(value,"phisq")) {
+  	       w->orderparam = PHISQ;
+           printf0(*p, "Multicanonical order parameter: phi^2\n");
+        } 
+				#endif
+				#ifdef TRIPLET
+				else if (!strcasecmp(value,"phi2Sigma2")) {
+  	       w->orderparam = PHI2SIGMA2;
+           printf0(*p, "Multicanonical order parameter: phi^2 Sigma^2\n");
+        } 
+				#endif 
+				else {
+          printf0(*p, "Unknown multicanonical order parameter!!\n");
+          w->orderparam = 0;
+        }
+      } // end order param
 
 		}
+    if (w->orderparam != 0)
+      set_orderparam = 1;
 
 		check_set(set_bins, "bins");
 		check_set(set_min, "min");
 		check_set(set_max, "max");
 		check_set(set_readonly, "readonly");
 		check_set(set_weightfile, "weightfile");
+		check_set(set_absolute_bounds, "absolute_bounds");
+    check_set(set_orderparam, "orderparam");
 
 		fclose(config);
 
@@ -452,4 +485,64 @@ void print_parameters(params p) {
   //fprintf(stderr, "msq %lf, lambda %lf, g %lf, msigmasq %lf, a2 %lf, b4 %lf\n",
 	  //p.msq, p.lambda, p.g, p.msigmasq, p.a2, p.b4);
 
+}
+
+/* Read config file again and update certain values. This is called at every checkpoint to 
+* see if the iterations limit has been changed by the user. 
+*/
+void read_updated_parameters(char *filename, params *p) {
+	
+	FILE *config;
+	long new;
+	char key[100];
+  char value[100];
+	char total[200];
+  int ret;
+	
+	if(access(filename,R_OK) == 0) {
+		config = fopen(filename, "r");
+		
+		while(!feof(config)) {
+
+			if(fgets(total,198,config) == NULL) {
+				// end of file?
+				break;
+			}
+
+			ret = sscanf(total,"%99s%99s",key,value);
+
+			if(ret == EOF) {
+				continue;
+			}
+
+			if(key[0] == '#') {
+				continue;
+			}
+			
+			if(!strcasecmp(key,"iterations")) {
+				new = strtol(value,NULL,10);
+				if (p->iterations != new) {
+					p->iterations = new;
+					printf0(*p, "Updated max iterations to %ld\n", new);
+				}
+			}
+			else if(!strcasecmp(key,"interval")) {
+				new = strtol(value,NULL,10);
+				if (p->interval != new) {
+					p->interval = new;
+					printf0(*p, "Updated measurement interval to %ld\n", new);
+				}
+			}
+			else if(!strcasecmp(key,"checkpoint")) {
+				new = strtol(value,NULL,10);
+				if (p->checkpoint != new) {
+					p->checkpoint = new;
+					printf0(*p, "Updated checkpoint interval to %ld\n", new);
+				}
+			}
+		
+		}
+		fclose(config);
+	}
+	
 }

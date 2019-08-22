@@ -1,0 +1,22 @@
+# single-CPU makefile
+
+CC := gcc -g -O3 -D HIGGS -D TRIPLET #-D DEBUG
+
+
+CFLAGS := 
+
+LIBS := -lm
+
+OBJECTS := main.o alloc.o init.o parameters.o su2.o measure.o update.o metropolis.o heatbath.o overrelax.o
+
+BINARY := build/su2
+
+FILES := $(OBJECTS) $(BINARY)
+
+all: su2
+
+su2: $(OBJECTS)
+	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $(BINARY)
+
+clean:
+	rm -f $(FILES) *\~ *\#

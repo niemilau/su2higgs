@@ -1,0 +1,108 @@
+MPI support enabled
+Starting 4 MPI processes
+Volume 8 x 8 x 24 x , total 1536
+iterations 200000, measurement interval 10, checkpoint interval 10000
+-------------------------- Lattice parameters --------------------------
+SU(2) beta 8.0
+msq (Higgs) -0.107404, lambda (Higgs) 0.019150, initial phi0 0.20
+
+Processor layout: 1 x 1 x 4
+Sites on each node: 8 x 8 x 6 = 384.
+Each node needs 416 additional halo sites (self halos to be removed).
+Allocated memory for lookup tables.
+All tests OK! Time taken: 0.000628 seconds.
+Initialization done! Took 0.024547 seconds.
+Allocated memory for fields.
+SU(2) links set to unity.
+
+Starting simulation!
+
+Checkpointing at iteration 10000. Total time so far: 22.5s, of which 40.10% comms.
+
+-- Acceptance rates --
+	Higgs 1924583/3839616 (50.12%),  
+
+Checkpointing at iteration 20000. Total time so far: 40.5s, of which 33.55% comms.
+
+-- Acceptance rates --
+	Higgs 3848190/7679616 (50.11%),  
+
+Checkpointing at iteration 30000. Total time so far: 61.9s, of which 34.98% comms.
+
+-- Acceptance rates --
+	Higgs 5770484/11519616 (50.09%),  
+
+Checkpointing at iteration 40000. Total time so far: 82.4s, of which 34.61% comms.
+
+-- Acceptance rates --
+	Higgs 7694325/15359616 (50.09%),  
+
+Checkpointing at iteration 50000. Total time so far: 99.9s, of which 32.77% comms.
+
+-- Acceptance rates --
+	Higgs 9615882/19199616 (50.08%),  
+
+Checkpointing at iteration 60000. Total time so far: 124.1s, of which 34.88% comms.
+
+-- Acceptance rates --
+	Higgs 11539006/23039616 (50.08%),  
+
+Checkpointing at iteration 70000. Total time so far: 141.8s, of which 33.72% comms.
+
+-- Acceptance rates --
+	Higgs 13462628/26879616 (50.08%),  
+
+Checkpointing at iteration 80000. Total time so far: 160.1s, of which 32.99% comms.
+
+-- Acceptance rates --
+	Higgs 15385829/30719616 (50.08%),  
+
+Checkpointing at iteration 90000. Total time so far: 181.6s, of which 33.61% comms.
+
+-- Acceptance rates --
+	Higgs 17307456/34559616 (50.08%),  
+
+Checkpointing at iteration 100000. Total time so far: 199.1s, of which 32.81% comms.
+
+-- Acceptance rates --
+	Higgs 19230653/38399616 (50.08%),  
+
+Checkpointing at iteration 110000. Total time so far: 221.2s, of which 33.50% comms.
+
+-- Acceptance rates --
+	Higgs 21153562/42239616 (50.08%),  
+
+Checkpointing at iteration 120000. Total time so far: 238.4s, of which 32.72% comms.
+
+-- Acceptance rates --
+	Higgs 23076657/46079616 (50.08%),  
+
+Checkpointing at iteration 130000. Total time so far: 256.5s, of which 32.32% comms.
+
+-- Acceptance rates --
+	Higgs 24999342/49919616 (50.08%),  
+
+Checkpointing at iteration 140000. Total time so far: 278.5s, of which 32.85% comms.
+
+-- Acceptance rates --
+	Higgs 26924376/53759616 (50.08%),  
+
+Checkpointing at iteration 150000. Total time so far: 296.0s, of which 32.30% comms.
+
+-- Acceptance rates --
+	Higgs 28846574/57599616 (50.08%),  
+
+Checkpointing at iteration 160000. Total time so far: 317.0s, of which 32.59% comms.
+
+-- Acceptance rates --
+	Higgs 30770349/61439616 (50.08%),  
+
+Checkpointing at iteration 170000. Total time so far: 336.0s, of which 32.47% comms.
+
+-- Acceptance rates --
+	Higgs 32693513/65279616 (50.08%),  
+
+Checkpointing at iteration 180000. Total time so far: 354.2s, of which 32.21% comms.
+
+-- Acceptance rates --
+	Higgs 34615006/69119616 (50.08%),  

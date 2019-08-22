@@ -1,0 +1,63 @@
+# Ordering does not matter in this file. 
+# Spacetime dimension is read from dim 
+# and lattice lengths in each direction are read from labels L1, L2, ...
+# program returns error if the number of L's does not match dim
+
+
+# lattice dimensions
+
+dim 3
+
+L1 8
+L2 8
+L3 8
+
+# iterations
+iterations 50000
+
+# how often to write measurements
+interval 10
+
+# how often to write lattice configuration to file 
+checkpoint 5000
+
+# parameters
+
+# gauge couplings
+betasu2 4.0
+
+# doublet
+msq -1.1986235604954407
+lambda 0.3628520951112565
+
+# triplet
+msq_triplet -3.9661508841326225
+b4 2.2761943780999343
+a2 0.13
+
+# initial values for fields
+phi0 1.0
+sigma0 1.0 
+
+# random number seed
+seed time
+
+# where results are written
+resultsfile measure
+
+### update algorithms
+
+# SU(2) links: metropolis or heatbath
+algorithm_su2link heatbath
+# SU(2) doublets: metropolis or overrelax
+algorithm_su2doublet metropolis
+# SU(2) triplet: metropolis or overrelax
+algorithm_su2triplet metropolis
+
+# where to store the lattice at the end
+latticefile lattice
+
+# how many times per sweep to update the two fields
+update_doublet 1
+update_triplet 1
+

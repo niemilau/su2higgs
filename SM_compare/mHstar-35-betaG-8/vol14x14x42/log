@@ -1,0 +1,88 @@
+MPI support enabled
+Starting 4 MPI processes
+Volume 14 x 14 x 42 x , total 8232
+iterations 1000000, measurement interval 100, checkpoint interval 100000
+-------------------------- Lattice parameters --------------------------
+SU(2) beta 8.0
+msq (Higgs) -0.207404, lambda (Higgs) 0.009150, initial phi0 0.20
+
+Multicanonical order parameter: phi^2
+Processor layout: 2 x 1 x 2
+Sites on each node: 7 x 14 x 21 = 2058.
+Each node needs 1254 additional halo sites (self halos to be removed).
+Allocated memory for lookup tables.
+All tests OK! Time taken: 0.002870 seconds.
+Initialization done! Took 0.067200 seconds.
+Allocated memory for fields.
+
+Loading weightfile: weight
+Unable to access weightfile!!
+Initialized new weight 
+readonly not 0, so multicanonical weight WILL be modified!
+
+Starting simulation!
+
+Reducing weight update factor! Now 0.333333 
+
+Checkpointing at iteration 100000. Total time: 804.7s, 14.94% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.31%, multicanonical 92.23%,  
+
+Checkpointing at iteration 200000. Total time: 1604.4s, 14.85% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.32%, multicanonical 92.24%,  
+
+Reducing weight update factor! Now 0.222222 
+
+Checkpointing at iteration 300000. Total time: 2401.6s, 14.74% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.82%, Higgs Metropolis 50.33%, multicanonical 91.89%,  
+
+Reducing weight update factor! Now 0.148148 
+
+Reducing weight update factor! Now 0.098765 
+
+Checkpointing at iteration 400000. Total time: 3209.6s, 14.86% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.83%, Higgs Metropolis 50.34%, multicanonical 91.56%,  
+
+Reducing weight update factor! Now 0.065844 
+MPI support enabled
+Starting 4 MPI processes
+Volume 14 x 14 x 42 x , total 8232
+iterations 1000000, measurement interval 100, checkpoint interval 100000
+-------------------------- Lattice parameters --------------------------
+SU(2) beta 8.0
+msq (Higgs) -0.207404, lambda (Higgs) 0.009150, initial phi0 0.20
+
+Multicanonical order parameter: phi^2
+Processor layout: 2 x 1 x 2
+Sites on each node: 7 x 14 x 21 = 2058.
+Each node needs 1254 additional halo sites (self halos to be removed).
+Allocated memory for lookup tables.
+All tests OK! Time taken: 0.002301 seconds.
+Initialization done! Took 0.052063 seconds.
+Allocated memory for fields.
+
+Loading weightfile: weight
+Starting with weight increment 0.065844, last_max 1
+readonly not 0, so multicanonical weight WILL be modified!
+
+Starting simulation!
+
+Reducing weight update factor! Now 0.043896 
+
+Reducing weight update factor! Now 0.029264 
+
+Reducing weight update factor! Now 0.019509 
+
+Reducing weight update factor! Now 0.013006 
+
+Checkpointing at iteration 100000. Total time: 692.7s, 16.62% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.84%, Higgs Metropolis 50.35%, multicanonical 91.00%,  

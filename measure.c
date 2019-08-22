@@ -10,32 +10,28 @@
 
 #include "su2.h"
 
-
 /* Print data labels for measurements (into a separate file for now)
 */
 void print_labels() {
 	FILE* f = fopen("labels", "w+");
-	int k=1;
-	while (1==1) {
-		fprintf(f, "%d action\n", k); k++;
-		fprintf(f, "%d SU(2) Wilson\n", k); k++;
-		#ifdef HIGGS
-			fprintf(f, "%d hopping_phi\n", k); k++;
-			fprintf(f, "%d phi^2\n", k); k++;
-			fprintf(f, "%d phi^4\n", k); k++;
-		#endif
-		#ifdef TRIPLET
-			fprintf(f, "%d hopping_Sigma\n", k); k++;
-			fprintf(f, "%d Sigma^2\n", k); k++;
-			fprintf(f, "%d Sigma^4\n", k); k++;
-		#endif
-		#if defined HIGGS && defined TRIPLET
-			fprintf(f, "%d phi^2 Sigma^2\n", k); k++;
-		#endif
 
-		break;
-	}
-
+	int k = 1;
+	fprintf(f, "%d weight\n", k); k++; // multicanonical weight
+	fprintf(f, "%d action\n", k); k++;
+	fprintf(f, "%d SU(2) Wilson\n", k); k++;
+	#ifdef HIGGS
+		fprintf(f, "%d hopping_phi\n", k); k++;
+		fprintf(f, "%d phi^2\n", k); k++;
+		fprintf(f, "%d phi^4\n", k); k++;
+	#endif
+	#ifdef TRIPLET
+		fprintf(f, "%d hopping_Sigma\n", k); k++;
+		fprintf(f, "%d Sigma^2\n", k); k++;
+		fprintf(f, "%d Sigma^4\n", k); k++;
+	#endif
+	#if defined HIGGS && defined TRIPLET
+		fprintf(f, "%d phi^2 Sigma^2\n", k); k++;
+	#endif
 
 	fclose(f);
 }
@@ -44,12 +40,12 @@ void print_labels() {
 /* Measure observables and write them to file.
 *
 */
-void measure(fields f, params p, counters* c) {
+void measure(fields f, params p, counters* c, weight* w) {
 
 	double start, end, time;
 
 	// observables that we want to measure, plus variables for their MPI reduced versions
-	
+
 	double action = 0.0, action_tot;
 	double wilson = 0.0, wilson_tot;
 	// Higgs doublet:
@@ -90,12 +86,20 @@ void measure(fields f, params p, counters* c) {
 				hopping_Sigma += hopping_triplet_forward(f, p, i, dir);
 			}
 		#endif
-
 	}
-	
-	// combine results from all nodes. Should we be worried about double overflow here if the lattice is very large?
+
+	// combine results from all nodes.
 	start = clock();
-	
+
+	double weight = 0.0; // if not multicanonical, just use zero weight
+	if (p.multicanonical) {
+		double muca_param = calc_orderparam(p, f);
+		weight = get_weight(*w, muca_param);
+	}
+	// our muca action is S' = S + W, but Kari uses S = S - W.
+	// store weight with a minus sign here to ensure compability with Kari's tools
+	weight = -1.0 * weight;
+
 	action_tot = reduce_sum(action);
 	wilson_tot = reduce_sum(wilson);
 	#ifdef HIGGS
@@ -111,14 +115,15 @@ void measure(fields f, params p, counters* c) {
 		phi2Sigma2_tot = reduce_sum(phi2Sigma2);
 		#endif
 	#endif
-	
-	
+
+
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	c->comms_time += time;
-	
+
 	// write to resultsfile. This is very fast performance wise
 	if (!p.rank) {
+		fprintf(p.resultsfile, "%g ", weight);
 		fprintf(p.resultsfile, "%g %g ",
 			action_tot, wilson_tot/((double)p.vol) );
 		#ifdef HIGGS
@@ -144,7 +149,7 @@ void measure(fields f, params p, counters* c) {
 
 
 /* Calculate local action for the system at site i.
-*	The construction is so that a loop over i gives the total action. 
+*	The construction is so that a loop over i gives the total action.
 */
 double action_local(fields f, params p, long i) {
 

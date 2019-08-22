@@ -29,9 +29,17 @@ typedef unsigned short ushort;
 #define EVEN 0
 #define ODD 1
 
+// multicanonical order parameters
+#define PHISQ 1
+#define PHI2SIGMA2
+
 // nasty global...
 double waittime;
 
+// general multipurpose struct params.
+// Multicanonical can modify the lattice parameters (redefine to include weight),
+// so this should be passed by reference. TODO make a separate lattice structure
+// that contains the layouting
 typedef struct {
 	// layout parameters for MPI
 	int rank, size;
@@ -55,6 +63,7 @@ typedef struct {
 
 	// parity of a site is EVEN if the physical index x+y+z+... is even, ODD otherwise
 	char *parity;
+	long evensites, oddsites;
 
 	// max iterations etc
 	long iterations;
@@ -81,13 +90,6 @@ typedef struct {
 	double phi0; // doublet
 	double sigma0; // triplet
 
-	// Stuff to measure
-	double current_action;
-	double current_wilson;
-	double current_doublet2;
-	double current_doublet4;
-	double current_hopping_doublet;
-
 	// How to update the fields
 	short algorithm_su2link;
 	short algorithm_su2doublet;
@@ -96,10 +98,13 @@ typedef struct {
 	// How many times to update a field per sweep
 	short update_su2doublet;
 	short update_su2triplet;
+	short globalradial;
 
 } params;
 
 
+// Field structure. Note that this can safely be passed by value to updating functions
+// after the contents have been alloc'd
 typedef struct {
 
 	//double *su2singlet;
@@ -115,33 +120,38 @@ typedef struct {
 	double comms_time;
 
 	// count metropolis updates
-	long total_su2link;
-	long total_doublet;
-	long total_triplet;
-	long accepted_su2link;
-	long accepted_doublet;
-	long accepted_triplet;
+	long total_su2link, accepted_su2link;
+	long total_doublet, accepted_doublet;
+	long total_triplet, accepted_triplet;
 	// count overrelax updates
-	long acc_overrelax_doublet;
-	long total_overrelax_doublet;
-	long acc_overrelax_triplet;
-	long total_overrelax_triplet;
+	long total_overrelax_doublet, acc_overrelax_doublet;
+	long total_overrelax_triplet, acc_overrelax_triplet;
+
+	long total_muca, accepted_muca;
 } counters;
 
 
-// multicanonical weight:
+// multicanonical weight
 typedef struct {
+	int orderparam;
 	long bins;
 	double min, max;
 	double dbin; // size (width) of one bin
 	double* pos; // weight "position", i.e. values of the order param in the given range
 	double* W; // value of the weight function at each position
 	double increment; // how much the weight is increased after visiting a bin
-	int* visited; // keep track of which bins we have visited
-	long visited_total;
+	double outsideW_min, outsideW_max; // weight values outside binning range
+
+	int* hits; // keep track of which bins we have visited
+	int update_interval; // how many measurements until weight is updated
+	int m; // current number of measurements (resets after weight update)
+
+ 	int last_max; // 1 if system was recently in one of the last bins (keep track of tunneling)
 	char readonly;
+	char absolute_bounds; // if 1, uses infinite weight outside binning range
 	char weightfile[100];
 } weight;
+
 
 // comms.c (move elsewhere later?)
 void make_comlists(params *p, comlist_struct *comlist, long** xphys);
@@ -149,6 +159,10 @@ void reorder_sitelist(params* p, sendrecv_struct* sr);
 void find_max_sendrecv(comlist_struct* comlist);
 void reorder_comlist(params* p, comlist_struct* comlist);
 double reduce_sum(double res);
+double allreduce(double res);
+void bcast_int(int *res);
+void bcast_long (long *res);
+void bcast_double(double *res);
 // gauge links:
 double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
 #ifdef MPI
@@ -221,21 +235,22 @@ double localact_triplet(fields f, params p, long i);
 
 // metropolis.c
 int metro_su2link(fields f, params p, long i, int dir);
-int metro_doublet(fields f, params p, long i, int transverse);
-int metro_triplet(fields f, params p, long i, int transverse);
+int metro_doublet(fields f, params p, long i);
+int metro_triplet(fields f, params p, long i);
 
 // heatbath.c
 int heatbath_su2link(fields f, params p, long i, int dir);
 
 // overrelax.c
+double polysolve3(long double a, long double b, long double c, long double d);
 int overrelax_doublet(fields f, params p, long i);
 int overrelax_triplet(fields f, params p, long i);
 
 // update.c
-void update_lattice(fields f, params p, comlist_struct comlist, counters* c, char metro);
+void update_lattice(fields f, params p, comlist_struct* comlist, weight* w, counters* c, char metro);
 void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, int dir);
-void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro, char transverse);
-void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro, char transverse);
+void checkerboard_sweep_su2doublet(fields f, params p, weight* w, counters* c, char parity, char metro);
+void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro);
 
 // init.c
 void setsu2(fields f, params p);
@@ -245,20 +260,31 @@ void setdoublets(fields f, params p);
 void settriplets(fields f, params p);
 void init_counters(counters* c);
 
+// checkpoint.c
+void print_acceptance(params p, counters c);
+
 // parameters.c
 void get_parameters(char *filename, params *p);
 void get_weight_parameters(char *filename, params *p, weight* w);
 void print_parameters(params p);
+void read_updated_parameters(char *filename, params *p);
 
 
 // measure.c
-void measure(fields f, params p, counters* c);
+void measure(fields f, params p, counters* c, weight* w);
 double action_local(fields f, params p, long i);
 void print_labels();
 
 // multicanonical.c
 void load_weight(params p, weight *w);
 void save_weight(params p, weight w);
-void update_weight(weight* w, long bin);
+double get_weight(weight w, double val);
+void update_weight(params p, weight* w);
+int multicanonical_acceptance(params p, weight* w, double oldval, double newval);
+long whichbin(weight w, double val);
+double calc_orderparam(params p, fields f);
+void measure_muca(params p, fields f, weight* w);
+void check_tunnel(params p, weight *w);
+void free_muca_arrays(weight *w);
 
 #endif

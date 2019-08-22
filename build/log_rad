@@ -1,0 +1,103 @@
+MPI support enabled
+Starting 4 MPI processes
+Volume 10 x 10 x 10 x , total 1000
+iterations 200000, measurement interval 10, checkpoint interval 10000
+-------------------------- Lattice parameters --------------------------
+SU(2) beta 8.0
+msq (Higgs) -0.107404, lambda (Higgs) 0.029150, initial phi0 0.20
+
+Processor layout: 2 x 2 x 1
+Sites on each node: 5 x 5 x 10 = 250.
+Each node needs 338 additional halo sites (self halos to be removed).
+Allocated memory for lookup tables.
+All tests OK! Time taken: 0.002606 seconds.
+Initialization done! Took 0.023692 seconds.
+Allocated memory for fields.
+SU(2) links set to unity.
+
+Starting simulation!
+
+Checkpointing at iteration 10000. Total time so far: 13.9s, of which 33.35% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 1988823/2000000 (99.44%), Higgs Metropolis 250398/499750 (50.10%), Higgs radial 8269/9999 (82.70%),  
+
+Checkpointing at iteration 20000. Total time so far: 28.4s, of which 35.30% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 3977804/4000000 (99.45%), Higgs Metropolis 501073/999750 (50.12%), Higgs radial 16444/19999 (82.22%),  
+
+Checkpointing at iteration 30000. Total time so far: 41.8s, of which 34.28% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 5966522/6000000 (99.44%), Higgs Metropolis 751228/1499750 (50.09%), Higgs radial 24698/29999 (82.33%),  
+
+Checkpointing at iteration 40000. Total time so far: 55.9s, of which 34.61% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 7955306/8000000 (99.44%), Higgs Metropolis 1001920/1999750 (50.10%), Higgs radial 32941/39999 (82.35%),  
+
+Checkpointing at iteration 50000. Total time so far: 73.7s, of which 37.60% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 9944076/10000000 (99.44%), Higgs Metropolis 1252472/2499750 (50.10%), Higgs radial 41187/49999 (82.38%),  
+
+Checkpointing at iteration 60000. Total time so far: 88.4s, of which 37.56% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 11932733/12000000 (99.44%), Higgs Metropolis 1503245/2999750 (50.11%), Higgs radial 49420/59999 (82.37%),  
+
+Checkpointing at iteration 70000. Total time so far: 102.7s, of which 37.42% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 13921316/14000000 (99.44%), Higgs Metropolis 1753951/3499750 (50.12%), Higgs radial 57681/69999 (82.40%),  
+
+Checkpointing at iteration 80000. Total time so far: 118.5s, of which 38.01% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 15910120/16000000 (99.44%), Higgs Metropolis 2004182/3999750 (50.11%), Higgs radial 65932/79999 (82.42%),  
+
+Checkpointing at iteration 90000. Total time so far: 136.0s, of which 39.01% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 17898961/18000000 (99.44%), Higgs Metropolis 2255003/4499750 (50.11%), Higgs radial 74215/89999 (82.46%),  
+
+Checkpointing at iteration 100000. Total time so far: 150.4s, of which 38.72% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 19887711/20000000 (99.44%), Higgs Metropolis 2505528/4999750 (50.11%), Higgs radial 82523/99999 (82.52%),  
+
+Checkpointing at iteration 110000. Total time so far: 163.8s, of which 38.21% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 21876506/22000000 (99.44%), Higgs Metropolis 2755599/5499750 (50.10%), Higgs radial 90782/109999 (82.53%),  
+
+Checkpointing at iteration 120000. Total time so far: 180.0s, of which 38.59% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 23865269/24000000 (99.44%), Higgs Metropolis 3006200/5999750 (50.11%), Higgs radial 99001/119999 (82.50%),  
+
+Checkpointing at iteration 130000. Total time so far: 193.7s, of which 38.24% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 25853968/26000000 (99.44%), Higgs Metropolis 3256661/6499750 (50.10%), Higgs radial 107182/129999 (82.45%),  
+
+Checkpointing at iteration 140000. Total time so far: 208.2s, of which 38.14% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 27842766/28000000 (99.44%), Higgs Metropolis 3507254/6999750 (50.11%), Higgs radial 115407/139999 (82.43%),  
+
+Checkpointing at iteration 150000. Total time so far: 226.2s, of which 38.81% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 29831466/30000000 (99.44%), Higgs Metropolis 3757246/7499750 (50.10%), Higgs radial 123667/149999 (82.45%),  
+
+Checkpointing at iteration 160000. Total time so far: 239.9s, of which 38.50% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 31820192/32000000 (99.44%), Higgs Metropolis 4007680/7999750 (50.10%), Higgs radial 131839/159999 (82.40%),  
+
+Checkpointing at iteration 170000. Total time so far: 254.5s, of which 38.37% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 33808978/34000000 (99.44%), Higgs Metropolis 4257746/8499750 (50.09%), Higgs radial 140143/169999 (82.44%),  

@@ -1,27 +1,23 @@
-# Ordering does not matter in this file. 
-# Spacetime dimension is read from dim 
-# and lattice lengths in each direction are read from labels L1, L2, ...
-# program returns error if the number of L's does not match dim
+# Ordering does not matter in this file! 
 
-
-# lattice dimensions (use even numbers to ensure checkerboard layout works)
-
+# Euclidian dimensions
 dim 3
 
-L1 16
-L2 16
-L3 16
+# size in each direction (preferably even numbers)
+L1 10
+L2 10
+L3 30
 
 # iterations
-iterations 30000
+iterations 1000000
 
 # how often to write measurements
 interval 10
 
 # how often to write lattice configuration to file 
-checkpoint 5000
+checkpoint 1000
 
-# perform initial sensibility checks on lattice layout?
+# perform initial sanity checks on lattice layout?
 run_checks 1
 
 # where results are written
@@ -30,23 +26,20 @@ resultsfile measure
 # parameters
 
 # gauge couplings
-betasu2 12.0
+betasu2 8.0
 
 # doublet
-msq 0.1
-lambda 0.0395911
+msq -0.207404
+lambda 0.00915047
 
 # triplet
 msq_triplet 0.2
-b4 0.02
-a2 0.01
+b4 0.2
+a2 0.1
 
 # initial values for fields
-phi0 1.0
-sigma0 1.0 
-
-# random number seed
-seed time
+phi0 0.2
+sigma0 0.2 
 
 
 ### update algorithms
@@ -65,3 +58,22 @@ latticefile lattice
 update_doublet 1
 update_triplet 1
 
+### multicanonical
+multicanonical 1
+bins 80
+min 0.505
+max 3.1
+# where to store the weight?
+weightfile weight
+# set infinite weight outside the binning range? 
+absolute_bounds 0
+
+# order parameter for multicanonical. These need to be implemented manually case by case.
+# currently implemented: phisq, phi2Sigma2
+orderparam phisq
+
+# update weight on the go?
+readonly 0
+
+# initial weight update factor (if weight exists, uses the value there instead)
+increment 0.5

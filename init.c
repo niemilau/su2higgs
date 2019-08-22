@@ -10,56 +10,6 @@
 #include "su2.h"
 
 
-
-/*
-* Function that loops over the lattice index and stores the neighboring site indices
-* of each site into p.next and p.prev. Also calculate parity for the sites.
-*/
-/* OUTDATED
-void calculate_neighbors(params* p) {
-
-	uint* x = malloc(p->dim * sizeof(x));
-
-	if (!p->rank)
-		printf("Constructing lookup table for lattice sites...\n");
-
-	for (long i=0; i<p->vol; i++) {
-
-		// get the physical coordinates of site i and store in x
-		indexToCoords(*p, i, x);
-		// calculate and store the parity of site i
-		uint coord = 0;
-		for (int j=0; j<p->dim; j++) {
-			coord += x[j];
-		}
-		p->parity[i] = coord % 2;
-
-
-		for (int dir=0; dir < p->dim; dir++) {
-			x[dir]++;
-			p->next[i][dir] = coordsToIndex(*p,x);
-			x[dir] -= 2;
-			p->prev[i][dir] = coordsToIndex(*p,x);
-			// return to the original value
-			x[dir]++;
-		}
-
-		#ifdef DEBUG
-		if (i != coordsToIndex(*p, x)) {
-			printf("Sanity check failed for site i = %lu!! Coordinates do not reproduce the correct site index!\n", i);
-		}
-		#endif
-	}
-
-	free(x);
-	if (!p->rank)
-		printf("Lookup table constructed succesfully.\n");
-}
-
-*/
-
-
-
 /*
 ****************** Field initializations ******************
 */
@@ -75,8 +25,6 @@ void setsu2(fields f, params p) {
 			f.su2link[i][dir][3] = 0.0;
 		}
 	}
-	if (!p.rank)
-		printf("SU(2) links set to unity.\n");
 }
 
 /* generate a random SU(2) matrix and store it in the argument
@@ -134,11 +82,11 @@ void setfields(fields f, params p) {
 }
 
 
-// Initialize accept/reject counters and time 
+// Initialize accept/reject counters and time
 void init_counters(counters* c) {
-	
-	c->comms_time = 0.0; 
-	
+
+	c->comms_time = 0.0;
+
 	c->accepted_su2link = 0;
 	c->accepted_doublet = 0;
 	c->accepted_triplet = 0;
@@ -149,4 +97,6 @@ void init_counters(counters* c) {
 	c->total_triplet = 0;
 	c->total_overrelax_doublet = 0;
 	c->total_overrelax_triplet = 0;
+	c->accepted_muca = 0;
+	c->total_muca = 0;
 }
