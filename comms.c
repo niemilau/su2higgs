@@ -49,7 +49,6 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 		siterank[i] = coordsToRank(*p, xphys[i]);
 	}
 
-
 	// allocate enough memory to host all needed receive structs, realloc later
 	// note that comlist->recv_from itself is a pointer to sendrecv_struct
 	comlist->recv_from = malloc(MAXNODES * sizeof(*(comlist->recv_from)));
@@ -136,7 +135,7 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 	for (k=0; k<nn; k++) {
 		recv = &(comlist->recv_from[k]);
 
-		// alloc list of sites in sendrecv_struct, realloc later (best to do this before MPI comms).
+		// alloc list of sites in sendrecv_struct, realloc later
 		comlist->send_to[k].sitelist = malloc(p->halos * sizeof(*(comlist->send_to[k].sitelist)));
 
 		buf[k] = alloc_latticetable(p->dim, maxindex);
@@ -164,11 +163,9 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 		send->odd = 0;
 
 		// request xphys from the receiving node
-		//printf("Node %d: Requesting xphys from node %d\n", p->rank, recv->node);
+		
 		// blocking receive here
-
 		MPI_Recv(&(xphys_nn[0][0]), size, MPI_LONG, recv->node, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		//printf("Node %d: Received xphys from node %d\n", p->rank, recv->node);
 
 		int match;
 		// find matching site in both nodes, and their indices.
@@ -195,7 +192,7 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 					* Note that since we loop over their xphys (j loop) in the SAME order as
 					* when we constructed sitelist for THEIR recv_from, we automatically get the
 					* sends in the same order as their receives!
-					* (apart from parity ordering, which is done later and does not reorder even/odd sites among themselves).
+					* (apart from parity ordering, which does not reorder even/odd sites among themselves).
 					* NB! Since the same site in our node may map onto many halo sites in their node, we may end up sending the same
 					* site multiple times. For optimization, we could implement this in receive structures instead...
 					*/
@@ -209,8 +206,6 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 
 	} // end k
 
-	// largest number of sites we have to send/receive with at once? (not used...)
-	find_max_sendrecv(comlist);
 
 	// wait for sends to finish and free buffer (MPI_Wait also frees request)
 	for (k=0; k<nn; k++) {
@@ -581,27 +576,6 @@ void reorder_comlist(params* p, comlist_struct* comlist) {
 
 }
 
-
-/* Quick routine for finding the largest amount of sites
-* we have to send at once. NOT USED ATM
-*/
-void find_max_sendrecv(comlist_struct* comlist) {
-	long max = 0;
-	sendrecv_struct* send;
-	sendrecv_struct* recv;
-	for (int k=0; k<comlist->neighbors; k++) {
-		send = &(comlist->send_to[k]);
-		recv = &(comlist->recv_from[k]);
-		if (send->sites > max) {
-			max = send->sites;
-		}
-		if (recv->sites > max) {
-			max = recv->sites;
-		}
-
-	}
-	comlist->max_sendrecv = max;
-}
 
 /* Test halo send and receive (specifically update_gaugehalo())
 * This routine first checks that individual parity EVEN or ODD updates

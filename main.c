@@ -37,6 +37,11 @@ int main(int argc, char *argv[]) {
 	p.size = 1;
 	#endif
 
+	// set RNG seed: different for each node!
+	start_time = clock();
+	long seed = (long) (start_time/2.0) * p.rank;
+	srand48(seed);
+
 	// read in the config file.
 	// This needs to be done before allocating anything since we don't know the dimensions otherwise
 	get_parameters(argv[1], &p);
@@ -120,10 +125,10 @@ int main(int argc, char *argv[]) {
 				print_acceptance(p, c);
 			}
 
-		// update max iterations if the config file has been changed by the user
-		get_parameters(argv[1], &p);
-
+			// update max iterations if the config file has been changed by the user
+			read_updated_parameters(argv[1], &p);
 		} // end checkpoint
+
 		if (iter % metro_interval == 0) {
 			metro = 1;
 		} else {

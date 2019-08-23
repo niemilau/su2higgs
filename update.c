@@ -18,19 +18,24 @@
 * for the loop, but it did not result in consistent improvement in computation time in short test runs...
 */
 void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, int dir) {
+	// EVEN sites come before ODD 
+	long offset, max;
+	if (parity == EVEN) {
+		offset = 0; max = p.evensites;
+	} else {
+		offset = p.evensites; max = p.sites;
+	}
 
-	for (long i=0; i<p.sites; i++) {
-		if (p.parity[i] == parity) {
-			if (p.algorithm_su2link == HEATBATH) {
-				c->accepted_su2link += heatbath_su2link(f, p, i, dir);
-				c->total_su2link++;
-			} else if (p.algorithm_su2link == METROPOLIS) {
-				c->accepted_su2link += metro_su2link(f, p, i, dir);
-				c->total_su2link++;
-			}
-
+	for (long i=offset; i<max; i++) {
+		if (p.algorithm_su2link == HEATBATH) {
+			c->accepted_su2link += heatbath_su2link(f, p, i, dir);
+			c->total_su2link++;
+		} else if (p.algorithm_su2link == METROPOLIS) {
+			c->accepted_su2link += metro_su2link(f, p, i, dir);
+			c->total_su2link++;
 		}
 	}
+	
 }
 
 
@@ -66,18 +71,22 @@ void checkerboard_sweep_su2doublet(fields f, params p, weight* w, counters* c, c
 			}
 		}
 	}
+	
+	long offset, max;
+	if (parity == EVEN) {
+		offset = 0; max = p.evensites;
+	} else {
+		offset = p.evensites; max = p.sites;
+	}
+	
+	for (long i=offset; i<max; i++) {
+		if (p.algorithm_su2doublet == OVERRELAX && (metro != 1)) {
+			c->acc_overrelax_doublet += overrelax_doublet(f, p, i);
+			c->total_overrelax_doublet++;
 
-	for (long i=0; i<p.sites; i++) {
-		if (p.parity[i] == parity) {
-			if (p.algorithm_su2doublet == OVERRELAX && (metro != 1)) {
-				c->acc_overrelax_doublet += overrelax_doublet(f, p, i);
-				c->total_overrelax_doublet++;
-
-			} else if (p.algorithm_su2doublet == METROPOLIS || (metro == 1)) {
-				c->accepted_doublet += metro_doublet(f, p, i);
-				c->total_doublet++;
-
-			}
+		} else if (p.algorithm_su2doublet == METROPOLIS || (metro == 1)) {
+			c->accepted_doublet += metro_doublet(f, p, i);
+			c->total_doublet++;
 		}
 	}
 
@@ -114,24 +123,29 @@ void checkerboard_sweep_su2doublet(fields f, params p, weight* w, counters* c, c
 * Parity of a site is assumed to be stored in params.
 */
 void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro) {
-
-	for (long i=0; i<p.sites; i++) {
-		if (p.parity[i] == parity) {
-			if (p.algorithm_su2triplet == OVERRELAX && (metro != 1)) {
-				c->acc_overrelax_triplet += overrelax_triplet(f, p, i);
-				c->total_overrelax_triplet++;
-			} else if (p.algorithm_su2triplet == METROPOLIS || (metro == 1)) {
-				c->accepted_triplet += metro_triplet(f, p, i);
-				c->total_triplet++;
-			}
+	long offset, max;
+	if (parity == EVEN) {
+		offset = 0; max = p.evensites;
+	} else {
+		offset = p.evensites; max = p.sites;
+	}
+	
+	for (long i=offset; i<max; i++) {
+		if (p.algorithm_su2triplet == OVERRELAX && (metro != 1)) {
+			c->acc_overrelax_triplet += overrelax_triplet(f, p, i);
+			c->total_overrelax_triplet++;
+		} else if (p.algorithm_su2triplet == METROPOLIS || (metro == 1)) {
+			c->accepted_triplet += metro_triplet(f, p, i);
+			c->total_triplet++;
 		}
+	
 	}
 }
 
 
 /* Full update on all sites + halo communication.
 * Following, hep-lat/9804019, we first update the gauge links and then scalars.
-* Each link direction is updated separately, I.E. first dir1 with even and odd, 
+* Each link direction is updated separately, I.E. first dir1 with even and odd,
 * then dir2 etc. This is necessary because the links in "positive" directions are not independent
 * because of the Wilson staple, which for U_1(x) depends on U_2(x-i+j), for example.
 */
@@ -162,33 +176,11 @@ void update_lattice(fields f, params p, comlist_struct* comlist, weight* w, coun
 	for (int k=0; k<p.update_su2triplet; k++) {
 		checkerboard_sweep_su2triplet(f, p, c, EVEN, metro);
 		c->comms_time += update_halo(comlist, EVEN, f.su2triplet, SU2TRIP);
+
 		checkerboard_sweep_su2triplet(f, p, c, ODD, metro);
 		c->comms_time += update_halo(comlist, ODD, f.su2triplet, SU2TRIP);
 	}
 	#endif
-	
 
-	/*
-	// finish with a transverse (metro) update on the scalars, TEST
-	// NB no need for multicanonical acc/rej here, TODO
-	trans = 1;
-	metro = 1;
-	#ifdef HIGGS
-	for (int k=0; k<p.update_su2doublet; k++) {
-	 checkerboard_sweep_su2doublet(f, p, w, c, EVEN, metro, trans);
-	 c->comms_time += update_halo(&comlist, EVEN, f.su2doublet, SU2DB);
-	 checkerboard_sweep_su2doublet(f, p, w, c, ODD, metro, trans);
-	 c->comms_time += update_halo(&comlist, ODD, f.su2doublet, SU2DB);
-	}
-	#endif
-	#ifdef TRIPLET
-	for (int k=0; k<p.update_su2triplet; k++) {
-	 checkerboard_sweep_su2triplet(f, p, c, EVEN, metro, trans);
-	 c->comms_time += update_halo(&comlist, EVEN, f.su2triplet, SU2TRIP);
-	 checkerboard_sweep_su2triplet(f, p, c, ODD, metro, trans);
-	 c->comms_time += update_halo(&comlist, ODD, f.su2triplet, SU2TRIP);
-	}
-	#endif
-*/
 
 }

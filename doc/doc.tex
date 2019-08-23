@@ -248,12 +248,15 @@ For the histogram in Fig.~6 of Ref.~\cite{Kajantie:1995kf} (left figure), our la
 \label{eq:SM-inputs}
 \lambda = 0.00915047 \quad m^2_\text{\phi} = -0.207404.
 \end{align}
+Some histograms produced with my code using these inputs are shown in Fig.~\ref{fig:SM_hgrams}.
+
 \lauri{Note that David's code takes in $g = 0.707107$ instead of $\beta_G$. Note also that David's conversion.py script defined $a g^2 = 2/\beta_G$ instead of the usual $a g^2 = 4/\beta_G$, and correspondingly the Wilson term was normalized differently in the code. Now that we use the standard convention, the conversion script is outdated. }
 
 
-\begin{figure}[h]
-	\includegraphics[scale=0.5]{histogram_SM}
-	\caption{Histogram for the SM case with inputs as in Eq.~(\ref{eq:SM-inputs}), at volume $6^2 \times 18$. The separation of the peaks agrees well with Kari's histogram in Fig.~6 when the conversion of Eq~(\ref{eq:kari_fields}) is taken into account. For larger volumes, this point would be a good place to test the multicanonical update for the doublet.}
+\begin{figure}[H]
+	\includegraphics[scale=0.5]{hgrams_beta8_mH35}
+	\caption{Histograms for the SM case with inputs as in Eq.~(\ref{eq:SM-inputs}). The smallest volume was done without multicanonical. The histograms agree well with those in Fig.~6 of Ref.~\cite{Kajantie:1995kf}, although our normalization is still off here. Their $\beta_H = 0.3450806$ here, so converting their x-axis to ours using Eq~(\ref{eq:kari_fields}) we see that the peaks are located exactly as in their figure. }
+\label{fig:SM_hgrams}
 \end{figure}
 
 
@@ -264,7 +267,6 @@ For the right-hand side histogram in Fig.~6 of Ref.~\cite{Kajantie:1995kf}, the 
 \end{align}
 \lauri{For David's code again $g = 0.707107$.}
 
-The resulting histogram from David's code is shown in Fig.~\ref{fig:histogram_SM2} and is in perfect agreement with what they have, even without multicanonical weighting. We conclude that the SM-only part of the code works very well. 
 
 \begin{figure}[h]
 \label{fig:histogram_SM2}
@@ -455,7 +457,7 @@ Note that there are also contributions not proportional to $a_2$.
 	
 	\item Dimensions of spacetime and the lattice size are not fixed beforehand; they are to be read in from config. Our lattice is a $L_1 \times L_2 \times \dots \times L_n$ sized periodic hypercube. It is recommended to use even numbers for $L_i$; otherwise checkerboard updating is not well defined. 
 	
-	\item We use a single index $i$ to label lattice sites and use this index to access field values etc, instead of Cartesian $(x, y, z, \dots)$ coordinates (these are used in initial layouting). In short, sites are ordered so that the site at origin $(0, 0, 0, \dots)$ has $i = 0$ ("upper left corner"), next site in positive direction $1$ has $i = 1$ etc. When we reach last site in direction $1$, we move one step in direction $2$ and repeat, and so on. Neighbor sites are enumerated in lookup tables before starting the simulation. 
+	\item We use a single index $i$ to label lattice sites and use this index to access field values etc, instead of Cartesian $(x, y, z, \dots)$ coordinates (these are used in initial layouting). In short, sites are ordered so that the site at origin $(0, 0, 0, \dots)$ has $i = 0$ ("upper left corner"), next site in positive direction $1$ has $i = 1$ etc. When we reach last site in direction $1$, we move one step in direction $2$ and repeat, and so on. Neighbor sites are stored in lookup tables before starting the simulation. \textbf{Update 23.8.2019:} Added routines in layout.c to further reorder the sites by parity. This allows for more optimized update sweeps (in quick test runs the improvement was $20\%$!). The full ordering using this option is: 1. even sites 2. odd sites 3. even halos 4. odd halos. To do: check if memory configuration could be optimized as well with parity ordering.
 	
 	\item Fields are dynamic arrays of doubles (double*, double**, double***) that are accessed as field[site index][direction][component] for gauge links, field[site index][component] for non-gauge fields. Gauge singlets are simply field[site]. Memory for fields is allocated contiguously. 
 	

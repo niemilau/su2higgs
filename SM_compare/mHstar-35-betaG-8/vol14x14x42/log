@@ -1,7 +1,7 @@
 MPI support enabled
 Starting 4 MPI processes
 Volume 14 x 14 x 42 x , total 8232
-iterations 1000000, measurement interval 100, checkpoint interval 100000
+iterations 5000000, measurement interval 10, checkpoint interval 100000
 -------------------------- Lattice parameters --------------------------
 SU(2) beta 8.0
 msq (Higgs) -0.207404, lambda (Higgs) 0.009150, initial phi0 0.20
@@ -11,78 +11,82 @@ Processor layout: 2 x 1 x 2
 Sites on each node: 7 x 14 x 21 = 2058.
 Each node needs 1254 additional halo sites (self halos to be removed).
 Allocated memory for lookup tables.
-All tests OK! Time taken: 0.002870 seconds.
-Initialization done! Took 0.067200 seconds.
+All tests OK! Time taken: 0.000519 seconds.
+Initialization done! Took 0.019188 seconds.
 Allocated memory for fields.
 
 Loading weightfile: weight
-Unable to access weightfile!!
-Initialized new weight 
-readonly not 0, so multicanonical weight WILL be modified!
+Starting with weight increment 0.000226, last_max 1
+Read-only run, will not modify weight. 
 
 Starting simulation!
 
-Reducing weight update factor! Now 0.333333 
-
-Checkpointing at iteration 100000. Total time: 804.7s, 14.94% comms.
+Checkpointing at iteration 100000. Total time: 374.7s, 12.70% comms.
 
 -- Acceptance rates --
-	Higgs overrelax 99.81%, Higgs Metropolis 50.31%, multicanonical 92.23%,  
+	Higgs overrelax 99.83%, Higgs Metropolis 50.33%, multicanonical 89.42%,  
 
-Checkpointing at iteration 200000. Total time: 1604.4s, 14.85% comms.
-
--- Acceptance rates --
-	Higgs overrelax 99.81%, Higgs Metropolis 50.32%, multicanonical 92.24%,  
-
-Reducing weight update factor! Now 0.222222 
-
-Checkpointing at iteration 300000. Total time: 2401.6s, 14.74% comms.
+Checkpointing at iteration 200000. Total time: 731.8s, 11.01% comms.
 
 -- Acceptance rates --
-	Higgs overrelax 99.82%, Higgs Metropolis 50.33%, multicanonical 91.89%,  
+	Higgs overrelax 99.83%, Higgs Metropolis 50.34%, multicanonical 89.78%,  
 
-Reducing weight update factor! Now 0.148148 
-
-Reducing weight update factor! Now 0.098765 
-
-Checkpointing at iteration 400000. Total time: 3209.6s, 14.86% comms.
+Checkpointing at iteration 300000. Total time: 1096.2s, 10.95% comms.
 
 -- Acceptance rates --
-	Higgs overrelax 99.83%, Higgs Metropolis 50.34%, multicanonical 91.56%,  
+	Higgs overrelax 99.82%, Higgs Metropolis 50.33%, multicanonical 90.21%,  
 
-Reducing weight update factor! Now 0.065844 
-MPI support enabled
-Starting 4 MPI processes
-Volume 14 x 14 x 42 x , total 8232
-iterations 1000000, measurement interval 100, checkpoint interval 100000
--------------------------- Lattice parameters --------------------------
-SU(2) beta 8.0
-msq (Higgs) -0.207404, lambda (Higgs) 0.009150, initial phi0 0.20
-
-Multicanonical order parameter: phi^2
-Processor layout: 2 x 1 x 2
-Sites on each node: 7 x 14 x 21 = 2058.
-Each node needs 1254 additional halo sites (self halos to be removed).
-Allocated memory for lookup tables.
-All tests OK! Time taken: 0.002301 seconds.
-Initialization done! Took 0.052063 seconds.
-Allocated memory for fields.
-
-Loading weightfile: weight
-Starting with weight increment 0.065844, last_max 1
-readonly not 0, so multicanonical weight WILL be modified!
-
-Starting simulation!
-
-Reducing weight update factor! Now 0.043896 
-
-Reducing weight update factor! Now 0.029264 
-
-Reducing weight update factor! Now 0.019509 
-
-Reducing weight update factor! Now 0.013006 
-
-Checkpointing at iteration 100000. Total time: 692.7s, 16.62% comms.
+Checkpointing at iteration 400000. Total time: 1466.0s, 11.20% comms.
 
 -- Acceptance rates --
-	Higgs overrelax 99.84%, Higgs Metropolis 50.35%, multicanonical 91.00%,  
+	Higgs overrelax 99.82%, Higgs Metropolis 50.33%, multicanonical 90.42%,  
+
+Checkpointing at iteration 500000. Total time: 1839.1s, 11.44% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.32%, multicanonical 90.59%,  
+
+Checkpointing at iteration 600000. Total time: 2211.6s, 11.60% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.82%, Higgs Metropolis 50.32%, multicanonical 90.54%,  
+
+Checkpointing at iteration 700000. Total time: 2686.0s, 14.23% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.82%, Higgs Metropolis 50.32%, multicanonical 90.66%,  
+
+Checkpointing at iteration 800000. Total time: 3197.2s, 16.75% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.32%, multicanonical 90.69%,  
+
+Checkpointing at iteration 900000. Total time: 3676.4s, 18.12% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.32%, multicanonical 90.78%,  
+
+Checkpointing at iteration 1000000. Total time: 4107.7s, 18.49% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.31%, multicanonical 90.83%,  
+
+Checkpointing at iteration 1100000. Total time: 4906.2s, 22.85% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.31%, multicanonical 90.86%,  
+
+Checkpointing at iteration 1200000. Total time: 5361.3s, 23.00% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.31%, multicanonical 90.91%,  
+
+Checkpointing at iteration 1300000. Total time: 5804.8s, 23.02% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.32%, multicanonical 90.86%,  
+
+Checkpointing at iteration 1400000. Total time: 6333.3s, 23.71% comms.
+
+-- Acceptance rates --
+	Higgs overrelax 99.81%, Higgs Metropolis 50.32%, multicanonical 90.82%,  

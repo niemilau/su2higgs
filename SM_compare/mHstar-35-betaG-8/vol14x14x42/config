@@ -8,12 +8,12 @@
 
 dim 3
 
-L1 4
-L2 4
-L3 8
+L1 14
+L2 14
+L3 42
 
 # iterations
-iterations 1000000
+iterations 5000000
 
 # how often to write measurements
 interval 10
@@ -76,7 +76,7 @@ absolute_bounds 0
 orderparam phisq
 
 # update weight on the go?
-readonly 0
+readonly 1
 
 # initial weight update factor (if weight exists, uses the value there instead)
 increment 0.5

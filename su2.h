@@ -64,6 +64,9 @@ typedef struct {
 	// parity of a site is EVEN if the physical index x+y+z+... is even, ODD otherwise
 	char *parity;
 	long evensites, oddsites;
+	long evenhalos, oddhalos;
+	// in layout.c we reorder lattice sites so that EVEN sites come first. 
+	int reorder_parity; // for debugging purposes
 
 	// max iterations etc
 	long iterations;
@@ -156,7 +159,6 @@ typedef struct {
 // comms.c (move elsewhere later?)
 void make_comlists(params *p, comlist_struct *comlist, long** xphys);
 void reorder_sitelist(params* p, sendrecv_struct* sr);
-void find_max_sendrecv(comlist_struct* comlist);
 void reorder_comlist(params* p, comlist_struct* comlist);
 double reduce_sum(double res);
 double allreduce(double res);
@@ -184,6 +186,8 @@ void make_slices(params *p);
 void sitemap(params *p, long** xphys, long* newindex);
 void calculate_neighbors(params *p, long** xphys, long* newindex);
 void set_parity(params *p, long** xphys);
+void paritymap(params* p, long* newindex);
+void remap_lattice_arrays(params* p, long** xphys, long* newindex);
 long findsite(params p, long* x, long** xphys, int include_halos);
 void test_xphys(params p, long** xphys);
 void test_neighbors(params p, long** xphys);

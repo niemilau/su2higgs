@@ -45,10 +45,21 @@ void layout(params *p, comlist_struct *comlist) {
 	// construct lookup tables for site neighbors:
 	calculate_neighbors(p, xphys, newindex);
 
+	// self halo sites have now been completely removed
+
 	// site parity:
 	set_parity(p, xphys);
 
-
+	/* Do one last remapping of site indices. We want sites 
+	* with EVEN parity to come first, 
+	* then ODD, for both real and halo sites. Ordering is:
+	* 1. EVEN real 2. ODD real 3. EVEN halo 4. ODD halo. */
+	p->reorder_parity = 1;
+	if (p->reorder_parity) {
+		paritymap(p, newindex);
+		remap_lattice_arrays(p, xphys, newindex);
+	}
+	
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// construct communication tables
@@ -286,11 +297,10 @@ void sitemap(params *p, long** xphys, long* newindex) {
 	p->sites_total = p->sites + p->halos - selfhalos;
 
 
-	// Rearrange indices: non-halo sites should come before halos.
-	// In case of self halos, move those to the end.
-	long j = 0;
-	long k = 0;
-	long n = 0;
+	/* Rearrange indices: non-halo sites should come before halos.
+	* In case of self halos, move those to the end. */
+	
+	long n=0, k=0, j=0;
 	for (i=0; i<maxindex; i++) {
 		if (ishalo[i] && siterank[i] == p->rank) {
 			// self halo site, so map it to something we don't care about anymore (could also just realloc away)
@@ -321,7 +331,6 @@ void sitemap(params *p, long** xphys, long* newindex) {
 			xphys[newindex[i]][dir] = xphys_temp[i][dir];
 		}
 	}
-
 
 	// free temp arrays
 	free_latticetable(xphys_temp);
@@ -452,7 +461,8 @@ void calculate_neighbors(params *p, long** xphys, long* newindex) {
 }
 
 
-/* Set checkerboard parity for all sites (excl. self halos).
+/* Set checkerboard parity for all sites (excl. self halos,
+* which are assumed to be mapped out already).
 * Parity of a site is defined to be EVEN if the sum of
 * its physical coordinates x + y + z + ... is an even number,
 * ODD otherwise. These are chars defined in a header file (where?)
@@ -460,10 +470,11 @@ void calculate_neighbors(params *p, long** xphys, long* newindex) {
 void set_parity(params *p, long** xphys) {
 
 	long tot;
-	p->evensites = 0;
-	p->oddsites = 0;
-
-	for (long i=0; i<p->sites_total; i++) {
+	p->evensites = 0; p->oddsites = 0;
+	p->evenhalos = 0; p->oddhalos = 0;
+	
+	// real sites
+	for (long i=0; i<p->sites; i++) {
 		tot = 0;
 		for (int dir=0; dir<p->dim; dir++) {
 			tot += xphys[i][dir];
@@ -476,6 +487,20 @@ void set_parity(params *p, long** xphys) {
 			p->oddsites++;
 		}
 	}
+	// halo sites
+	for (long i=p->sites; i<p->sites_total; i++) {
+		tot = 0;
+		for (int dir=0; dir<p->dim; dir++) {
+			tot += xphys[i][dir];
+		}
+		if (tot % 2 == 0) {
+			p->parity[i] = EVEN;
+			p->evenhalos++;
+		} else {
+			p->parity[i] = ODD;
+			p->oddhalos++;
+		}
+	}
 
 }
 
@@ -486,7 +511,6 @@ void set_parity(params *p, long** xphys) {
 long findsite(params p, long* x, long** xphys, int include_halos) {
 
 	long max;
-
 	if (include_halos) {
 		max = p.sites_total;
 	} else {
@@ -526,20 +550,23 @@ void test_xphys(params p, long** xphys) {
 	int dir;
 	long i;
 
+	
 	// first site on the node?
+	// we remapped sites by parity, so first site is either i=0 or i=p.evensites
 	for (dir=0; dir<p.dim; dir++) {
-		if (xphys[0][dir] != xnode[dir] * p.sliceL[dir]) {
+		if (xphys[0][dir] != xnode[dir] * p.sliceL[dir] && xphys[p.evensites][dir] != xnode[dir] * p.sliceL[dir]) {
 			printf("Node %d: Error in test_xphys! First site not where it should be \n", p.rank);
 			die(-111);
 		}
 	}
 	// last real site on the node?
 	for (dir=0; dir<p.dim; dir++) {
-		if (xphys[p.sites - 1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1) {
+		if (xphys[p.sites-1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1 && xphys[p.evensites-1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1) {
 			printf("Node %d: Error in test_xphys! Last site not where it should be \n", p.rank);
 			die(-112);
 		}
 	}
+	
 
 	// non-halo sites: coordinate x[j] should be in range
 	// xnode[j] * p.sliceL[j] <= x[j] <= xnode[j] * p.sliceL[j] + p.sliceL[j] - 1
@@ -587,7 +614,7 @@ void test_neighbors(params p, long** xphys) {
 	if (!skip_parity && p.rank == 0) {
 		if (p.parity[0] != EVEN) {
 			printf("Node 0: Error in test_neighbors! First site parity not is not EVEN \n");
-			// don't die; this may not be fatal
+			// don't die
 		}
 	}
 
@@ -713,8 +740,8 @@ void layout(params *p, comlist_struct *comlist) {
 	p->sites_total = p->vol;
 	p->halos = 0;
 
-	p->sliceL = malloc(p->dim * sizeof(p->sliceL));
-	p->nslices = malloc(p->dim * sizeof(p->nslices));
+	p->sliceL = malloc(p->dim * sizeof(*p->sliceL));
+	p->nslices = malloc(p->dim * sizeof(*p->nslices));
 
 	for (int dir=0; dir<p->dim; dir++) {
 		p->sliceL[dir] = p->L[dir];
@@ -722,41 +749,47 @@ void layout(params *p, comlist_struct *comlist) {
 	}
 
 	alloc_lattice_arrays(p);
+	// not used in serial; just give some dummy values
+	long** xphys = alloc_latticetable(p->dim, p->sites_total);
+	for (long i=0; i<p->sites_total; i++) {
+		for (int dir=0; dir<p->dim; dir++) {
+			xphys[i][dir] = 0;
+		}
+	}
 
-	long** xphys;
-	long* newindex;
-	// construct lookup tables for site neighbors and parity:
+	long* newindex = malloc(p->sites_total * sizeof(*newindex));
+	// construct lookup tables for site neighbors and parity
 	calculate_neighbors(p, xphys, newindex);
-
+	set_parity(p, xphys);
+	
+	// reorder by parity (not used for now)
+	p->reorder_parity = 1;
+	if (p->reorder_parity) {
+		paritymap(p, newindex);
+		remap_lattice_arrays(p, xphys, newindex);
+	}
+	
+	
 	comlist->neighbors = 0;
 	comlist->send_to = malloc(sizeof(*comlist->send_to));
 	comlist->recv_from = malloc(sizeof(*comlist->recv_from));
+	
+	free(newindex);
+	free_latticetable(xphys);
 }
+
 
 // arguments xphys and newindex are not actually used in serial
 void calculate_neighbors(params* p, long** xphys, long* newindex) {
 
-	p->oddsites = 0;
-	p->evensites = 0;
+	p->oddsites = 0; p->oddhalos = 0;
+	p->evensites = 0; p->evenhalos = 0;
 	long* x = malloc(p->dim * sizeof(*x));
 
 	for (long i=0; i<p->sites_total; i++) {
 
 		// get the physical coordinates of site i and store in x
 		indexToCoords(p->dim, p->L, i, x);
-		// calculate and store the parity of site i
-		long coord = 0;
-		for (int j=0; j<p->dim; j++) {
-			coord += x[j];
-		}
-
-		if (coord % 2 == 0) {
-			p->parity[i] = EVEN;
-			p->evensites++;
-		} else {
-			p->parity[i] = ODD;
-			p->oddsites++;
-		}
 
 		for (int dir=0; dir < p->dim; dir++) {
 			x[dir]++;
@@ -774,6 +807,36 @@ void calculate_neighbors(params* p, long** xphys, long* newindex) {
 	printf("Site lookup table constructed succesfully.\n");
 }
 
+
+void set_parity(params *p, long** xphys) {
+	
+	p->oddsites = 0; p->oddhalos = 0;
+	p->evensites = 0; p->evenhalos = 0;
+	long* x = malloc(p->dim * sizeof(*x));
+	
+	for (long i=0; i<p->sites_total; i++) {
+
+		// get the physical coordinates of site i and store in x
+		indexToCoords(p->dim, p->L, i, x);
+		// calculate and store the parity of site i
+		long coord = 0;
+		for (int j=0; j<p->dim; j++) {
+			coord += x[j];
+		}
+
+		if (coord % 2 == 0) {
+			p->parity[i] = EVEN;
+			p->evensites++;
+		} else {
+			p->parity[i] = ODD;
+			p->oddsites++;
+		}
+	}
+	
+	free(x);
+}
+
+
 void printf0(params p, char *msg, ...) {
   va_list fmtargs;
   va_start(fmtargs, msg);
@@ -786,6 +849,95 @@ void die(int howbad) {
 }
 
 #endif
+
+
+/******************************************
+*	Mutual routines for both serial and MPI *
+******************************************/
+
+/* Order sites according to their parity. 
+* Assumes that self halos have been removed and sites ordered so that
+* real sites come before halos. The routine just reuses newindex array.
+* Possible problem: contiguous memory may lose its effectiveness?
+*/
+void paritymap(params* p, long* newindex) {
+	
+	long even=0, odd=0, evenhalo=0, oddhalo=0;
+	
+	// order real sites 
+	for (long i=0; i<p->sites; i++) {
+		if (p->parity[i] == EVEN) {
+			newindex[i] = even;
+			even++;
+		} else {
+			newindex[i] = p->evensites + odd;
+			odd++;
+		}
+	}
+	// order halo sites 
+	for (long i=p->sites; i<p->sites_total; i++) {
+		if (p->parity[i] == EVEN) {
+			newindex[i] = p->sites + evenhalo;
+			evenhalo++;
+		} else {
+			newindex[i] = p->sites + p->evenhalos + oddhalo;
+			oddhalo++;
+		}
+	}
+	
+}
+
+/* Remap all lattice tables using mapping given in newindex.
+*/
+void remap_lattice_arrays(params* p, long** xphys, long* newindex) {
+
+	long maxindex = p->sites_total;
+	// create backups
+	long** xphys_temp = alloc_latticetable(p->dim, maxindex);
+	long** nextsite = alloc_latticetable(p->dim, maxindex);
+	long** prevsite = alloc_latticetable(p->dim, maxindex);
+	char* par = malloc(maxindex * sizeof(*(par)));
+	
+	long next, prev;
+	
+	for (long i=0; i<maxindex; i++) {
+		par[i] = p->parity[i];
+		for (int dir=0; dir<p->dim; dir++) {
+			xphys_temp[i][dir] = xphys[i][dir];
+			nextsite[i][dir] = p->next[i][dir];
+			prevsite[i][dir] = p->prev[i][dir];
+		}
+	}
+	
+	// remap
+	for (long i=0; i<maxindex; i++) {
+		long new = newindex[i];
+		p->parity[new] = par[i];
+		for (int dir=0; dir<p->dim; dir++) {
+			xphys[new][dir] = xphys_temp[i][dir];
+			
+			next = nextsite[i][dir];
+			if (next == -1) {
+				p->next[newindex[i]][dir] = -1;
+			} else {
+				p->next[newindex[i]][dir] = newindex[next];
+			}
+			
+			prev = prevsite[i][dir];
+			if (prev == -1) {
+				p->prev[newindex[i]][dir] = -1;
+			} else {
+				p->prev[newindex[i]][dir] = newindex[prev];
+			}
+			
+		}
+	}
+
+	free_latticetable(xphys_temp);
+	free_latticetable(prevsite);
+	free_latticetable(nextsite);
+	free(par);
+}
 
 
 /***********************************************************************

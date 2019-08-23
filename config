@@ -4,18 +4,18 @@
 dim 3
 
 # size in each direction (preferably even numbers)
-L1 10
-L2 10
-L3 30
+L1 24
+L2 24
+L3 24
 
 # iterations
-iterations 1000000
+iterations 50000
 
 # how often to write measurements
 interval 10
 
 # how often to write lattice configuration to file 
-checkpoint 1000
+checkpoint 10000
 
 # perform initial sanity checks on lattice layout?
 run_checks 1
@@ -29,7 +29,7 @@ resultsfile measure
 betasu2 8.0
 
 # doublet
-msq -0.207404
+msq -0.107404
 lambda 0.00915047
 
 # triplet
@@ -59,7 +59,7 @@ update_doublet 1
 update_triplet 1
 
 ### multicanonical
-multicanonical 1
+multicanonical 0
 bins 80
 min 0.505
 max 3.1

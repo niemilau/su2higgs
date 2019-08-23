@@ -10,14 +10,16 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      1347,         48]
-NotebookOptionsPosition[      1063,         35]
-NotebookOutlinePosition[      1396,         50]
-CellTagsIndexPosition[      1353,         47]
+NotebookDataLength[      4152,        125]
+NotebookOptionsPosition[      3739,        109]
+NotebookOutlinePosition[      4072,        124]
+CellTagsIndexPosition[      4029,        121]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
+
+Cell[CellGroupData[{
 Cell[BoxData[
  RowBox[{
   RowBox[{"(*", 
@@ -28,13 +30,85 @@ Cell[BoxData[
      SubscriptBox["A", 
       RowBox[{"0", " "}]], 
      RowBox[{"simulations", "?"}]}]}], " ", "**)"}], "\[IndentingNewLine]", 
-  "\[IndentingNewLine]"}]], "Input",
- CellChangeTimes->{{3.775471453443153*^9, 
-  3.775471474596635*^9}},ExpressionUUID->"17cd3cdf-672a-4bce-a129-\
-a5182eb97e5f"]
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+     "we", " ", "want", " ", "to", " ", "reproduce", " ", "histogram", " ", 
+      "in", " ", "fig", ".23", " ", "of", " ", "hep"}], "-", 
+     RowBox[{"lat", "/", "9510020"}]}], ",", " ", 
+    RowBox[{"but", " ", "they", " ", 
+     RowBox[{"don", "'"}], "t", " ", "give", " ", "the", " ", "inputs", " ", 
+     "very", " ", 
+     RowBox[{"clearly", ".", " ", "In"}], " ", "particular"}], ",", " ", 
+    RowBox[{
+    "it", " ", "looks", " ", "like", " ", "they", " ", "neglect", " ", 
+     "fermions", " ", "in", " ", 
+     RowBox[{"DR", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"\[Beta]H", "=", "0.34771"}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"\[Beta]G", "=", "12"}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"a", "=", 
+     FractionBox["4", 
+      RowBox[{"\[Beta]G", " ", 
+       SuperscriptBox["g3", "2"]}]]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{
+     SuperscriptBox["T", "*"], " ", "and", " ", 
+     SubsuperscriptBox["m", "H", "*"]}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"T", "=", "170"}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"mH", "=", "79.976"}], ";"}], "\[IndentingNewLine]", 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"a2", "=", 
+     RowBox[{
+      FractionBox["1", "2"], 
+      SuperscriptBox["g3", "2"]}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"mDsq", "=", 
+     RowBox[{
+      FractionBox["5", "6"], 
+      SuperscriptBox["g", "4"], 
+      SuperscriptBox["T", "2"]}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"b4", "=", 
+     RowBox[{"17", 
+      SuperscriptBox["g", "4"], 
+      FractionBox["T", 
+       RowBox[{"48", 
+        SuperscriptBox["\[Pi]", "2"]}]]}]}], ";"}], "\[IndentingNewLine]", 
+   "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{"their", " ", "\[Beta]", " ", 
+     RowBox[{"parameters", "?"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{"\[Beta]2", "=", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"mDsq", " ", 
+       SuperscriptBox["a", "2"]}], "/.", 
+      RowBox[{"g3", "\[Rule]", " ", 
+       RowBox[{"g", " ", 
+        SqrtBox["T"]}]}]}], "//", "N"}]}], "\[IndentingNewLine]", 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   "\[IndentingNewLine]"}]}]], "Input",
+ CellChangeTimes->{{3.775471453443153*^9, 3.775471855837099*^9}, {
+  3.775550128568842*^9, 3.7755501296557617`*^9}},
+ EmphasizeSyntaxErrors->
+  True,ExpressionUUID->"17cd3cdf-672a-4bce-a129-a5182eb97e5f"],
+
+Cell[BoxData["0.09259259259259259`"], "Output",
+ CellChangeTimes->{{3.7754718220487137`*^9, 3.775471852854844*^9}},
+ CellLabel->"Out[27]=",ExpressionUUID->"09fd52a3-75c9-4e01-b951-f157acffd508"]
+}, Open  ]]
 },
 WindowSize->{808, 925},
-WindowMargins->{{Automatic, 0}, {47, Automatic}},
+WindowMargins->{{0, Automatic}, {Automatic, 28}},
 FrontEndVersion->"11.3 for Linux x86 (64-bit) (March 6, 2018)",
 StyleDefinitions->"Default.nb"
 ]
@@ -49,7 +123,10 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[558, 20, 501, 13, 78, "Input",ExpressionUUID->"17cd3cdf-672a-4bce-a129-a5182eb97e5f"]
+Cell[CellGroupData[{
+Cell[580, 22, 2946, 80, 635, "Input",ExpressionUUID->"17cd3cdf-672a-4bce-a129-a5182eb97e5f"],
+Cell[3529, 104, 194, 2, 35, "Output",ExpressionUUID->"09fd52a3-75c9-4e01-b951-f157acffd508"]
+}, Open  ]]
 }
 ]
 *)
