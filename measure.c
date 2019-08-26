@@ -93,7 +93,7 @@ void measure(fields f, params p, counters* c, weight* w) {
 
 	double weight = 0.0; // if not multicanonical, just use zero weight
 	if (p.multicanonical) {
-		double muca_param = calc_orderparam(p, f);
+		double muca_param = w->param_value[EVEN] + w->param_value[ODD];
 		weight = get_weight(*w, muca_param);
 	}
 	// our muca action is S' = S + W, but Kari uses S = S - W.

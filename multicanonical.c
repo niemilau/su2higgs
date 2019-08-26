@@ -14,16 +14,7 @@
 * our weight function INCREASES when we want to suppress a particular configuration (ensemble ~ exp(-S - W).
 * When a bin is visited by the order parameter, the weight in that bin is increased by w.increment.
 *
-*	At least two good options to calculate the weight:
-* 	1. Recursive computation described in hep-lat/9804019. Hard to implement, but
-*			 will eventually converge to the exact weight function. Here weight in the first bin can
-*			 be chosen arbitrary (e.g. 0), as weight elsewhere is computed relative to the previous bin.
-*		2. Simpler method similar to the Landau-Wang algorithm, but information from
-*			 previous short runs is "forgotten" in each iteration. Kari uses this in his
-*			 modern codes. Easy to implement, but may not give the exact weight if the
-*			 "delta" parameter becomes too small too early. Usually still sufficient.
-
-* We use method 2 here. To summarize the algorithm:
+* Summary of the algorithm:
 *
 * 	1. Do a standard checkerboard sweep, updating the multicanonical field with
 *			 local updates WITHOUT caring about the weight at all. This will move the system
@@ -36,28 +27,32 @@
 *			 and we first sweep and update phi, then e.g. gauge links and only then
 *			 do multicanonical accept/reject, even the link updates need to be undone
 *			 in case of reject. In practice such updating does not make much sense, though.
-
+*
+*	Additional steps for calculating the weight function, if w.readonly != 1:
+ 
 *		3. After certain number of multicanonical measurements (can measure after every sweep,
 *			 according to Kari; autocorrelations don't matter that much here), increase weight in
 *			 each bin by value proportional to w.hits[bin]. Then reset w.hits; this makes the simulation
 *			 "forget" the earlier runs.
-*		4. Once all bins have been visited, decrease w.increment to make the iteration converge.
-*			 This is necessary because at first the system prefers the canonical minima, so those
-*			 obtain large weight very quickly. Afterwards, the mixed-phase configurations are
+*		4. Once the system has visited both the first and last bin, decrease w.increment to make the 
+*			 iteration converge. This is necessary because at first the system prefers the canonical 
+*			 minima, so those obtain large weight very quickly. Afterwards, the mixed-phase configurations are
 *		   preferred and the system spends most of the time there, so smaller weight updates are
 *			 then required to prevent the weight from becoming flat again.
 *
-*			(TODO once the system tunnels once, decrease w.increment)
 *
-* Kari tips: Behavior of the weight function outside the given range can in principle be chosen arbitrary.
-* Usually it's enough to set it to a constant value there, so that the total weight function is still continuous.
-* For bubble nucleation it may be better to set an infinite weight there instead.
-* For the weight range, it's best to choose it so that the peaks are mostly included
+* Practical note: For the weight range, it's best to choose it so that the peaks are mostly included
 *
-* TODO different order parameters. For this we need to modify calc_orderparam()
-* but not others (apart from possible minor changes). We also need to place the
-* call to muca_acceptance() appropriately (this is hard to automatize!)
-*
+***************** On different order parameters ********************
+* Most of the routines here for updating the weight and accepting a multicanonical update are 
+* insensitive to what the actual order parameter is. To implement a new multicanonical order parameter, 
+* the following steps need to be taken:
+* 
+*		1. #define a constant label for it in a header (su2.h) and add it to get_weight_parameters().
+*		2. Tell calc_orderparam(), alloc_backup_arrays(), free_muca_arrays(), 
+*			 store_muca_fields() and reset_muca_fields() what to do for this case.
+*		3. In update_lattice_muca(), call multicanonical_acceptance() after updating all the 
+*			 fields contributing to the order param and reject the updates if necessary (this is the tricky part).
 */
 
 #include "su2.h"
@@ -163,7 +158,6 @@ void load_weight(params p, weight *w) {
 		}
 
 		printf0(p, "Starting with weight increment %lf, last_max %d\n", w->increment, w->last_max);
-		// also: free muca arrays somewhere
 
   }
 
@@ -181,7 +175,7 @@ void load_weight(params p, weight *w) {
 		w->outsideW_max = w->W[w->bins-1];
 		w->outsideW_min = w->W[0];
 	}
-
+	
 }
 
 
@@ -285,6 +279,7 @@ void check_tunnel(params p, weight *w) {
 * TODO optimize calculation of order param diff
 */
 int multicanonical_acceptance(params p, weight* w, double oldval, double newval) {
+	
 	// acc/rej only in root node
 	int accept;
 	if (p.rank == 0) {
@@ -308,8 +303,11 @@ int multicanonical_acceptance(params p, weight* w, double oldval, double newval)
 	// broadcast outcome to all nodes
 	bcast_int(&accept);
 
-	// update w->hits and check if w->increment should be modified
+	// update w->hits and call update_weight() if necessary.
 	// do this even if the update was rejected
+	if (!accept) 
+		newval = oldval;
+	
 	if (!w->readonly && newval <= w->max && newval >= w->min) {
 		long bin = whichbin(*w, newval);
 
@@ -343,21 +341,160 @@ long whichbin(weight w, double val) {
 }
 
 
-// Calculate muca order parameter and distribute to all nodes
-double calc_orderparam(params p, fields f) {
+/* Calculate muca order parameter and distribute to all nodes.
+* Only the contribution from sites with parity = par is recalculated
+* while the other parity contribution is read from w.param_value
+*/
+double calc_orderparam(params p, fields f, weight* w, char par) {
 	double tot = 0.0;
-	for (long i=0; i<p.sites; i++) {
-		tot += doubletsq(f.su2doublet[i]);
+	long offset, max;
+	if (par == EVEN) {
+		offset = 0; max = p.evensites;
+	} else {
+		offset = p.evensites; max = p.sites;
 	}
-	tot /= p.vol;
-	return allreduce(tot);
+
+	switch(w->orderparam) {
+		case SIGMASQ :
+			for (long i=offset; i<max; i++) {
+				tot += tripletsq(f.su2triplet[i]);
+			}
+			break;
+		case PHI2SIGMA2 :
+			for (long i=offset; i<max; i++) {
+				tot += doubletsq(f.su2doublet[i]) * tripletsq(f.su2triplet[i]);
+			}
+			break;
+		case PHISQ :
+			for (long i=offset; i<max; i++) {
+				tot += doubletsq(f.su2doublet[i]);
+			}
+			break;
+	}
+	
+	tot = allreduce(tot) / p.vol;
+	
+	w->param_value[par] = tot;
+	// add other parity contribution 
+	return tot + w->param_value[ otherparity(par) ];
 }
 
-// Backup a field in case a sweep needs to be undone later
+
+/* Backup all fields contributing to the order parameter, 
+* in case an update sweep is rejected later by the global acc/rej.
+* Ordering in the backup array is exactly the same as in the original field array.
+* Depending on the order parameter, we may have to also backup halo fields.
+* Some optimization is achieved by only including halos here if it is scrictly necessary.
+*/
+void store_muca_fields(params p, fields* f, weight* w) {
+	
+	switch(w->orderparam) {
+		case SIGMASQ : 
+			// no halos
+			for (long i=0; i<p.sites; i++) {
+				for (int dof=0; dof<SU2TRIP; dof++) {
+					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
+				}
+			}
+			break;
+		case PHI2SIGMA2 :
+			// need real sites AND halos
+			for (long i=0; i<p.sites_total; i++) {
+				for (int dof=0; dof<SU2TRIP; dof++) {
+					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
+				}
+			}
+			// continue to store Higgs
+		case PHISQ : 
+			// no halos 
+			for (long i=0; i<p.sites; i++) {
+				for (int dof=0; dof<SU2DB; dof++) {
+					f->backup_doublet[i][dof] = f->su2doublet[i][dof];
+				}
+			}
+			break;
+	}
+}
+
+
+/* Undo field updates if the multicanonical step is rejected.
+* Here we may need to undo halo updates as well, depending on 
+* the order parameter (see store_muca_fields()). For optimization, 
+* we do NOT include halos for the Higgs, so it should be updated last in a sweep. 
+*/
+void reset_muca_fields(params p, fields* f, weight* w, char par) {
+
+	long offset, max, halo_offset, halo_max;
+	if (par == EVEN) {
+		offset = 0; max = p.evensites; halo_offset = p.sites; halo_max = p.sites + p.evenhalos;
+	} else {
+		offset = p.evensites; max = p.sites; halo_offset = p.sites + p.evenhalos; halo_max = p.sites_total;
+	}
+	
+	switch(w->orderparam) {
+		case SIGMASQ : 
+			// no need to undo halos
+			for (long i=offset; i<max; i++) {
+				for (int dof=0; dof<SU2TRIP; dof++) {
+					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
+				}
+			}
+			break;
+		case PHI2SIGMA2 :
+			// need real sites AND halos
+			for (long i=offset; i<max; i++) {
+				for (int dof=0; dof<SU2TRIP; dof++) {
+					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
+				}
+			}
+			// then halos 
+			for (long i=halo_offset; i<halo_max; i++) {
+				for (int dof=0; dof<SU2TRIP; dof++) {
+					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
+				}
+			}
+		// continue to undo Higgs changes
+		case PHISQ : 
+			// no need to undo halos
+			for (long i=offset; i<max; i++) {
+				for (int dof=0; dof<SU2DB; dof++) {
+					f->su2doublet[i][dof] = f->backup_doublet[i][dof];
+				}
+			}
+			break;
+	} 
+}
+
+
+// Allocate field backup arrays
+void alloc_backup_arrays(params p, fields* f, weight w) {
+	switch(w.orderparam) {
+		case SIGMASQ : 
+			f->backup_triplet = make_field(p.sites_total, SU2TRIP);
+			break;
+		case PHI2SIGMA2 : 
+			f->backup_triplet = make_field(p.sites_total, SU2TRIP);
+		case PHISQ : 
+			f->backup_doublet = make_field(p.sites, SU2DB);
+			break;
+	}
+}
 
 // Free memory allocated for multicanonical
-void free_muca_arrays(weight *w) {
+void free_muca_arrays(fields* f, weight *w) {
 	free(w->pos);
   free(w->W);
 	free(w->hits);
+	
+	// free backup arrays
+	switch(w->orderparam) {
+		case SIGMASQ : 
+			free_field(f->backup_triplet);
+			break;
+		case PHI2SIGMA2 : 
+			free_field(f->backup_triplet);
+		case PHISQ : 
+			free_field(f->backup_doublet);
+			break;
+	}
 }

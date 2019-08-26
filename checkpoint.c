@@ -39,7 +39,7 @@ void print_acceptance(params p, counters c) {
 		if (p.algorithm_su2triplet == METROPOLIS) {
 			printf("Triplet %.2lf%%, ",
 				100.0*c.accepted_triplet/c.total_triplet);
-		} else if (p.algorithm_su2doublet == OVERRELAX) {
+		} else if (p.algorithm_su2triplet == OVERRELAX) {
 			printf("Triplet overrelax %.2lf%%, Triplet Metropolis %.2lf%%, ",
 				100.0*c.acc_overrelax_triplet/c.total_overrelax_triplet,
 				100.0*c.accepted_triplet/c.total_triplet);

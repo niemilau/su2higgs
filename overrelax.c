@@ -146,6 +146,110 @@ int overrelax_doublet(fields f, params p, long i) {
 
 }
 
+
+/* Same Cartesian overrelax as overrelax_doublet(), but for adjoint scalar.
+*/
+int overrelax_triplet(fields f, params p, long i) {
+
+	double s[3] = {0.0, 0.0, 0.0};
+	double u[SU2LINK];
+	double b[SU2TRIP];
+
+	// calculate hopping staple s_a (denote. s_a = F_a)
+	for (int dir=0; dir<p.dim; dir++) {
+		long next = p.next[i][dir];
+		// link variable
+		for (int d=0; d<SU2LINK; d++) {
+			u[d] = f.su2link[i][dir][d];
+		}
+		// Sigma at next site
+		for (int d=0; d<SU2TRIP; d++) {
+			b[d] = f.su2triplet[next][d];
+		}
+		s[0] += -(b[0]*(u[0]*u[0])) - b[0]*(u[1]*u[1]) + 2*b[2]*u[0]*u[2] -
+		 				2*b[1]*u[1]*u[2] + b[0]*(u[2]*u[2]) - 2*b[1]*u[0]*u[3]
+						- 2*b[2]*u[1]*u[3] + b[0]*(u[3]*u[3]);
+		s[1] += -(b[1]*(u[0]*u[0])) - 2*b[2]*u[0]*u[1] + b[1]*(u[1]*u[1]) -
+						2*b[0]*u[1]*u[2] - b[1]*(u[2]*u[2]) + 2*b[0]*u[0]*u[3] -
+						2*b[2]*u[2]*u[3] + b[1]*(u[3]*u[3]);
+		s[2] += -(b[2]*(u[0]*u[0])) + 2*b[1]*u[0]*u[1] + b[2]*(u[1]*u[1])
+						- 2*b[0]*u[0]*u[2] + b[2]*(u[2]*u[2]) - 2*b[0]*u[1]*u[3]
+						- 2*b[1]*u[2]*u[3] - b[2]*(u[3]*u[3]);
+		// same for backwards directions
+		long prev = p.prev[i][dir];
+		for (int d=0; d<SU2LINK; d++) {
+			u[d] = f.su2link[prev][dir][d];
+		}
+		for (int d=0; d<SU2TRIP; d++) {
+			b[d] = f.su2triplet[prev][d];
+		}
+		s[0] += -(b[0]*(u[0]*u[0])) - b[0]*(u[1]*u[1]) - 2*b[2]*u[0]*u[2]
+						- 2*b[1]*u[1]*u[2] + b[0]*(u[2]*u[2]) + 2*b[1]*u[0]*u[3]
+						- 2*b[2]*u[1]*u[3] + b[0]*(u[3]*u[3]);
+		s[1] += -(b[1]*(u[0]*u[0])) + 2*b[2]*u[0]*u[1] + b[1]*(u[1]*u[1])
+						- 2*b[0]*u[1]*u[2] - b[1]*(u[2]*u[2]) - 2*b[0]*u[0]*u[3]
+						- 2*b[2]*u[2]*u[3] + b[1]*(u[3]*u[3]);
+		s[2] += -(b[2]*(u[0]*u[0])) - 2*b[1]*u[0]*u[1] + b[2]*(u[1]*u[1])
+						+ 2*b[0]*u[0]*u[2] + b[2]*(u[2]*u[2]) - 2*b[0]*u[1]*u[3]
+						- 2*b[1]*u[2]*u[3] - b[2]*(u[3]*u[3]);
+	}
+	// staple normalization
+	double F = 0.0;
+	for (int k=0; k<SU2TRIP; k++) {
+		F += s[k] * s[k];
+	}
+	F = sqrt(F);
+
+	// Cartesian X and Y coordinates
+	double X = 0.0;
+	for (int k=0; k<SU2TRIP; k++) {
+		X += f.su2triplet[i][k] * s[k];
+	}
+	X /= F;
+	double Y[SU2TRIP], Ysq = 0.0;
+	for (int k=0; k<SU2TRIP; k++) {
+		Y[k] = f.su2triplet[i][k] - X * s[k] / F;
+		Ysq += Y[k] * Y[k];
+	}
+
+	// remaining terms in the local action
+	double B = 0.5 * p.msq_triplet + 1.0 * p.dim;
+	#ifdef HIGGS
+		B += 0.5 * p.a2 * doubletsq(f.su2doublet[i]);
+	#endif
+	double C = 0.25 * p.b4;
+
+	// we need to solve V(X') - V(X) = 0, where Y is kept constant. Write this as
+	// (x - y) (alpha x^3 + beta * x^2 + gamma * x + delta) = 0
+	// for x = X', y = X, and find a nontrivial real root.
+	// Note: need to be careful about large numbers here. Best to not rescale by C
+	long double alpha = C;
+	long double beta = C*X;
+	long double cc = B + 2.0 * Ysq * C; // quadratic term coefficient in V
+	long double gamma = (cc + C * X*X);
+	long double delta = (F + cc * X + C * X*X*X);
+
+	double newX = polysolve3(alpha, beta, gamma, delta);
+	// now accept/reject based on the derivatives
+	// dV/dX = F + 2B*X + 4C(X^3 + Y^2 X), with again same Y in both cases
+	double dV = F + 2.0*B*X + 4.0*C*(X*X*X + Ysq*X);
+	double dV_new = F + 2.0*B*newX + 4.0*C*(newX*newX*newX + Ysq*newX);
+
+	beta = fabs(dV/dV_new);
+
+	if (beta >= drand48()) {
+		// accept, so overrelax Y' = -Y using the new X
+		for (int k=0; k<SU2TRIP; k++) {
+			f.su2triplet[i][k] = -1.0*f.su2triplet[i][k] + (newX + X) * s[k] / F; // this works well
+		}
+		return 1;
+	} else {
+		// reject, no changes to the field
+		return 0;
+	}
+
+}
+
 /* OLD overrelaxation for the doublet.
 *
 *	The doublet is Phi(x) = 1/sqrt(2) sig_i phi_i , i = 0,1,2,3,
@@ -249,7 +353,7 @@ int overrelax_doublet_old(fields f, params p, long i) {
 /* Same as overrelax_doublet_old() but for the real triplet.
 * Logic is the same: reflect the Gaussian part, acc/rej on the quartic part.
 */
-int overrelax_triplet(fields f, params p, long i) {
+int overrelax_triplet_old(fields f, params p, long i) {
 
 	double oldfield[3];
 	oldfield[0] = f.su2triplet[i][0];

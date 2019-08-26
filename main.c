@@ -86,6 +86,9 @@ int main(int argc, char *argv[]) {
 	if (p.multicanonical) {
 		// initialize multicanonical
 		load_weight(p, &w);
+		alloc_backup_arrays(p, &f, w);
+		calc_orderparam(p, f, &w, EVEN);
+		calc_orderparam(p, f, &w, ODD);
 		if (!w.readonly) {
 			printf0(p, "readonly not 0, so multicanonical weight WILL be modified!\n");
 		} else {
@@ -134,8 +137,12 @@ int main(int argc, char *argv[]) {
 		} else {
 			metro = 0;
 		}
-
-		update_lattice(f, p, &comlist, &w, &c, metro);
+		
+		if (!p.multicanonical) {
+			update_lattice(&f, p, &comlist, &c, metro);
+		} else {
+			update_lattice_muca(&f, p, &comlist, &w, &c, metro);
+		}
 		iter++;
 
 	} // end main loop
@@ -149,7 +156,7 @@ int main(int argc, char *argv[]) {
 	free_comlist(&comlist);
 	free_lattice_arrays(&p);
 	if (p.multicanonical) {
-		free_muca_arrays(&w);
+		free_muca_arrays(&f, &w);
 	}
 
 	end_time = clock();

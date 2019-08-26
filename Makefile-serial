@@ -10,7 +10,7 @@ LIBS := -lm
 OBJECTS := main.o layout.o comms.o alloc.o init.o parameters.o su2.o measure.o \
 	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o
 
-BINARY := su2
+BINARY := build/su2
 
 FILES := $(OBJECTS) $(BINARY)
 

@@ -30,8 +30,9 @@ typedef unsigned short ushort;
 #define ODD 1
 
 // multicanonical order parameters
-#define PHISQ 1
-#define PHI2SIGMA2
+#define PHISQ 1 
+#define SIGMASQ 2
+#define PHI2SIGMA2 3
 
 // nasty global...
 double waittime;
@@ -114,7 +115,10 @@ typedef struct {
 	double ***su2link;
 	double **su2doublet;
 	double **su2triplet;
-
+	
+	// backup arrays. these are used in global multicanonical steps in case the update sweep needs to be undone
+	double **backup_doublet;
+	double **backup_triplet;
 } fields;
 
 typedef struct {
@@ -137,6 +141,11 @@ typedef struct {
 // multicanonical weight
 typedef struct {
 	int orderparam;
+	/* current value of the order parameter, separated by parity.
+	* e.g. param_value[0] is the full contribution from EVEN sites
+	* and param_value[1] is the contribution from ODD sites */
+	double param_value[2];
+	
 	long bins;
 	double min, max;
 	double dbin; // size (width) of one bin
@@ -155,6 +164,14 @@ typedef struct {
 	char weightfile[100];
 } weight;
 
+
+/* inlines */
+inline char otherparity(char parity) { 
+	if (parity == EVEN)
+		return ODD; 
+	else 
+		return EVEN;
+}
 
 // comms.c (move elsewhere later?)
 void make_comlists(params *p, comlist_struct *comlist, long** xphys);
@@ -251,9 +268,10 @@ int overrelax_doublet(fields f, params p, long i);
 int overrelax_triplet(fields f, params p, long i);
 
 // update.c
-void update_lattice(fields f, params p, comlist_struct* comlist, weight* w, counters* c, char metro);
+void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, char metro);
+void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w, counters* c, char metro);
 void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, int dir);
-void checkerboard_sweep_su2doublet(fields f, params p, weight* w, counters* c, char parity, char metro);
+void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro);
 void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro);
 
 // init.c
@@ -286,9 +304,13 @@ double get_weight(weight w, double val);
 void update_weight(params p, weight* w);
 int multicanonical_acceptance(params p, weight* w, double oldval, double newval);
 long whichbin(weight w, double val);
-double calc_orderparam(params p, fields f);
+double calc_orderparam(params p, fields f, weight* w, char par);
 void measure_muca(params p, fields f, weight* w);
 void check_tunnel(params p, weight *w);
-void free_muca_arrays(weight *w);
+void store_muca_fields(params p, fields* f, weight* w);
+void reset_muca_fields(params p, fields* f, weight* w, char par);
+void alloc_backup_arrays(params p, fields* f, weight w);
+void free_muca_arrays(fields* f, weight *w);
+
 
 #endif

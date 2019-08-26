@@ -428,9 +428,13 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
         } 
 				#endif
 				#ifdef TRIPLET
+				else if (!strcasecmp(value,"Sigmasq")) {
+  	       w->orderparam = SIGMASQ;
+           printf0(*p, "Multicanonical order parameter: Tr Sigma^2 \n");
+        } 
 				else if (!strcasecmp(value,"phi2Sigma2")) {
   	       w->orderparam = PHI2SIGMA2;
-           printf0(*p, "Multicanonical order parameter: phi^2 Sigma^2\n");
+           printf0(*p, "Multicanonical order parameter: phi^2 Tr Sigma^2 \n");
         } 
 				#endif 
 				else {

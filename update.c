@@ -43,34 +43,7 @@ void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, in
 * Parity of a site is assumed to be stored in params.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 */
-void checkerboard_sweep_su2doublet(fields f, params p, weight* w, counters* c, char parity, char metro) {
-
-	double** oldfield;
-	double muca_param_old, muca_param_new;
-
-	if (p.multicanonical) {
-		// multicanonical order parameter BEFORE updates
-		muca_param_old = calc_orderparam(p, f);
-
-		// Store the old field values, in case the muca step is rejected
-		long paritysites;
-		if (parity == EVEN) {
-			paritysites = p.evensites;
-		} else {
-			paritysites = p.oddsites;
-		}
-
-		oldfield = make_field(paritysites, SU2DB);
-		long k = 0;
-		for (long i=0; i<p.sites; i++) {
-			if (p.parity[i] == parity) {
-				for (int d=0; d<SU2DB; d++) {
-					oldfield[k][d] = f.su2doublet[i][d];
-				}
-				k++;
-			}
-		}
-	}
+void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro) {
 	
 	long offset, max;
 	if (parity == EVEN) {
@@ -88,32 +61,6 @@ void checkerboard_sweep_su2doublet(fields f, params p, weight* w, counters* c, c
 			c->accepted_doublet += metro_doublet(f, p, i);
 			c->total_doublet++;
 		}
-	}
-
-	// sweep done, now recalculate the muca order parameter and acc/rej
-	if (p.multicanonical) {
-
-		muca_param_new = calc_orderparam(p, f);
-		int accept = multicanonical_acceptance(p, w, muca_param_old, muca_param_new);
-		// multicanonical_acceptance() also does weight update if accepted
-
-		if (!accept) {
-			// multicanonical step was rejected, undo field changes
-			long k = 0;
-			for (long i=0; i<p.sites; i++) {
-				if (p.parity[i] == parity) {
-					for (int d=0; d<SU2DB; d++) {
-						f.su2doublet[i][d] = oldfield[k][d];
-					}
-					k++;
-				}
-			}
-
-		}
-
-		c->accepted_muca += accept;
-		c->total_muca++;
-		free_field(oldfield);
 	}
 
 }
@@ -149,38 +96,119 @@ void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity,
 * then dir2 etc. This is necessary because the links in "positive" directions are not independent
 * because of the Wilson staple, which for U_1(x) depends on U_2(x-i+j), for example.
 */
-void update_lattice(fields f, params p, comlist_struct* comlist, weight* w, counters* c, char metro) {
+void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, char metro) {
 
 	// update each link direction separately.
 	// I.E. first dir1 with even and odd, then dir2 etc
 	// This is necessary because the links in "positive" directions are not independent
 	// because of the Wilson staple, which for U_1(x) depends on U_2(x-i+j), for example
 	for (int dir=0; dir<p.dim; dir++) {
-		checkerboard_sweep_su2link(f, p, c, EVEN, dir);
-		c->comms_time += update_gaugehalo(comlist, EVEN, f.su2link, SU2LINK, dir);
-		checkerboard_sweep_su2link(f, p, c, ODD, dir);
-		c->comms_time += update_gaugehalo(comlist, ODD, f.su2link, SU2LINK, dir);
+		checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
+		c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
+		checkerboard_sweep_su2link(*f, p, c, ODD, dir);
+		c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
 	}
 
+	// EVEN sweeps for scalars
 	#ifdef HIGGS
 	for (int k=0; k<p.update_su2doublet; k++) {
-		checkerboard_sweep_su2doublet(f, p, w, c, EVEN, metro);
-		c->comms_time += update_halo(comlist, EVEN, f.su2doublet, SU2DB);
-
-		checkerboard_sweep_su2doublet(f, p, w, c, ODD, metro);
-		c->comms_time += update_halo(comlist, ODD, f.su2doublet, SU2DB);
+		checkerboard_sweep_su2doublet(*f, p, c, EVEN, metro);
+		c->comms_time += update_halo(comlist, EVEN, f->su2doublet, SU2DB);
 	}
+	#endif
 
+	#ifdef TRIPLET
+	for (int k=0; k<p.update_su2triplet; k++) {
+		checkerboard_sweep_su2triplet(*f, p, c, EVEN, metro);
+		c->comms_time += update_halo(comlist, EVEN, f->su2triplet, SU2TRIP);
+	}
+	#endif
+	
+	// ODD sweeps for scalars
+	#ifdef HIGGS
+	for (int k=0; k<p.update_su2doublet; k++) {
+		checkerboard_sweep_su2doublet(*f, p, c, ODD, metro);
+		c->comms_time += update_halo(comlist, ODD, f->su2doublet, SU2DB);
+	}
 	#endif
 	#ifdef TRIPLET
 	for (int k=0; k<p.update_su2triplet; k++) {
-		checkerboard_sweep_su2triplet(f, p, c, EVEN, metro);
-		c->comms_time += update_halo(comlist, EVEN, f.su2triplet, SU2TRIP);
-
-		checkerboard_sweep_su2triplet(f, p, c, ODD, metro);
-		c->comms_time += update_halo(comlist, ODD, f.su2triplet, SU2TRIP);
+		checkerboard_sweep_su2triplet(*f, p, c, ODD, metro);
+		c->comms_time += update_halo(comlist, ODD, f->su2triplet, SU2TRIP);
 	}
 	#endif
 
+}
 
+/* Same as update_lattice(), but takes multicanonical weight
+* into account. Note that multicanonical_acceptance() also does 
+* weight update if accepted. Here the timing of the call to 
+* multicanonical_acceptance() is crucial: we need to call it 
+* only after ALL fields contributing to the order parameter 
+* have been updated. Note that some halo updates may need to be undone 
+* as well; this is implemented in store_muca_fields() and reset_muca_fields(),
+* and assume that the Higgs is updated LAST.
+*/
+void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w, counters* c, char metro) {
+
+	int accept; 
+	double muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
+	store_muca_fields(p, f, w);
+
+	for (int dir=0; dir<p.dim; dir++) {
+		checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
+		c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
+		checkerboard_sweep_su2link(*f, p, c, ODD, dir);
+		c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
+	}
+
+	// parity loop for scalars. EVEN = 0, ODD = 1; defined in su2.h
+	for (char par=0; par<=1; par++) {
+		
+		#ifdef TRIPLET
+		for (int k=0; k<p.update_su2triplet; k++) {
+			checkerboard_sweep_su2triplet(*f, p, c, par, metro);
+			
+			// multicanonical step if the order parameter ONLY depends on the adjoint
+			if (w->orderparam == SIGMASQ) {
+				double muca_param_new = calc_orderparam(p, *f, w, par); // this also updates w->param_value[par]
+				accept = multicanonical_acceptance(p, w, muca_param_old, muca_param_new);
+			
+				if (!accept) {
+					// rejected, undo field changes and w->param_value
+					reset_muca_fields(p, f, w, par);
+					w->param_value[par] = muca_param_old - w->param_value[otherparity(par)];	
+				}		
+			}
+			
+			c->comms_time += update_halo(comlist, par, f->su2triplet, SU2TRIP);
+		}
+		#endif
+		
+		#ifdef HIGGS
+		for (int k=0; k<p.update_su2doublet; k++) {
+			checkerboard_sweep_su2doublet(*f, p, c, par, metro);
+			
+			// multicanonical step if the order parameter depends on the Higgs
+			if (w->orderparam == PHISQ || w->orderparam == PHI2SIGMA2) {
+				double muca_param_new = calc_orderparam(p, *f, w, par); // this also updates w->param_value[par]
+				accept = multicanonical_acceptance(p, w, muca_param_old, muca_param_new);
+			
+				if (!accept) {
+					// rejected, undo field changes and w->param_value
+					reset_muca_fields(p, f, w, par);
+					w->param_value[par] = muca_param_old - w->param_value[otherparity(par)];	
+				}			
+			}
+			
+			c->comms_time += update_halo(comlist, par, f->su2doublet, SU2DB);
+		}
+		#endif
+		
+		// update muca_param_old for the next parity 
+		muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
+		c->accepted_muca += accept;
+		c->total_muca++;
+	} // end parity loop
+	
 }

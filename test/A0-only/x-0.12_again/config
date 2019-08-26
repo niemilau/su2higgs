@@ -8,9 +8,9 @@
 
 dim 3
 
-L1 24
-L2 24
-L3 24
+L1 12
+L2 12
+L3 12
 
 # iterations
 iterations 1000000
@@ -30,16 +30,16 @@ resultsfile measure
 # parameters
 
 # gauge couplings
-betasu2 12.0
+betasu2 8.0
 
 # doublet
-msq -0.262345
-lambda 0.0410249
+msq -0.207404
+lambda 0.00915047
 
 # triplet
-msq_triplet -0.189333
-b4 0.00531667
-a2 0.1666667
+msq_triplet -0.54502
+b4 0.06
+a2 0.1
 
 # initial values for fields
 phi0 0.2
@@ -63,21 +63,20 @@ update_doublet 1
 update_triplet 1
 
 ### multicanonical
-multicanonical 0
+multicanonical 1
 bins 80
-min 0.41
-max 2.50
+min 0.437
+max 1.425
 # where to store the weight?
 weightfile weight
 # set infinite weight outside the binning range? 
 absolute_bounds 0
 
-## order parameter for multicanonical
-# phisq, Sigmasq
-orderparam phisq
+# order parameter for multicanonical
+orderparam Sigmasq
 
 # update weight on the go?
 readonly 0
 
 # initial weight update factor (if weight exists, uses the value there instead)
-increment 0.5
+increment 1.0

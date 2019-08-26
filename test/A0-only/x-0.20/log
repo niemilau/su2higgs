@@ -1,0 +1,64 @@
+MPI support enabled
+Starting 4 MPI processes
+Volume 28 x 28 x 28 x , total 21952
+iterations 1000000, measurement interval 10, checkpoint interval 50000
+-------------------------- Lattice parameters --------------------------
+SU(2) beta 16.0
+msq (triplet) -0.315858, b4 0.050000, a2 0.100000, initial sigma0 0.20
+
+Multicanonical order parameter: Tr Sigma^2 
+Processor layout: 2 x 2 x 1
+Sites on each node: 14 x 14 x 28 = 5488.
+Each node needs 2192 additional halo sites (self halos to be removed).
+Allocated memory for lookup tables.
+All tests OK! Time taken: 0.002649 seconds.
+Initialization done! Took 0.080640 seconds.
+Allocated memory for fields.
+
+Loading weightfile: weight
+Unable to access weightfile!!
+Initialized new weight 
+readonly not 0, so multicanonical weight WILL be modified!
+
+Starting simulation!
+
+Reducing weight update factor! Now 0.333333 
+
+Reducing weight update factor! Now 0.222222 
+
+Reducing weight update factor! Now 0.148148 
+
+Reducing weight update factor! Now 0.098765 
+
+Reducing weight update factor! Now 0.065844 
+
+Reducing weight update factor! Now 0.043896 
+
+Reducing weight update factor! Now 0.029264 
+
+Reducing weight update factor! Now 0.019509 
+
+Reducing weight update factor! Now 0.013006 
+
+Reducing weight update factor! Now 0.008671 
+
+Reducing weight update factor! Now 0.005781 
+
+Reducing weight update factor! Now 0.003854 
+
+Reducing weight update factor! Now 0.002569 
+
+Reducing weight update factor! Now 0.001713 
+
+Reducing weight update factor! Now 0.001142 
+
+Reducing weight update factor! Now 0.000761 
+
+Reducing weight update factor! Now 0.000507 
+
+Checkpointing at iteration 50000. Total time: 984.4s, 6.79% comms.
+
+-- Acceptance rates --
+	SU(2) link 91.20%, multicanonical 98.87%,  
+
+Reducing weight update factor! Now 0.000338 

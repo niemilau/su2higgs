@@ -47,11 +47,11 @@ Since the weight function generally depends on a \textit{global} parameter $R$ (
 	
 	\item Perform an even-odd sweep on the lattice, updating half of the sites locally using \textit{canonical} updates such as overrelaxation. This moves the system towards a local minimum of the canonical ensemble. For example if the order parameter is $\phi^\dagger\phi$, we update the Higgs field at half of the sites but do not touch the other fields yet.
 	
-	\item After the sweep, recalculate the order parameter and perform an accept/reject step based on the change in the weight function. The sweep of updates is accepted with probability $\min(1, \exp[W(R) - W(R') ])$, where $R$ and $R'$ are the old and new values the order parameter. If rejected, ALL local updates contributing to the weight change are undone (ex. if $R$ is the Higgs hopping term, we sweep and update gauge links and the Higgs, and then apply the multicanonical step. If rejected, undo changes in both Higgs and the links). This step produces a bias towards mixed-phase configurations where the weight function is smaller.
+	\item After the sweep, recalculate the order parameter and perform an accept/reject step based on the change in the weight function. The sweep of updates is accepted with probability $\min(1, \exp[W(R) - W(R') ])$, where $R$ and $R'$ are the old and new values the order parameter. If rejected, ALL local updates contributing to the weight change are undone (ex. if $R$ is the Higgs hopping term, we sweep and update gauge links and the Higgs, and then apply the multicanonical step. If rejected, undo changes in both Higgs and the links). This step produces a bias towards mixed-phase configurations where the weight function is smaller. 
 	
 \end{itemize}
 
-For the "easy" order parameter $\phi^\dagger\phi$, the acceptance rate of the multicanonical update is generally good, $>90\%$. This is in agreement with Kari's acceptance rates in the SM and MSSM.
+For the "easy" order parameter $\phi^\dagger\phi$, the acceptance rate of the multicanonical update is generally good, $>90\%$. This is in agreement with Kari's acceptance rates in the SM and MSSM. \textbf{To do:} optimize the algorithm for more complicated order parameters. It should be safe to do perform the multicanonical step in parts, so that if we choose hopping term as the order parameter, we can first update half of the links, do global acc/rej, then update half of the Higgs and do acc/rej again etc.
 
 \subsection{Calculation of the weight function}
 
@@ -162,16 +162,7 @@ S_\text{latt} =& \beta_G \sum_{\textbf{x}, i<j} \Big(1-\frac12 P_{ij}(x)\Big) + 
 & + \sum_\textbf{x} \bigg[ (a m_\Sigma)^2 (a \Tr \Sigma^2) + a b_4 (a \Tr \Sigma^2)^2\bigg],
 \end{align}
 
-This is exactly the same action as in Ref.~\cite{Kajantie:1997tt}, but they denote $\Sigma = A_0, m_\Sigma = m_D, b_4 = \lambda_A$. They define 
-\begin{align}
-y = \frac{m^2_D(g^2)}{g^4}, \quad x = \frac{\lambda_A}{g^2},
-\end{align}
-in terms of which they give their results. In Fig.~4 they show histograms but only give the critical $y_c$ for the case $x=0.20$, in Fig.~2. Their volume is also quite large, $28^3$, and we need multicanonical in order to simulate this volume. Nevertheless, reading off the critical $y$ corresponding to this volume and $\beta_G = 16$ from their Fig.~2, we have $y_c \approx 0.154$. This fixes the continuum mass $\mu^2_\Sigma$ in our parameterization. 
-
-
-
-Their volume in the $x=0.20$ histogram is $28^3$ and the mixed-phase suppression quite strong, so we need a working multicanonical update for the adjoint to compare this case. With just standard metropolis we may nevertheless use smaller volume, $8^3$, and preliminary simulations are in some agreement with their critical values. 
-
+This is exactly the same action as in Ref.~\cite{Kajantie:1997tt}, but they denote $\Sigma = A_0, m_\Sigma = m_D, b_4 = \lambda_A$.
 
 \subsection{SU(2) + fundamental Higgs + adjoint scalar}
 
@@ -268,15 +259,19 @@ For the right-hand side histogram in Fig.~6 of Ref.~\cite{Kajantie:1995kf}, the 
 \lauri{For David's code again $g = 0.707107$.}
 
 
-\begin{figure}[h]
-\label{fig:histogram_SM2}
-	\includegraphics[scale=0.5]{histogram_mhstar-70}
-	\caption{Histogram for the SM case, $m_H^* = 70$ GeV, with inputs as in Eq.~(\ref{eq:SM-inputs2}), at volume $24^3$. The result is in very good agreement with Kari's histogram.}
-\end{figure}
-
-
-
 \subsection{$\gr{SU(2)} + $adjoint scalar in 3d}
+
+We can compare to histograms in Fig~4 of Ref.~\cite{Kajantie:1997tt}. In this case $\Sigma^a$ is identified as the temporal scalar $A_0^a$ originating from thermal screening of the gauge field $A^a_\mu$. They define 
+\begin{align}
+	y = \frac{m^2_D(g^2)}{g^4}, \quad x = \frac{\lambda_A}{g^2} = \frac{b_4}{g^2},
+\end{align}
+in terms of which they give their results (these are in \MSbar!). In Fig.~4 they give $x, \beta_G$ and volume for the histograms, while $y_c$ needs to be calculated from their Eq~(5.12). 
+
+show histograms but only give the critical $y_c$ for the case $x=0.20$, in Fig.~2. Their volume is also quite large, $28^3$, and we need multicanonical in order to simulate this volume. Nevertheless, reading off the critical $y$ corresponding to this volume and $\beta_G = 16$ from their Fig.~2, we have $y_c \approx 0.154$. This fixes the continuum mass $\mu^2_\Sigma$ in our parameterization. 
+
+
+
+Their volume in the $x=0.20$ histogram is $28^3$ and the mixed-phase suppression quite strong, so we need a working multicanonical update for the adjoint to compare this case. With just standard metropolis we may nevertheless use smaller volume, $8^3$, and preliminary simulations are in some agreement with their critical values. 
 
 
 Applying this, we obtain lattice parameters for David's code corresponding to their $x=0.20$ critical histogram: 
@@ -291,9 +286,11 @@ Histograms in Ref.~\cite{Kajantie:1997tt} are given in terms of $A^a_0 A^a_0 / (
 \end{align}
 
 
+
+
 \subsection{Comparing to Kari's simulations in Higgs + $A_0$ theory}
 
-We can compare the full fundamental + adjoint case to the histograms in Fig.~23 of Ref.~\cite{Kajantie:1995kf}. In this case $\Sigma^a$ is identified as the temporal scalar $A_0^a$ originating from thermal screening of the gauge field $A^a_\mu$. Our DR suggests that the parameters need to be fixed (in terms of 4d parameters) as 
+We can compare the full fundamental + adjoint case to the histograms in Fig.~23 of Ref.~\cite{Kajantie:1995kf}, with $\Sigma$ again being the $A_0$ field. Our DR suggests that the parameters need to be fixed (in terms of 4d parameters) as 
 \begin{align}
 \mu^2_\Sigma =& m^2_D = g_4^2 T^2 \left( \frac{5}{6} + \frac{N_f}{3} \right) , \quad b_4 = T \frac{g_4^4}{16\pi^2} \left( \frac{17+N_f}{3} \right), \nonumber \\
 \quad a_2 =& 2 h_3 = \frac12 g^2_4 T \Big[ 1 + \frac{1}{16\pi^2} \Big( \frac{17}{2} - 4 (4 \ln 2 -1 ) \Big)g_4^2 - 6 y_t^2 + 12\lambda_4 \Big]
