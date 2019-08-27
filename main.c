@@ -26,9 +26,6 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &p.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &p.size); // how many MPI threads
 
-  if(!p.rank)
-    printf("MPI support enabled\n");
-
 	printf0(p, "Starting %d MPI processes\n", p.size);
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -137,7 +134,7 @@ int main(int argc, char *argv[]) {
 		} else {
 			metro = 0;
 		}
-		
+
 		if (!p.multicanonical) {
 			update_lattice(&f, p, &comlist, &c, metro);
 		} else {

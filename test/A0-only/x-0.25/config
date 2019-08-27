@@ -1,0 +1,82 @@
+# Ordering does not matter in this file. 
+# Spacetime dimension is read from dim 
+# and lattice lengths in each direction are read from labels L1, L2, ...
+# program returns error if the number of L's does not match dim
+
+
+# lattice dimensions (use even numbers to ensure checkerboard layout works)
+
+dim 3
+
+L1 32
+L2 32
+L3 32
+
+# iterations
+iterations 1000000
+
+# how often to write measurements
+interval 10
+
+# how often to write lattice configuration to file 
+checkpoint 50000
+
+# perform initial sensibility checks on lattice layout?
+run_checks 1
+
+# where results are written
+resultsfile measure
+
+# parameters
+
+# gauge couplings
+betasu2 16.0
+
+# doublet
+msq -0.335046
+lambda 0.0625
+
+# triplet
+msq_triplet -0.335046
+b4 0.0625
+a2 0.1
+
+# initial values for fields
+phi0 0.2
+sigma0 0.2 
+
+
+### update algorithms
+
+# SU(2) links: metropolis or heatbath
+algorithm_su2link heatbath
+# SU(2) doublets: metropolis or overrelax
+algorithm_su2doublet overrelax
+# SU(2) triplet: metropolis or overrelax
+algorithm_su2triplet overrelax
+
+# where to store the lattice at the end
+latticefile lattice
+
+# how many times per sweep to update the two fields
+update_doublet 1
+update_triplet 1
+
+### multicanonical
+multicanonical 1
+bins 80
+min 0.436
+max 0.57
+# where to store the weight?
+weightfile weight
+# set infinite weight outside the binning range? 
+absolute_bounds 0
+
+# order parameter for multicanonical
+orderparam Sigmasq
+
+# update weight on the go?
+readonly 1
+
+# initial weight update factor (if weight exists, uses the value there instead)
+increment 1.5

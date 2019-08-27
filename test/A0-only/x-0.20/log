@@ -6,59 +6,67 @@ iterations 1000000, measurement interval 10, checkpoint interval 50000
 SU(2) beta 16.0
 msq (triplet) -0.315858, b4 0.050000, a2 0.100000, initial sigma0 0.20
 
-Multicanonical order parameter: Tr Sigma^2 
 Processor layout: 2 x 2 x 1
 Sites on each node: 14 x 14 x 28 = 5488.
 Each node needs 2192 additional halo sites (self halos to be removed).
 Allocated memory for lookup tables.
-All tests OK! Time taken: 0.002649 seconds.
-Initialization done! Took 0.080640 seconds.
+All tests OK! Time taken: 0.001191 seconds.
+Initialization done! Took 0.044419 seconds.
 Allocated memory for fields.
-
-Loading weightfile: weight
-Unable to access weightfile!!
-Initialized new weight 
-readonly not 0, so multicanonical weight WILL be modified!
 
 Starting simulation!
 
-Reducing weight update factor! Now 0.333333 
-
-Reducing weight update factor! Now 0.222222 
-
-Reducing weight update factor! Now 0.148148 
-
-Reducing weight update factor! Now 0.098765 
-
-Reducing weight update factor! Now 0.065844 
-
-Reducing weight update factor! Now 0.043896 
-
-Reducing weight update factor! Now 0.029264 
-
-Reducing weight update factor! Now 0.019509 
-
-Reducing weight update factor! Now 0.013006 
-
-Reducing weight update factor! Now 0.008671 
-
-Reducing weight update factor! Now 0.005781 
-
-Reducing weight update factor! Now 0.003854 
-
-Reducing weight update factor! Now 0.002569 
-
-Reducing weight update factor! Now 0.001713 
-
-Reducing weight update factor! Now 0.001142 
-
-Reducing weight update factor! Now 0.000761 
-
-Reducing weight update factor! Now 0.000507 
-
-Checkpointing at iteration 50000. Total time: 984.4s, 6.79% comms.
+Checkpointing at iteration 50000. Total time: 656.6s, 15.81% comms.
 
 -- Acceptance rates --
-	SU(2) link 91.20%, multicanonical 98.87%,  
+	SU(2) link 90.77%, Triplet overrelax 99.57%, Triplet Metropolis 56.92%,  
 
-Reducing weight update factor! Now 0.000338 
+Checkpointing at iteration 100000. Total time: 1318.8s, 16.13% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.77%, Triplet overrelax 99.57%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 150000. Total time: 1970.7s, 15.90% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.90%, Triplet overrelax 99.58%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 200000. Total time: 2628.5s, 15.94% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.90%, Triplet overrelax 99.58%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 250000. Total time: 3267.6s, 15.53% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.85%, Triplet overrelax 99.58%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 300000. Total time: 3910.7s, 15.33% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.82%, Triplet overrelax 99.58%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 350000. Total time: 4583.6s, 15.71% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.78%, Triplet overrelax 99.57%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 400000. Total time: 5277.4s, 16.31% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.78%, Triplet overrelax 99.57%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 450000. Total time: 5957.5s, 16.58% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.79%, Triplet overrelax 99.57%, Triplet Metropolis 56.93%,  
+
+Checkpointing at iteration 500000. Total time: 6616.3s, 16.55% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.77%, Triplet overrelax 99.57%, Triplet Metropolis 56.92%,  
+
+Checkpointing at iteration 550000. Total time: 7306.4s, 16.87% comms.
+
+-- Acceptance rates --
+	SU(2) link 90.76%, Triplet overrelax 99.57%, Triplet Metropolis 56.92%,  

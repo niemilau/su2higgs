@@ -410,9 +410,6 @@ int overrelax_triplet_old(fields f, params p, long i) {
 	double mod = tripletsq(oldfield);
 	double oldquartic = p.b4 * mod * mod;
 
-	//debug
-	//oldquartic = localact_doublet(f,p,i);
-
 	// Overrelax all the components and then apply a accept/reject based on the quartic term.
 	// This should be OK since overrelaxation for A_a is independent of the other components
 	for (int dof=0; dof<3; dof++) {
@@ -420,8 +417,6 @@ int overrelax_triplet_old(fields f, params p, long i) {
 	}
 	mod = tripletsq(f.su2triplet[i]);
 	double newquartic = p.b4 * mod * mod;
-	//debug
-	//newquartic = localact_doublet(f, p, i);
 
 	double diff = newquartic - oldquartic;
 

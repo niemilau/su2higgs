@@ -8,18 +8,18 @@
 
 dim 3
 
-L1 24
-L2 24
-L3 24
+L1 8
+L2 8
+L3 8
 
 # iterations
-iterations 1000000
+iterations 50000
 
 # how often to write measurements
 interval 10
 
 # how often to write lattice configuration to file 
-checkpoint 50000
+checkpoint 10000
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -33,7 +33,7 @@ resultsfile measure
 betasu2 12.0
 
 # doublet
-msq -0.262345
+msq -0.162345
 lambda 0.0410249
 
 # triplet

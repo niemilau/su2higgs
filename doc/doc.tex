@@ -23,7 +23,7 @@
 \definecolor{myorange}{rgb}{1,0.5,0}
 \newcommand\lauri[1]{{\color{myorange}#1}}
 
-\title{Basic documentation for lattice simulations}
+\title{Documentation for lattice simulations}
 \author{Lauri Niemi}
 \date{\today}
 
@@ -39,13 +39,13 @@ In practice the weight function is implemented by specifying a range $R_\text{mi
 \begin{align}
 W(R) = w_i + (R - R_i) \frac{w_{i+1} - w_i}{R_{i+1} - R_i},
 \end{align}
-and in the last bin we simply use constant weight. Outside the binning range the weight is chosen to be constant and equal to $w_i$ in the nearest bin. \lauri{For nucleation we would need infinite weighting outside the range. This is also implemented and can be specified in config file.}
+and in the last bin we simply use constant weight. Outside the binning range the weight is chosen to be constant and equal to $w_i$ in the nearest bin. \lauri{For nucleation we would need infinite weighting outside the range. This is also implemented and can be specified in the config file.}
 
 Since the weight function generally depends on a \textit{global} parameter $R$ (ex. volume average of $\phi^\dagger\phi$), parallelization of multicanonical algorithms is not straightforward. We use the following method, adapted from Kari: 
 
 \begin{itemize}
 	
-	\item Perform an even-odd sweep on the lattice, updating half of the sites locally using \textit{canonical} updates such as overrelaxation. This moves the system towards a local minimum of the canonical ensemble. For example if the order parameter is $\phi^\dagger\phi$, we update the Higgs field at half of the sites but do not touch the other fields yet.
+	\item Perform an even-odd sweep on the lattice, updating half of the sites locally using \textit{canonical} updates such as standard overrelaxation. This moves the system towards a local minimum of the canonical ensemble. For example if the order parameter is $\phi^\dagger\phi$, we update the Higgs field at half of the sites but do not touch the other fields yet.
 	
 	\item After the sweep, recalculate the order parameter and perform an accept/reject step based on the change in the weight function. The sweep of updates is accepted with probability $\min(1, \exp[W(R) - W(R') ])$, where $R$ and $R'$ are the old and new values the order parameter. If rejected, ALL local updates contributing to the weight change are undone (ex. if $R$ is the Higgs hopping term, we sweep and update gauge links and the Higgs, and then apply the multicanonical step. If rejected, undo changes in both Higgs and the links). This step produces a bias towards mixed-phase configurations where the weight function is smaller. 
 	
@@ -72,7 +72,7 @@ Details of our algorithm are as follows:
 	
 	\item After $M$ ($\sim 500-2000$) such measurements, update weight function in each bin by factor w.hits[bin]$\times \delta / n_\text{bins}$, where $\delta$  is an increment factor and $n_\text{bins}$ is the total number of bins (the normalization is very convenient and generally leads to smoother weight functions). After updating, reset w.hits and repeat the measurements.
 	
-	\item Initially when the weight is flat, canonical configurations are preferred and so weight is increased in the pure phases by large amounts. To make the weight function converge, the increment factor $\delta$ needs to be gradually decreased so that weight of mixed-phase configurations does not catch up to the pure phases. Again we adapt Kari's method here: each time the system tunnels from the last bin to the first bin (or vice versa), set $\delta \leftarrow \delta / 1.5$. This check is only performed after a full set of multicanonical measurements (after updating the weight).
+	\item Initially when the weight is flat, canonical configurations are preferred and so weight is increased in the pure phases by large amounts. To make the weight function converge, the increment factor $\delta$ needs to be gradually decreased so that weight of mixed-phase configurations does not catch up to the pure phases. Again we adapt Kari's method here: each time the system tunnels from the last bin to the first bin (or vice versa), set $\delta \leftarrow \delta / 1.5$. This check is only performed after a full set of multicanonical measurements (after updating the weight). This method generally works well if the mixed-phase suppression is strong. 
 	
 \end{itemize}
 
@@ -93,7 +93,7 @@ Details of our algorithm are as follows:
 \end{figure}
 
 
-A possible downside of this method is that it may not be possible to produce a completely smooth weight function if the $\delta$ parameter becomes small too quickly. Usually this does not matter however, because the resulting "spikes" remain quite small. A good initial value for $\delta$ is $\sim 0.5$ and number of bins $\sim 100$. Binning range should be chosen so that both spikes are included and preferably some extra, but not regions that are already very strongly suppressed (need to be especially careful with the symmetric phase peak that is usually very sharp).
+A possible downside of this method is that it may not be possible to produce a completely smooth weight function if the $\delta$ parameter becomes small too quickly. Usually this does not matter however, because the resulting "spikes" remain quite small. A good initial value for $\delta$ is $\sim 0.5$ and number of bins $\sim 100$. Binning range should be chosen so that both spikes are included and preferably some extra, but not regions that are already very strongly suppressed (need to be especially careful with the symmetric phase peak, which is usually very sharp).
 
 
 \section{Lattice actions and parametrization}
@@ -181,7 +181,7 @@ S_{a_2} = \sum_\textbf{x} (a a_2) \frac12 \Tr (a\he\Phi\Phi) \Tr (a\Sigma^2).
 
 In scalar theories, the common procedure for updating fields seems to be $4-5 \times $overrelaxation, followed by a Metropolis update to obtain ergodicity. Gauge fields are updated using heat bath algorithms. We adapt this procedure, and the details are given in this section. An important thing to keep in mind is the fact that for flat potentials (especially Higgs in the broken phase), substantial improvement can be obtained by optimizing the updates for radial parts of the scalar fields (e.g. $\Phi = R V$, with $R \geq 0, V \in SU(2)$). 
 
-As a side note, we point out that the global radial update for the Higgs advertised in \cite{Kajantie:1995kf} is most likely not worth implementing, because it scales very badly with volume. \lauri{Kari also ditched it already a long ago.}
+As a side note, we point out that the global radial update for the Higgs advertised in \cite{Kajantie:1995kf} is most likely not worth implementing, because it scales very badly with volume. \lauri{Kari also ditched it already a long time ago.}
 
 \subsection{Overrelaxation for the scalars}
 
@@ -195,7 +195,7 @@ where the components $\phi_a$ are as defined in Eq.~(\ref{eq:Higgsfield}), $R^2 
 \end{align}
 To account for the quartic term, we simply do an accept/reject based on the difference $C (R')^4 - C R^4$. If $C$ is small, the acceptance rate is high and the algorithm can be expected to work well. In my tests in the SM case $x=0.034$ (very small $C$) I obtained acceptance of $\sim 95\%$. \lauri{I believe Guy Moore used this update for SM nucleation.} Note that this update generalizes very simply to e.g. adjoint scalars.
 
-We can, however, do better by adapting the overrelaxation presented in \cite{Kajantie:1995kf} (has slight error in $Y^2$ parts) and \cite{Laine:1998qk} (no error). Because the algorithm is described in detail in the aforementioned references, I will not bother writing it here. The basic idea nevertheless is to perform separate updates on Cartesian parametrization of the Higgs field, which also is very efficient in updating the radial part. This update yields acceptance rate of whopping $99.8\%$ or better, and I have tested that it facilitates tunneling much more effectively than the Gaussian approximation above, at least in the SM $x = 0.034$ case. \textbf{I use this optimized update for the Higgs}. \lauri{(slightly confusing thing here: in Kari's code he does not seem to overrelax the $Y$ component at all, or at least this is not very obvious. Perhaps updating the $X$ part really is enough in practice?)}
+We can, however, do better by adapting the overrelaxation presented in \cite{Kajantie:1995kf} (has slight error in $Y^2$ parts) and \cite{Laine:1998qk} (no error). Because the algorithm is described in detail in the aforementioned references, I will not bother writing it here. The basic idea is to perform separate updates on Cartesian parametrization of the Higgs field, which also is very efficient in updating the radial part. This update yields acceptance rate of whopping $99.8\%$ or better, and I have tested that it facilitates tunneling much more effectively than the Gaussian approximation above, at least in the SM $x = 0.034$ case. \textbf{I use this optimized update for both Higgs and the adjoint scalar}. \lauri{(slightly confusing thing here: in Kari's code he does not seem to overrelax the $Y$ component at all, or at least this is not very obvious. Perhaps updating the $X$ part really is enough in practice?)}
 
 \subsection{$\gr{SU(2)}$ gauge link heat bath}
 
@@ -219,7 +219,7 @@ where we wrote $U = a_0 \sigma_0 + i a_i \sigma_i$.
 \end{itemize}
 
 
-If an adjoint scalar is present, this simple recipe no longer works because the adjoint hopping term is quadratic in $U_i(x)$. Instead, we generate a new link candidate following the above recipe, and then accept it with the probability $\min[1, \exp(H - H')]$, where $H$ and $H'$ are the adjoint hopping terms before and after the link update. Acceptance rate is typically good, $\sim 90\%$.
+If an adjoint scalar is present, this simple recipe no longer works because the adjoint hopping term is quadratic in $U_i(x)$. Instead, we generate a new link candidate following the above recipe, and then accept it with the probability $\min[1, \exp(H - H')]$, where $H$ and $H'$ are the adjoint hopping terms before and after the link update. Acceptance rate is typically good, $>80\%$.
 
 
 \section{Sample histograms and comparison to old results}
@@ -265,27 +265,24 @@ We can compare to histograms in Fig~4 of Ref.~\cite{Kajantie:1997tt}. In this ca
 \begin{align}
 	y = \frac{m^2_D(g^2)}{g^4}, \quad x = \frac{\lambda_A}{g^2} = \frac{b_4}{g^2},
 \end{align}
-in terms of which they give their results (these are in \MSbar!). In Fig.~4 they give $x, \beta_G$ and volume for the histograms, while $y_c$ needs to be calculated from their Eq~(5.12). 
+in terms of which they give their results (these are in \MSbar!). In Fig.~4 they give $x, \beta_G$ and volume for the histograms, while $y_c$ needs to be calculated from their Eq~(5.12). The lattice mass is then obtained from $y_c$ by subtracting the lattice divergence (Appendix \ref{sec:lat-cont}).
 
-show histograms but only give the critical $y_c$ for the case $x=0.20$, in Fig.~2. Their volume is also quite large, $28^3$, and we need multicanonical in order to simulate this volume. Nevertheless, reading off the critical $y$ corresponding to this volume and $\beta_G = 16$ from their Fig.~2, we have $y_c \approx 0.154$. This fixes the continuum mass $\mu^2_\Sigma$ in our parameterization. 
-
-
-
-Their volume in the $x=0.20$ histogram is $28^3$ and the mixed-phase suppression quite strong, so we need a working multicanonical update for the adjoint to compare this case. With just standard metropolis we may nevertheless use smaller volume, $8^3$, and preliminary simulations are in some agreement with their critical values. 
-
-
-Applying this, we obtain lattice parameters for David's code corresponding to their $x=0.20$ critical histogram: 
+Some lattice inputs corresponding to histograms in their Fig~4 are:
 \begin{align}
-g_\text{latt} = 0.5, \quad b_\text{4,latt}= 0.05, \quad m^2_\text{\Sigma, latt} = -0.315315.
-\end{align}
-
-
-Histograms in Ref.~\cite{Kajantie:1997tt} are given in terms of $A^a_0 A^a_0 / (2 g^2)$ (I don't know if this is the lattice $A^a_0$ or not!!). The condensate discontinuity in their histograms is related to David's histograms by 
-\begin{align}
-\Delta \langle a \Sigma^a_0\Sigma_0^a\rangle_\text{David} = \frac{8}{\beta_G} \Big(\frac{\Delta\langle A^a_0A_0^a\rangle}{2g^2}\Big)_\text{Kari}.
-\end{align}
-
-
+\label{eq:inputs-A0}
+x =& 0.04, \beta_G = 32: m^2_\Sigma = -0.123686, b_4 = 0.005 \\ 
+x =& 0.12, \beta_G = 8: m^2_\Sigma = -0.54502, b_4 = 0.06 \\
+x =& 0.20, \beta_G = 16: m^2_\Sigma = -0.315858, b_4 = 0.05.
+\end{align}   
+Histograms corresponding to these are shown in Fig~\ref{fig:A0_only}. \lauri{To do: normalize these properly...}
+\begin{figure}[H]
+	\centering
+	\subfloat[$x=0.04$]{\includegraphics[width=0.33\textwidth]{A0_x-0_04}\label{}}
+	\subfloat[$x=0.12$]{\includegraphics[width=0.33\textwidth]{A0_x-0_12}\label{}}
+	\subfloat[$x=0.20$]{\includegraphics[width=0.33\textwidth]{A0_x-0_20}\label{}}
+	\caption{Histograms obtained with the inputs of Eq.~(\ref{eq:inputs-A0}) (unnormalized...). Horizontal axis is $\langle\Tr\Sigma^2\rangle$ in lattice regularization. (a) and (b) were obtained with multicanonical weighting. In Ref.~\cite{Kajantie:1997tt} they give the histograms in Fig~4 in terms of the continuum condensate $\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle$. Because the condensates in \MSbar and on the lattice are related by additative renormalization, the relation between \textit{differences} in our and their histograms is $\Delta\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle_\text{Kari} = \frac{\beta_G}{4}\Delta\langle \Tr\Sigma^2\rangle_\text{latt}$. It is straightforward to check that the separation of the pure phases in our histograms matches to what they have. \lauri{Note that (c) does NOT give the same relative probabilities as in Ref.~\cite{Kajantie:1997tt}. A possible explanation is that since their fit for $y_c(x)$ is performed at $V \rightarrow \infty$ limit, my value for the mass parameter may be slightly off here.}} 
+	\label{fig:A0_only}
+\end{figure}
 
 
 \subsection{Comparing to Kari's simulations in Higgs + $A_0$ theory}
@@ -373,7 +370,7 @@ Due to renormalization scheme dependence, the relation between continuum and lat
 
 Denoting $m_i = \text{lattice mass}, \mu_i = \text{\MSbar mass}$, the two are related as 
 \begin{align}
-m^2_i = \mu^2_i(\Lambda) + \delta m^2_i(\hbar) + \delta m^2_i(\hbar^2),
+m^2_i = a^2 (\mu^2_i(\Lambda) + \delta m^2_i(\hbar) + \delta m^2_i(\hbar^2) ),
 \end{align}
 where $\hbar$ is the loop counting parameter. Constants often appearing in the counterterms read \cite{Laine:1997dy}: 
 \begin{align}
@@ -384,9 +381,9 @@ We will denote the \MSbar scale in 3d by $\Lambda$ and the 3d parameters are ass
 
 \subsection{$\gr{SU(2)}$ + fundamental Higgs}
 
-The relation between lattice and continuum Higgs condensates is 
+The relation between lattice and continuum Higgs condensates is \lauri{(bad notation; here $m^2_\phi$ means mass in lattice regularization, with units GeV$^2$)}
 \begin{align}
-\langle \frac12\Tr\he\Phi\Phi\rangle_\text{cont} = \langle\phi^\dagger\phi\rangle_\text{cont} = \langle \frac12\Tr\he\Phi\Phi\rangle_\text{latt} + \frac{d(\delta V)}{dm^2_\phi}, 
+\langle \frac12\Tr\he\Phi\Phi\rangle_\text{cont} = \langle\phi^\dagger\phi\rangle_\text{cont} = a^{-1}\langle \frac12\Tr\he\Phi\Phi\rangle_\text{latt} + \frac{d(\delta V)}{dm^2_\phi}, 
 \end{align}
 where 
 \begin{align}
@@ -434,8 +431,8 @@ The vacuum divergence is not modified by the $a_2$ term, so the counterterm rela
 
 For the masses, we have 
 \begin{align}
-m^2_\phi =& \mu^2_\phi(\Lambda) + (\delta m^2_\phi)_\text{fund}+ (\delta m^2_\phi)_\text{both} \\
-m^2_\Sigma =& \mu^2_\Sigma(\Lambda) + (\delta m^2_\Sigma)_\text{adj} + (\delta m^2_\Sigma)_\text{both} 
+m^2_\phi =& a^2(\mu^2_\phi(\Lambda) + (\delta m^2_\phi)_\text{fund}+ (\delta m^2_\phi)_\text{both} )\\
+m^2_\Sigma =& a^2( \mu^2_\Sigma(\Lambda) + (\delta m^2_\Sigma)_\text{adj} + (\delta m^2_\Sigma)_\text{both} ) 
 \end{align}
 where the new contributions read
 \begin{align}
