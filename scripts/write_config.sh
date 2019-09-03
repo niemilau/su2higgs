@@ -24,8 +24,8 @@ gp=$(echo $params | awk {'print $4'})
 muphisq=$(echo $params | awk {'print $5'})
 muSigmasq=$(echo $params | awk {'print $6'})
 lam=$(echo $params | awk {'print $7'})
-a2=$(echo $params | awk {'print $8'})
-b4=$(echo $params | awk {'print $9'})
+b4=$(echo $params | awk {'print $8'})
+a2=$(echo $params | awk {'print $9'})
 a=$(echo $params | awk {'print $10'})
 
 
@@ -40,5 +40,5 @@ sed -i -e "/# doublet/!b;n;n;c\lambda $lam" config
 
 sed -i -e "/# triplet/!b;n;c\msq_triplet $muSigmasq" config
 sed -i -e "/# triplet/!b;n;n;c\b4 $b4" config
-sed -i -e "/# triplet/!b;n;n;c\a2 $a2" config
+sed -i -e "/# triplet/!b;n;n;n;c\a2 $a2" config
 

@@ -65,23 +65,25 @@ int main(int argc, char *argv[]) {
 
 	// initialize all fields
 	alloc_fields(p, &f);
-	setfields(f, p);
 
-	// main iteration loop
-	long iter = 1;
-	long start = 1;
-	// metro = 1 if we force metropolis sweep, 0 otherwise
-	char metro = 0;
-	// how often to force metropolis
-	int metro_interval = 6;
+	// check if p.latticefile exists and load it; if not, call setfields()
+	if (access(p.latticefile,R_OK) == 0) {
+		// ok
+		printf0(p, "\nLoading latticefile: %s\n", p.latticefile);
+		load_lattice(p, f, &c);
+	} else {
+		printf0(p, "No latticefile found; starting with cold configuration.\n");
+		setfields(f, p);
+		p.reset = 1;
+	}
 
-	// labels for results file (TODO only if new simulation)
+	// labels for results file
 	if (!p.rank) {
 		print_labels();
 	}
 
 	if (p.multicanonical) {
-		// initialize multicanonical
+		// initialize multicanonical. Needs to come after field initializations
 		load_weight(p, &w);
 		alloc_backup_arrays(p, &f, w);
 		calc_orderparam(p, f, &w, EVEN);
@@ -93,15 +95,19 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// possible optimization: keep track of changes to action and other observables
-	// when doing updates on the lattice and use those in measurements, instead of
-	// calculating everything from the scratch each time.
-	// Drawback: the variables used to keep track accumulate errors from limited float precision.
-
-
-	if (!p.rank) {
-		printf("\nStarting simulation!\n");
+	// main iteration loop
+	long iter;
+	if (p.reset) {
+		iter = 1;
+		printf0(p, "\nStarting new simulation!\n");
+	} else {
+		iter = c.iter + 1;
+		printf0(p, "\nContinuing from iteration %ld!\n", iter-1);
 	}
+	// metro = 1 if we force metropolis sweep, 0 otherwise
+	char metro = 0;
+	// how often to force metropolis
+	int metro_interval = 5;
 
 	#ifdef MPI
 	// make sure weight is not written before all nodes get the initial weight.
@@ -113,21 +119,10 @@ int main(int argc, char *argv[]) {
 
 	while (iter <= p.iterations) {
 
+		// measure & update fields first, then checkpoint if needed
 		if (iter % p.interval == 0) {
 			measure(f, p, &c, &w);
 		}
-		if ((iter % p.checkpoint == 0) && (iter != start)) {
-			// Checkpoint time
-			end_time = clock();
-			time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-			if (!p.rank) {
-				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n", iter, time, 100.0*c.comms_time/time);
-				print_acceptance(p, c);
-			}
-
-			// update max iterations if the config file has been changed by the user
-			read_updated_parameters(argv[1], &p);
-		} // end checkpoint
 
 		if (iter % metro_interval == 0) {
 			metro = 1;
@@ -140,6 +135,26 @@ int main(int argc, char *argv[]) {
 		} else {
 			update_lattice_muca(&f, p, &comlist, &w, &c, metro);
 		}
+
+
+		if ((iter % p.checkpoint == 0)) {
+			// Checkpoint time; print acceptance and save fields to latticefile
+			end_time = clock();
+			time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+
+			start_time = clock(); // restart timer
+
+			c.total_time += time; c.iter = iter; // store for I/O
+			if (!p.rank) {
+				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
+				print_acceptance(p, c);
+			}
+
+			save_lattice(p, f, c);
+			// update max iterations if the config file has been changed by the user
+			read_updated_parameters(argv[1], &p);
+		} // end checkpoint
+
 		iter++;
 
 	} // end main loop
@@ -147,6 +162,13 @@ int main(int argc, char *argv[]) {
 	if (p.resultsfile != NULL)	{
 		fclose(p.resultsfile);
 	}
+
+	end_time = clock();
+	time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+
+	// save final configuration
+	c.total_time += time; c.iter = iter;
+	save_lattice(p, f, c);
 
 	// free memory and finish
 	free_fields(p, &f);
@@ -156,14 +178,11 @@ int main(int argc, char *argv[]) {
 		free_muca_arrays(&f, &w);
 	}
 
-	end_time = clock();
-	time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-
-	printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
 	#ifdef MPI
 	MPI_Barrier(MPI_COMM_WORLD);
 	#endif
-	printf0(p, "Reached end! Total time taken: %.1lfs, of which %.2lf%% comms. Time per iteration: %.3lfs \n", time, 100.0*c.comms_time/time, time/p.iterations);
+	printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
+	printf0(p, "Reached end! Total time taken: %.1lfs, of which %.2lf%% comms. Time per iteration: %.3lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
 	#ifdef MPI
   MPI_Finalize();
 	#endif

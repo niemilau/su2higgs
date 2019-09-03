@@ -86,6 +86,8 @@ void setfields(fields f, params p) {
 void init_counters(counters* c) {
 
 	c->comms_time = 0.0;
+	c->total_time = 0.0;
+	c->iter = 1;
 
 	c->accepted_su2link = 0;
 	c->accepted_doublet = 0;

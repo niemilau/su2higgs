@@ -1,6 +1,6 @@
 # non-parallel makefile
 
-CC := gcc -g -O3 -D HIGGS # -D TRIPLET #-D DEBUG
+CC := gcc -g -O3 -D HIGGS -D TRIPLET
 
 
 CFLAGS := 

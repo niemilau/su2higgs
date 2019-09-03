@@ -32,6 +32,7 @@ void get_parameters(char *filename, params *p) {
 	int set_dim = 0;
   int set_L = 0;
 
+  int set_reset = 0;
   int set_iterations = 0;
   int set_checkpoint = 0;
 	int set_interval = 0;
@@ -46,6 +47,7 @@ void get_parameters(char *filename, params *p) {
   int set_seed = 0;
 
   int set_resultsfile = 0;
+  int set_latticefile = 0;
 
 	int set_betasu2 = 0;
 	// doublet
@@ -114,6 +116,10 @@ void get_parameters(char *filename, params *p) {
       p->multicanonical = strtol(value,NULL,10);
       set_multicanonical = 1;
     }
+    else if(!strcasecmp(key,"reset")) {
+      p->reset = strtol(value,NULL,10);
+      set_reset = 1;
+    }
 		else if(!strcasecmp(key,"iterations")) {
       p->iterations = strtol(value,NULL,10);
       set_iterations = 1;
@@ -164,7 +170,10 @@ void get_parameters(char *filename, params *p) {
       p->sigma0 = strtod(value,NULL);
       set_sigma0 = 1;
     }
-
+    else if(!strcasecmp(key,"latticefile")) {
+      strcpy(p->latticefile,value);
+      set_latticefile = 1;
+    }
 
 		else if(!strcasecmp(key,"resultsfile")) {
       if(!strcasecmp(value,"stdout")) {
@@ -295,6 +304,7 @@ void get_parameters(char *filename, params *p) {
 
 	check_set(set_multicanonical, "multicanonical");
 
+  check_set(set_reset, "reset");
   check_set(set_iterations, "iterations");
 	check_set(set_interval, "measure interval");
   check_set(set_checkpoint, "checkpoint");
@@ -322,7 +332,7 @@ void get_parameters(char *filename, params *p) {
   #endif
 
   check_set(set_resultsfile, "resultsfile");
-
+  check_set(set_latticefile, "latticefile");
 
   fclose(config);
 
@@ -425,18 +435,18 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
         else if(!strcasecmp(value,"phisq")) {
   	       w->orderparam = PHISQ;
            printf0(*p, "Multicanonical order parameter: phi^2\n");
-        } 
+        }
 				#endif
 				#ifdef TRIPLET
 				else if (!strcasecmp(value,"Sigmasq")) {
   	       w->orderparam = SIGMASQ;
            printf0(*p, "Multicanonical order parameter: Tr Sigma^2 \n");
-        } 
+        }
 				else if (!strcasecmp(value,"phi2Sigma2")) {
   	       w->orderparam = PHI2SIGMA2;
            printf0(*p, "Multicanonical order parameter: phi^2 Tr Sigma^2 \n");
-        } 
-				#endif 
+        }
+				#endif
 				else {
           printf0(*p, "Unknown multicanonical order parameter!!\n");
           w->orderparam = 0;
@@ -491,21 +501,21 @@ void print_parameters(params p) {
 
 }
 
-/* Read config file again and update certain values. This is called at every checkpoint to 
-* see if the iterations limit has been changed by the user. 
+/* Read config file again and update certain values. This is called at every checkpoint to
+* see if the iterations limit has been changed by the user.
 */
 void read_updated_parameters(char *filename, params *p) {
-	
+
 	FILE *config;
 	long new;
 	char key[100];
   char value[100];
 	char total[200];
   int ret;
-	
+
 	if(access(filename,R_OK) == 0) {
 		config = fopen(filename, "r");
-		
+
 		while(!feof(config)) {
 
 			if(fgets(total,198,config) == NULL) {
@@ -522,7 +532,7 @@ void read_updated_parameters(char *filename, params *p) {
 			if(key[0] == '#') {
 				continue;
 			}
-			
+
 			if(!strcasecmp(key,"iterations")) {
 				new = strtol(value,NULL,10);
 				if (p->iterations != new) {
@@ -544,9 +554,9 @@ void read_updated_parameters(char *filename, params *p) {
 					printf0(*p, "Updated checkpoint interval to %ld\n", new);
 				}
 			}
-		
+
 		}
 		fclose(config);
 	}
-	
+
 }

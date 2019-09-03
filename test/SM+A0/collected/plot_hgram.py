@@ -12,7 +12,8 @@ import sys
 import string, math
 
 
-lines = itertools.cycle(('--', ':','-.'))
+#lines = itertools.cycle(('--', ':','-.'))
+lines = itertools.cycle(('-'))
 
 # setup latex plotting
 plt.rc('text', usetex=True)
@@ -116,7 +117,7 @@ plt.xlabel(r'$\langle \frac12 a\text{Tr} \Phi^\dagger\Phi \rangle$')
 h = plt.ylabel(r'$log_{10}(P)$')
 #h.set_rotation(0)
 plt.xlim([0.4,0.8])
-plt.ylim([0.0,1.0])
+plt.ylim([0.3,1.2])
 plt.grid()
 plt.tick_params(labelsize=20)
 #plt.xticks(np.arange(0.2, 1.0, 0.2)) # set denser ticks

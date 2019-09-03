@@ -19,6 +19,7 @@ matplotlib.rcParams.update({'font.size': 14})
 # but make legend smaller
 matplotlib.rcParams.update({'legend.fontsize': 14})
 
+matplotlib.rcParams['legend.numpoints'] = 1 
 #plt.figure(figsize=(1,1))
 #linestyles = ['_', '-', '--', ':']
 
@@ -27,16 +28,20 @@ from pylab import genfromtxt;
 
 
 # read simulation results
-data1 = genfromtxt("h1_T.dat");
-data2 = genfromtxt("h2_T.dat");
+data1 = genfromtxt("h1_T.dat", names=True)
+data2 = genfromtxt("h2_T.dat", names=True)
 
-# first column is T
-T = data1[:,0];
+## same for both h1, h2
+T = data1['T']
 
-# lattice field squared exp values of lattice fields,
-# defined as phiSq_lat = phiSq_cont / T + div
-h1lat = data1[:,2];
-h2lat = data2[:,2];
+
+# lattice field exp values, in our case:
+# h1 = \phi^\dagger\phi and h2 = 0.5 * \Sigma^a \Sigma^a
+h1lat = data1['avg']
+h2lat = data2['avg']
+
+err1 = data1['error']
+err2 = data2['error']
 
 # remove lattice divergence: see hep-lat/9705003
 # constants from lattice PT
@@ -44,19 +49,26 @@ Sigma = 3.1759115;
 delta = 1.942130;
 zeta = 0.08849;
 
-# read from data file (these are the same in both h1, h2):
-#betaG = data1[:,7]; # SU2 beta
-#g3 = data1[:,8];  # units: GeV^1/2
-#RGscale = data1[:,9];
+# read required parameter from data file (these are the same in both h1, h2):
+betaG = data1['betaG']; # SU2 beta
+gsq = data1['gsq']; # 3d gauge coupling squared, units: GeV^1
+RGscale = data1['RGscale'];
 
-#a = 4/(betaG * g3**2); # lattice spacing
+a = 4.0/(betaG * gsq); # lattice spacing
 
-# substract div: eq. (24) in the Rajantie&Laine paper
-#h1cont = h1lat * T - Sigma/(2*math.pi*a) - 3*g3**2/(16*math.pi**2) * (np.log(6/(a*RGscale)) + zeta + 0.25 * Sigma**2 - delta );
-#h2cont = h2lat * T - Sigma/(2*math.pi*a) - 3*g3**2/(16*math.pi**2) * (np.log(6/(a*RGscale)) + zeta + 0.25 * Sigma**2 - delta );
+# vacuum counterterms (or their derivatives)
+pi = math.pi
+ct_phi = -2.0 * Sigma/(4.0*pi*a) - 3.0/(16.0*pi**2)*gsq*(np.log(6.0/(a*RGscale)) \
+    + zeta + 0.25*Sigma**2 - delta)
 
-h1cont = h1lat*T;
-h2cont = h2lat*T;
+ct_Sigma = -1.5 * Sigma/(4.0*pi*a) - 6.0/(16.0*pi**2)*gsq*(np.log(6.0/(a*RGscale)) \
+    + zeta + 0.25*Sigma**2 - delta)
+
+
+h1cont = h1lat / (1.0*a) + ct_phi;
+h2cont = h2lat / (1.0*a) + ct_Sigma;
+err1 = err1 / (1.0*a)
+err2 = err2 / (1.0*a)
 
 ###############################################
 ######## Transform to 4d fields ###############
@@ -78,23 +90,23 @@ h2cont = h2lat*T;
 
 ###############################################
 
-# FOR NOW ONLY PLOT THE CONTINUUM 3D FIELDS
 # plot: error bars included. remember to change the errors to match what we plot
-# also: multiply by 2 to compare with BG field thing
-plt.errorbar(data1[:,0], 2*h1cont/T, yerr=2*data1[:,3], fmt='o', label = r"\phi_1^2")
-plt.errorbar(data2[:,0], 2*h2cont/T, yerr=2*data2[:,3], fmt='o', label = r"\phi_2^2")
+# also: multiply by 2 to compare with usual VEV
+plt.errorbar(T, 2.0*h1cont/T, yerr=2.0*err1/T, fmt='o', label = r"2\langle\phi^\dagger\phi\rangle / T")
+plt.errorbar(T, h2cont/T, yerr=err2/T, fmt='o', label = r"\langle\text{Tr}\Sigma^2\rangle / T")
 
 
 # draw horizontal line at y = 0
 plt.axhline(y=0, color='black', linestyle='-')
 
-plt.title(r'BM2: $\beta_g = 4$. Note: fields are the lattice fields',fontsize=12)
-plt.xlabel(r'$T$')
-h = plt.ylabel(r'$2\langle\phi^\dagger\phi\rangle/T ')
+plt.title(r'$\beta_g = 16$',fontsize=12)
+plt.xlabel(r'$T$ / GeV')
+#h = plt.ylabel(r'$2\langle\phi^\dagger\phi\rangle/T ')
 #h.set_rotation(0)
 #plt.xlim([0,0.2])
 #plt.ylim([-0.5,2.0])
 #plt.xticks(np.arange(min(T), max(T)+1, 1.0)) # set denser ticks
+plt.grid();
 pyplot.legend();
 pyplot.savefig('test_triplet.pdf')
 plt.gcf().clear()

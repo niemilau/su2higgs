@@ -77,7 +77,7 @@ Details of our algorithm are as follows:
 \end{itemize}
 
 
-\begin{figure}[H]
+\begin{figure}[h]
 \centering
 	\includegraphics[scale=0.5]{weight}
 	\caption{Sample weight function produced using the above algorithm. This corresponds to the SM case with $m_H^* = 35$ GeV, $\beta_G = 8$ and $V = 10\times 10\times 30$. Horizontal axis is the multicanonical order parameter $\langle\frac12 \Tr\Phi^\dagger\Phi\rangle$. }
@@ -251,12 +251,20 @@ Some histograms produced with my code using these inputs are shown in Fig.~\ref{
 \end{figure}
 
 
+\begin{figure}[H]
+	\includegraphics[scale=0.5]{mH-60-beta-8}
+	\caption{Histogram corresponding to $m^*_H = 60$ GeV, $T^* = 137.669$ GeV, $\beta_G = 8$. Compare with Figure~5 in Ref.~\cite{Kajantie:1995kf}. Our lattice inputs here are $m_\phi^2 = -0.263633, \lambda = 0.0322228$.}
+\label{fig:mH60-hgram}
+\end{figure}
+
+
+
 For the right-hand side histogram in Fig.~6 of Ref.~\cite{Kajantie:1995kf}, the inputs corresponding to $\beta_G=8, m^*_H = 70$ GeV, $T^* = 153.620$ GeV are
 \begin{align}
 \label{eq:SM-inputs2}
 \lambda = 0.0448519 \quad m^2_\text{\phi} = -0.287506.
 \end{align}
-\lauri{For David's code again $g = 0.707107$.}
+\lauri{Haven't really tested these yet because the other cases worked so well...}
 
 
 \subsection{$\gr{SU(2)} + $adjoint scalar in 3d}
@@ -277,10 +285,10 @@ x =& 0.20, \beta_G = 16: m^2_\Sigma = -0.315858, b_4 = 0.05.
 Histograms corresponding to these are shown in Fig~\ref{fig:A0_only}. \lauri{To do: normalize these properly...}
 \begin{figure}[H]
 	\centering
-	\subfloat[$x=0.04$]{\includegraphics[width=0.33\textwidth]{A0_x-0_04}\label{}}
-	\subfloat[$x=0.12$]{\includegraphics[width=0.33\textwidth]{A0_x-0_12}\label{}}
-	\subfloat[$x=0.20$]{\includegraphics[width=0.33\textwidth]{A0_x-0_20}\label{}}
-	\caption{Histograms obtained with the inputs of Eq.~(\ref{eq:inputs-A0}) (unnormalized...). Horizontal axis is $\langle\Tr\Sigma^2\rangle$ in lattice regularization. (a) and (b) were obtained with multicanonical weighting. In Ref.~\cite{Kajantie:1997tt} they give the histograms in Fig~4 in terms of the continuum condensate $\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle$. Because the condensates in \MSbar and on the lattice are related by additative renormalization, the relation between \textit{differences} in our and their histograms is $\Delta\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle_\text{Kari} = \frac{\beta_G}{4}\Delta\langle \Tr\Sigma^2\rangle_\text{latt}$. It is straightforward to check that the separation of the pure phases in our histograms matches to what they have. \lauri{Note that (c) does NOT give the same relative probabilities as in Ref.~\cite{Kajantie:1997tt}. A possible explanation is that since their fit for $y_c(x)$ is performed at $V \rightarrow \infty$ limit, my value for the mass parameter may be slightly off here.}} 
+	\subfloat[$x=0.04, V = 18^3$]{\includegraphics[width=0.33\textwidth]{A0_x-0_04}\label{}}
+	\subfloat[$x=0.12, V = 12^3$]{\includegraphics[width=0.33\textwidth]{A0_x-0_12}\label{}}
+	\subfloat[$x=0.20, V = 28^3$]{\includegraphics[width=0.33\textwidth]{A0_x-0_20}\label{}}
+	\caption{Histograms obtained with the inputs of Eq.~(\ref{eq:inputs-A0}) (unnormalized...). Horizontal axis is $\langle\Tr\Sigma^2\rangle$ in lattice regularization. (a) and (b) were obtained with multicanonical weighting. In Ref.~\cite{Kajantie:1997tt} they give the histograms in Fig~4 in terms of the continuum condensate $\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle$. Because the condensates in \MSbar and on the lattice are related by additative renormalization, the relation between \textit{differences} in our and their histograms is $\Delta\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle_\text{Kari} = \frac{\beta_G}{4}\Delta\langle \Tr\Sigma^2\rangle_\text{latt}$. It is straightforward to check that the separation of the pure phases in our histograms matches what they have. \lauri{Note that (c) does NOT give the same relative probabilities as in Ref.~\cite{Kajantie:1997tt}. A possible explanation is that since their fit for $y_c(x)$ is performed at $V \rightarrow \infty$ limit, my value for the mass parameter may be slightly off here.}} 
 	\label{fig:A0_only}
 \end{figure}
 
@@ -314,40 +322,9 @@ m^2_D = \frac56 g^2_4 T^2.
 \end{align}
 \textbf{Note that all parameters in the $A_0$ sector are quite small, and the doublet will dominate the simulations.} Nevertheless, to my knowledge there are no other simulations in the literature performed with both Higgs and an adjoint scalar.
 
-Now for some complications: in Ref.~\cite{Kajantie:1995kf} they do not actually list the explicit input parameters for the $A_0$ simulations. They they values for $m^*_H$ and $T^*$, but only give the relations to $x,y$ in terms of these \textbf{in the case of a fundamental Higgs only}, i.e. the relations already include the integration over $A_0$. So we need to figure out what they used for $x,y$ in this case. 
-\begin{comment}
-Starting from their parameters in 4d, 
-\begin{align}
-g_4 &= \frac23 \\ 
-h &= \frac{m_H^*}{80.6 \text{ GeV}} \\
-\lambda_4 &= \frac18 g_4^2 h^2 ,
-\end{align}
-we find, using the simplified DR of Ref.~\cite{Farakos:1994kx},
-\begin{align}
-g^2_3 &= \Big(\frac23\Big)^2 T^* \\
-\lambda_3 &= 0.055556 h^2 T^* \\
-\mu^2_{\phi,3} &= -\frac12 {m_H^*}^2 + (0.0951588 + 0.0300915 h^2 - 0.000366074 h^4) {T^*}^2.
-\end{align}
+Now for some complications: in Ref.~\cite{Kajantie:1995kf} they do not actually list the explicit input parameters for the $A_0$ simulations. They give values for $m^*_H$ and $T^*$, but only give the relations to $x,y$ in terms of these \textbf{in the case of a fundamental Higgs only}, i.e. the relations already include the integration over $A_0$. So we would need to figure out what they used for $x,y$... 
 
-For their $T^*=170.0$, $m^*_H = 79.976$ GeV, $\beta_G=12$ in Table~9 of \cite{Kajantie:1995kf}, this reciple leads to the following inputs:
-\begin{align}
-\label{eq:inputs-A0}
-g_\text{David} =& 0.57735 \quad \lambda_\text{David} = 0.0410243 \quad a_\text{2, David} = 0.1666667 \nonumber \\ 
-b_\text{4,David} =& 0.00531623 \quad m^2_\text{\phi, David} = -0.262436 \quad m^2_\text{\Sigma, David} = -0.228026.
-\end{align}
-
-
-\begin{figure}[h]
-	\includegraphics[scale=0.5]{histogram_A0}
-	\caption{Histogram for the SM + $A_0$ case with inputs as in Eq.~(\ref{eq:inputs-A0}), at volume $20^3$. The shape is a bit different from Kari's histogram in Fig.~23, but this may be explained by the ambiguity in inputs. Nevertheless we are very close to a transition point here. Again, the separation of peaks agrees quite well with what Kari has. To do: verify this case with multicanonical. }
-\end{figure}
-
-
-\subsection{Updated inputs}
-
-\end{comment}
-
-I asked Kari to search through his old files and he found the following inputs for the fundamental + adjoint case:
+Instead, I asked Kari to search through his old files and he found the following inputs for the fundamental + adjoint case:
 \begin{align}
 \beta_G = 12, \quad \beta_R = 0.00124, \quad \beta^A_2 = 1.136, \quad \beta^A_4 = 0.1914, 
 \end{align}
@@ -359,6 +336,13 @@ m^2_\text{\Sigma} &= -\frac{2\beta_2^A}{\beta_G} = -0.189333 \\
 b_\text{4} &= \frac{4\beta_4^A}{\beta_G^2} = 0.00531667 \\
 a_\text{2} &= \frac{2}{\beta_G} = \frac16 = 0.16666667.
 \end{align}
+Running simulations with these, we obtain histograms shown in Fig~\ref{fig:hgrams_SM_A0}. We see that although the small-volume histograms agree quite well with Kari, the histograms for $32^3$ and $40^3$ lattices \textbf{do not agree}. I am tempted to think that this is because the inputs are off (since I have no means of really verifying what they used), but perhaps the code could still use some more testing for larger volumes...
+
+\begin{figure}[H]
+	\includegraphics[scale=0.5]{hgrams_SM+A0}
+	\caption{Histograms for $\gr{SU(2)}$ + Higgs + $A_0$ field, with inputs as given in the text. All of these were done without multicanonical weight, because the suppression was always quite small. It's easy to check that the condensate discontinuity agrees with that of Ref.~\cite{Kajantie:1995kf} (after conversion). \lauri{However, the large-volume histograms do not agree!! Wrong inputs?}}
+\label{fig:hgrams_SM_A0}
+\end{figure}
 
 
 \appendix 

@@ -121,7 +121,7 @@ h = plt.ylabel(r'$log_{10}(P)$')
 #plt.ylim([-6,0])
 plt.grid()
 plt.tick_params(labelsize=20)
-plt.xticks(np.arange(0, 5, 0.5)) # set denser ticks
+#plt.xticks(np.arange(0.5, 1, 0.5)) # set denser ticks
 pyplot.legend();
 plt.tight_layout()
 pyplot.savefig('hgrams.pdf')

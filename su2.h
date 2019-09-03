@@ -30,7 +30,7 @@ typedef unsigned short ushort;
 #define ODD 1
 
 // multicanonical order parameters
-#define PHISQ 1 
+#define PHISQ 1
 #define SIGMASQ 2
 #define PHI2SIGMA2 3
 
@@ -46,8 +46,8 @@ typedef struct {
 	int rank, size;
 
 	// lattice dimensions
-	ushort dim;
-	uint *L;
+	int dim;
+	int *L;
 	long vol;
 	// slicing the lattice for MPI
 	int *nslices; // how many slices in each direction
@@ -66,14 +66,16 @@ typedef struct {
 	char *parity;
 	long evensites, oddsites;
 	long evenhalos, oddhalos;
-	// in layout.c we reorder lattice sites so that EVEN sites come first. 
+	// in layout.c we reorder lattice sites so that EVEN sites come first.
 	int reorder_parity; // for debugging purposes
 
 	// max iterations etc
+	int reset;
 	long iterations;
 	long checkpoint;
 	long interval;
 	FILE *resultsfile;
+	char latticefile[100];
 	int run_checks;
 
 	int multicanonical;
@@ -115,7 +117,7 @@ typedef struct {
 	double ***su2link;
 	double **su2doublet;
 	double **su2triplet;
-	
+
 	// backup arrays. these are used in global multicanonical steps in case the update sweep needs to be undone
 	double **backup_doublet;
 	double **backup_triplet;
@@ -125,6 +127,8 @@ typedef struct {
 
 	// keep track of evaluation time
 	double comms_time;
+	double total_time;
+	long iter;
 
 	// count metropolis updates
 	long total_su2link, accepted_su2link;
@@ -145,7 +149,7 @@ typedef struct {
 	* e.g. param_value[0] is the full contribution from EVEN sites
 	* and param_value[1] is the contribution from ODD sites */
 	double param_value[2];
-	
+
 	long bins;
 	double min, max;
 	double dbin; // size (width) of one bin
@@ -166,10 +170,10 @@ typedef struct {
 
 
 /* inlines */
-inline char otherparity(char parity) { 
+inline char otherparity(char parity) {
 	if (parity == EVEN)
-		return ODD; 
-	else 
+		return ODD;
+	else
 		return EVEN;
 }
 
@@ -284,6 +288,10 @@ void init_counters(counters* c);
 
 // checkpoint.c
 void print_acceptance(params p, counters c);
+void read_field(params p, FILE *file, double *field, int size);
+void write_field(params p, FILE *file, double *field, int size);
+void save_lattice(params p, fields f, counters c);
+void load_lattice(params p, fields f, counters* c);
 
 // parameters.c
 void get_parameters(char *filename, params *p);

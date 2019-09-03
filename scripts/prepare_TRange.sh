@@ -25,6 +25,7 @@ do
 		./write_config.sh input_couplings $T $beta
 		cp config $DIRNAME
 		mv params_lattice.dat $DIRNAME
+		mv params_MSbar.dat $DIRNAME
 	else
 		echo 'Error: directory' $DIRNAME 'exists.'
 	fi

@@ -163,7 +163,7 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 		send->odd = 0;
 
 		// request xphys from the receiving node
-		
+
 		// blocking receive here
 		MPI_Recv(&(xphys_nn[0][0]), size, MPI_LONG, recv->node, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
@@ -366,7 +366,7 @@ void recv_gaugefield(sendrecv_struct* recv, char parity, double*** field, int do
 }
 
 /* Same as update_gaugehalo(), but for a normal field with dof components.
-*
+* TODO: generalize this to also work for gauge fields, so that separate routines are not needed (see write_field() in checkpoint.c)
 */
 double update_halo(comlist_struct* comlist, char parity, double** field, int dofs) {
 
@@ -823,7 +823,7 @@ void bcast_int(int *res) {
 	return;
 }
 
-void bcast_long (long *res) {
+void bcast_long(long *res) {
 	return;
 }
 

@@ -8,18 +8,21 @@
 
 dim 3
 
-L1 8
-L2 8
-L3 8
+L1 24
+L2 42
+L3 12
+
+# start new simulation (initial configuration still read from latticefile)?
+reset 0
 
 # iterations
-iterations 50000
+iterations 10000
 
 # how often to write measurements
 interval 10
 
 # how often to write lattice configuration to file 
-checkpoint 10000
+checkpoint 1000
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -27,7 +30,10 @@ run_checks 1
 # where results are written
 resultsfile measure
 
-# parameters
+# where lattice configuration is stored
+latticefile lattice
+
+### parameters
 
 # gauge couplings
 betasu2 12.0
@@ -41,7 +47,7 @@ msq_triplet -0.189333
 b4 0.00531667
 a2 0.1666667
 
-# initial values for fields
+# initial values for fields (overwritten by existing lattice file)
 phi0 0.2
 sigma0 0.2 
 
@@ -55,8 +61,6 @@ algorithm_su2doublet overrelax
 # SU(2) triplet: metropolis or overrelax
 algorithm_su2triplet overrelax
 
-# where to store the lattice at the end
-latticefile lattice
 
 # how many times per sweep to update the two fields
 update_doublet 1

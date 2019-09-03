@@ -98,9 +98,21 @@ print
 print('---- Read in continuum 3d parameters at T = '+str(T)+' ----')
 #print('Units of GeV are assumed (GeV^2 for mass squared).\n')
 
-print('gsq %g, gpsq %g, muphisq %g, muSigmasq %g, lambda %g, a2 %g, b4 %g, RGscale %g\n\n'
-                     % (gsq, gpsq, muphisq, muSigmasq, lam, a2, b4, RGscale))
+print('gsq %g, gpsq %g, muphisq %g, muSigmasq %g, lambda %g, b4 %g, a2 %g, RGscale %g\n\n'
+                     % (gsq, gpsq, muphisq, muSigmasq, lam, b4, a2, RGscale))
 
+
+## write these into a file
+f = open('params_MSbar.dat',"w+")
+
+f.write('T gsq gpsq muphisq muSigmasq lambda b4 a2 RGscale\n')
+
+paramsMS = [T, gsq, gpsq, muphisq, muSigmasq, lam, b4, a2, RGscale]
+
+for x in paramsMS:
+	f.write(repr(x)+' ')
+
+f.close()
 
 
 ## limitations on lattice size and spacing? correlation lengths \xi must satisfy
@@ -110,8 +122,8 @@ print('gsq %g, gpsq %g, muphisq %g, muSigmasq %g, lambda %g, a2 %g, b4 %g, RGsca
 
 v = math.sqrt(T) # 3d units
 mW = 0.5 * math.sqrt(gsq) * v
-mh = math.sqrt(2.0 * muphisq)
-mSigma = math.sqrt(muSigmasq + 0.5 * a2 * v**2)
+mh = math.sqrt(abs(2.0 * muphisq))
+mSigma = math.sqrt(abs(muSigmasq + 0.5 * a2 * v**2))
 ## some symmetric phase masses
 mSigmaSymm = math.sqrt(muSigmasq)
 masses = [mW, mh, mSigma, mSigmaSymm]
@@ -132,28 +144,29 @@ def convert_lattice(pars):
 
 	### lattice mass counterterms. NB! U(1) parts are missing from these
 
-	deltamuphi1 = -(1.5*gsq + 6*lam) *float(Sigma)/(4*a*math.pi) - 1.5*a2*float(Sigma)/(4*a*math.pi)
+	deltamuphi1 = -(1.5*gsq + 6*lam) *float(Sigma)/(4.0*a*math.pi) \
+        - 1.5*a2*float(Sigma)/(4.0*a*math.pi)
 
 
-	deltamuphi2 = - 1.0/(16*math.pi**2) * ((51.0/16 * gsq**2 + 9*lam*gsq - \
-        12*lam**2)*(math.log(6.0/(a*RGscale)) + zeta) + 9*lam*gsq * (0.25 *Sigma**2 - \
-        delta) + 0.75*gsq**2 * (15.0/16 * Sigma**2 + math.pi/3 * Sigma + 1.25 - \
-        7.0/2*delta - 4*rho + 4*k1 - k2 - k3 - 3*k4) ) - 1.0/(16*math.pi**2) * \
-        ( (-0.75*gsq**2 + 6*gsq*a2 - 6*0.25*a2**2) * (math.log(6.0/(a*RGscale)) + zeta) \
-        + 12*gsq*0.5*a2 * (0.25*Sigma**2 - delta) - 3*gsq**2 * rho )
+	deltamuphi2 = - 1.0/(16*math.pi**2.0) * ((51.0/16.0 * gsq**2 + 9.0*lam*gsq - \
+        12.0*lam**2)*(math.log(6.0/(a*RGscale)) + zeta) + 9.0*lam*gsq * (0.25 *Sigma**2 - \
+        delta) + 0.75*gsq**2 * (15.0/16.0 * Sigma**2 + math.pi/3.0 * Sigma + 1.25 - \
+        7.0/2.0 *delta - 4.0*rho + 4.0*k1 - k2 - k3 - 3.0*k4) ) - 1.0/(16.0*math.pi**2) * \
+        ( (-0.75*gsq**2 + 6.0*gsq*a2 - 1.5*a2**2) * (math.log(6.0/(a*RGscale)) + zeta) \
+        + 6.0*gsq*a2 * (0.25*Sigma**2 - delta) - 3.0*gsq**2 * rho )
 
 
 	mphisqLat = a**2 * (muphisq + deltamuphi1 + deltamuphi2)
 
 
-	deltamuSigma1 = -(4*gsq + 5*b4 + 2*a2)*float(Sigma)/(4*math.pi*a)
+	deltamuSigma1 = -(4.0*gsq + 5.0*b4 + 2.0*a2)*float(Sigma)/(4.0*math.pi*a)
 
-	deltamuSigma2 = -1.0/(16*math.pi**2) * ( (20*b4*gsq - 10*b4**2) * \
-        (math.log(6.0/(a*RGscale)) + zeta) + 20*b4*gsq * (0.25*Sigma**2 - delta) \
-        + 2*gsq**2 *(1.25*Sigma**2 + math.pi/3 * Sigma - 6*delta - 6*rho + 4*k1 \
-        - k2 - k3 - 3*k4) ) - 1.0/(16*math.pi**2) * ( (-gsq**2 + 3*a2*gsq - 2*a2**2) \
-         * (math.log(6.0/(a*RGscale)) + zeta) + 3*a2*gsq * (0.25*Sigma**2 - delta) \
-         - 4*gsq**2*rho )
+	deltamuSigma2 = -1.0/(16.0*math.pi**2) * ( (20.0*b4*gsq - 10.0*b4**2) * \
+        (math.log(6.0/(a*RGscale)) + zeta) + 20.0*b4*gsq * (0.25*Sigma**2 - delta) \
+        + 2.0*gsq**2 *(1.25*Sigma**2 + math.pi/3.0 * Sigma - 6.0*delta - 6.0*rho + 4.0*k1 \
+        - k2 - k3 - 3.0*k4) ) - 1.0/(16.0*math.pi**2) * ( (-gsq**2 + 3.0*a2*gsq - 2.0*a2**2) \
+         * (math.log(6.0/(a*RGscale)) + zeta) + 3.0*a2*gsq * (0.25*Sigma**2 - delta) \
+         - 4.0*gsq**2*rho )
 
 
 	mSigmasqLat = a**2 * (muSigmasq + deltamuSigma1 + deltamuSigma2)
@@ -177,8 +190,8 @@ def convert_lattice(pars):
 print('---- Lattice parameters for beta_G = '+str(beta)+' ----')
 #print('David\'s convention assumed: everything here is scaled by factors of a to get dimensionless numbers.\n')
 
-print('g %g, gp %g, muphisq %g, muSigmasq %g, lambda %g, a2 %g, b4 %g, a %g\n\n'
-                     % (gLat, gpLat, mphisqLat, mSigmasqLat, lamLat, a2Lat, b4Lat, a))
+print('g %g, gp %g, muphisq %g, muSigmasq %g, lambda %g, b4 %g, a2 %g, a %g\n\n'
+                     % (gLat, gpLat, mphisqLat, mSigmasqLat, lamLat, b4Lat, a2Lat, a))
 
 
 #print('gsq: '+repr(gsqLat)+' gpsq: '+repr(gpsqLat)+' muphisq: '+repr(mphisqLat)+' muSigmasq: '+repr(mSigmasqLat)+' lambda: '+repr(lamLat)+' a2: '+repr(a2Lat)+' b4: '+repr(b4Lat)+' a: '+repr(a)\n)
@@ -187,9 +200,9 @@ print('g %g, gp %g, muphisq %g, muSigmasq %g, lambda %g, a2 %g, b4 %g, a %g\n\n'
 ## write these into a file
 f = open('params_lattice.dat',"w+")
 
-f.write('T beta g gp muphisq muSigmasq lambda a2 b4 a\n')
+f.write('T beta g gp muphisq muSigmasq lambda b4 a2 a\n')
 
-paramsLat = [T, beta, gLat, gpLat, mphisqLat, mSigmasqLat, lamLat, a2Lat, b4Lat, a]
+paramsLat = [T, beta, gLat, gpLat, mphisqLat, mSigmasqLat, lamLat, b4Lat, a2Lat, a]
 
 for x in paramsLat:
 	f.write(repr(x)+' ')
