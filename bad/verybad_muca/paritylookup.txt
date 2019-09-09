@@ -1,5 +1,0 @@
----------------------- Metropolis acceptance rates ----------------------
-SU(2) link 49911075/218695626 (22.82%). 
-Freed memory allocated for fields.
-Freed memory allocated for layouting.
-Reached end! Total time taken: 387.9s, of which 5.63% comms.
