@@ -44,10 +44,6 @@ int metro_su2link(fields f, params p, long i, int dir) {
 
 /*
 * Update a single SU(2) scalar doublet using Metropolis.
-* If transverse == 1, forces a transverse update, i.e.
-* keeps Tr \Phi^\dagger \Phi constant. This is useful
-* for improving ergodicity especially for multicanonical
-* runs that use phisq as the order parameter.
 * Returns 1 if update was accepted and 0 if rejected.
 */
 int metro_doublet(fields f, params p, long i) {
@@ -92,8 +88,6 @@ int metro_doublet(fields f, params p, long i) {
 
 /*
 * Update a single SU(2) scalar triplet using Metropolis.
-* If transverse == 1, forces a transverse update, i.e.
-* keeps Tr A^2 constant.
 * Returns 1 if update was accepted and 0 if rejected.
 */
 int metro_triplet(fields f, params p, long i) {

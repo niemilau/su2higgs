@@ -295,7 +295,6 @@ long double local_su2wilson(fields f, params p, long i) {
 * that contain the link at site i.
 *
 * The constant term in beta \sum (1 - 0.5 ptrace) is also included for convenience.
-// TODO remove the extra term for optimization?
 */
 double localact_su2link(fields f, params p, long i, int dir) {
 
@@ -474,12 +473,12 @@ double tripletsq(double* a) {
 inline double hopping_trace_triplet(double* a1, double* u, double* a2) {
 
 	return 0.5 * ( a1[0]*a2[0]*(u[0]*u[0]) + a1[1]*a2[1]*(u[0]*u[0]) + a1[2]*a2[2]*(u[0]*u[0]) -
-   2*a1[2]*a2[1]*u[0]*u[1] + 2*a1[1]*a2[2]*u[0]*u[1] + a1[0]*a2[0]*(u[1]*u[1]) -
-   a1[1]*a2[1]*(u[1]*u[1]) - a1[2]*a2[2]*(u[1]*u[1]) + 2*a1[2]*a2[0]*u[0]*u[2] -
-   2*a1[0]*a2[2]*u[0]*u[2] + 2*a1[1]*a2[0]*u[1]*u[2] + 2*a1[0]*a2[1]*u[1]*u[2] -
+   2.0*a1[2]*a2[1]*u[0]*u[1] + 2.0*a1[1]*a2[2]*u[0]*u[1] + a1[0]*a2[0]*(u[1]*u[1]) -
+   a1[1]*a2[1]*(u[1]*u[1]) - a1[2]*a2[2]*(u[1]*u[1]) + 2.0*a1[2]*a2[0]*u[0]*u[2] -
+   2.0*a1[0]*a2[2]*u[0]*u[2] + 2.0*a1[1]*a2[0]*u[1]*u[2] + 2*a1[0]*a2[1]*u[1]*u[2] -
    a1[0]*a2[0]*(u[2]*u[2]) + a1[1]*a2[1]*(u[2]*u[2]) - a1[2]*a2[2]*(u[2]*u[2]) -
-   2*a1[1]*a2[0]*u[0]*u[3] + 2*a1[0]*a2[1]*u[0]*u[3] + 2*a1[2]*a2[0]*u[1]*u[3] +
-   2*a1[0]*a2[2]*u[1]*u[3] + 2*a1[2]*a2[1]*u[2]*u[3] + 2*a1[1]*a2[2]*u[2]*u[3] -
+   2.0*a1[1]*a2[0]*u[0]*u[3] + 2.0*a1[0]*a2[1]*u[0]*u[3] + 2.0*a1[2]*a2[0]*u[1]*u[3] +
+   2.0*a1[0]*a2[2]*u[1]*u[3] + 2.0*a1[2]*a2[1]*u[2]*u[3] + 2.0*a1[1]*a2[2]*u[2]*u[3] -
    a1[0]*a2[0]*(u[3]*u[3]) - a1[1]*a2[1]*(u[3]*u[3]) + a1[2]*a2[2]*(u[3]*u[3]) );
 }
 

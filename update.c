@@ -13,9 +13,6 @@
 * Gauge links are updated only in direction specified by dir.
 * Parity of a site is assumed to be stored in params.
 *
-* Future optimization: loop only over sites with the correct parity?
-* I have tried storing odd / even sites in predetermined arrays and using those
-* for the loop, but it did not result in consistent improvement in computation time in short test runs...
 */
 void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, int dir) {
 	// EVEN sites come before ODD
@@ -40,7 +37,6 @@ void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, in
 
 
 /* Sweep over the lattice in a checkerboard layout and update half of the doublets.
-* Parity of a site is assumed to be stored in params.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 */
 void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro) {
@@ -67,7 +63,6 @@ void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity,
 
 
 /* Sweep over the lattice in a checkerboard layout and update half of the triplet.
-* Parity of a site is assumed to be stored in params.
 */
 void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro) {
 	long offset, max;
@@ -98,10 +93,6 @@ void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity,
 */
 void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, char metro) {
 
-	// update each link direction separately.
-	// I.E. first dir1 with even and odd, then dir2 etc
-	// This is necessary because the links in "positive" directions are not independent
-	// because of the Wilson staple, which for U_1(x) depends on U_2(x-i+j), for example
 	for (int dir=0; dir<p.dim; dir++) {
 		checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
 		c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
@@ -204,7 +195,7 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 			c->comms_time += update_halo(comlist, par, f->su2doublet, SU2DB);
 		}
 		#endif
-		
+
 		// update muca_param_old for the next parity
 		muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
 		c->accepted_muca += accept;
