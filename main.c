@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
 
 	// set RNG seed: different for each node!
 	start_time = clock();
-	long seed = (long) (start_time/2.0) * p.rank;
+	long seed = (long) (start_time/2.0) * (p.rank + 1.0);
 	srand48(seed);
 
 	// read in the config file.
