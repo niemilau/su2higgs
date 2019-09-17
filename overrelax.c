@@ -134,9 +134,11 @@ int overrelax_doublet(fields f, params p, long i) {
 
 	if (beta >= drand48()) {
 		// accept, so overrelax Y' = -Y using the new X
+		// phi'_a = Y' + X' f_a = -phi_a + (X' + X) f_a
+		// this should agree with what Kari has in XORsu2Higgs.c; he probably has
+		// his y variable with a different sign
 		for (int k=0; k<SU2DB; k++) {
-			f.su2doublet[i][k] = -1.0*f.su2doublet[i][k] + (newX + X) * s[k] / F; // this works well
-			//f.su2doublet[i][k] = Y[k] + newX * s[k] / F; // Kari seems to have this instead, no Y -> -Y?
+			f.su2doublet[i][k] = -1.0*f.su2doublet[i][k] + (newX + X) * s[k] / F;
 		}
 		return 1;
 	} else {
@@ -240,7 +242,7 @@ int overrelax_triplet(fields f, params p, long i) {
 	if (beta >= drand48()) {
 		// accept, so overrelax Y' = -Y using the new X
 		for (int k=0; k<SU2TRIP; k++) {
-			f.su2triplet[i][k] = -1.0*f.su2triplet[i][k] + (newX + X) * s[k] / F; // this works well
+			f.su2triplet[i][k] = -1.0*f.su2triplet[i][k] + (newX + X) * s[k] / F;
 		}
 		return 1;
 	} else {
