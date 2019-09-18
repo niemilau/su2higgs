@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 	weight w;
 
 	clock_t start_time, end_time;
-	double time = 0.0;
+	double timing = 0.0;
 
 
 	#ifdef MPI
@@ -55,12 +55,12 @@ int main(int argc, char *argv[]) {
   layout(&p, &comlist);
 
 	end_time = clock();
-	time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+	timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 
 	// initialize accept/reject/etc counters
 	init_counters(&c);
 
-	printf0(p, "Initialization done! Took %lf seconds.\n", time);
+	printf0(p, "Initialization done! Took %lf seconds.\n", timing);
 
 	// initialize all fields
 	alloc_fields(p, &f);
@@ -139,13 +139,13 @@ int main(int argc, char *argv[]) {
 		if ((iter % p.checkpoint == 0)) {
 			// Checkpoint time; print acceptance and save fields to latticefile
 			end_time = clock();
-			time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+			timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 
 			start_time = clock(); // restart timer
 
-			c.total_time += time; c.iter = iter; // store for I/O
+			c.total_time += timing; c.iter = iter; // store for I/O
 			if (!p.rank) {
-				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
+				printf("\nCheckpointing at iteration %lu. Total timing: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
 				print_acceptance(p, c);
 			}
 
@@ -163,10 +163,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	end_time = clock();
-	time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+	timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 
 	// save final configuration
-	c.total_time += time; c.iter = iter;
+	c.total_time += timing; c.iter = iter;
 	save_lattice(p, f, c);
 
 	// free memory and finish
@@ -180,8 +180,8 @@ int main(int argc, char *argv[]) {
 	#ifdef MPI
 	MPI_Barrier(MPI_COMM_WORLD);
 	#endif
-	printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
-	printf0(p, "Reached end! Total time taken: %.1lfs, of which %.2lf%% comms. Time per iteration: %.3lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
+	printf("Node %d ready, timing spent waiting: %.1lfs \n", p.rank, waittime);
+	printf0(p, "Reached end! Total timing taken: %.1lfs, of which %.2lf%% comms. timing per iteration: %.3lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
 	#ifdef MPI
   MPI_Finalize();
 	#endif
