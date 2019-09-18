@@ -69,7 +69,7 @@ void su2rot(double *u1, double *u2) {
 */
 inline double su2trace4(double *u1, double *u2, double *u3, double *u4) {
 
-	return 2 * (u1[0]*u2[0]*u3[0]*u4[0] - u1[1]*u2[1]*u3[0]*u4[0] - u1[2]*u2[2]*u3[0]*u4[0] -
+	return 2.0 * (u1[0]*u2[0]*u3[0]*u4[0] - u1[1]*u2[1]*u3[0]*u4[0] - u1[2]*u2[2]*u3[0]*u4[0] -
    u1[3]*u2[3]*u3[0]*u4[0] + u1[1]*u2[0]*u3[1]*u4[0] + u1[0]*u2[1]*u3[1]*u4[0] +
    u1[3]*u2[2]*u3[1]*u4[0] - u1[2]*u2[3]*u3[1]*u4[0] + u1[2]*u2[0]*u3[2]*u4[0] -
    u1[3]*u2[1]*u3[2]*u4[0] + u1[0]*u2[2]*u3[2]*u4[0] + u1[1]*u2[3]*u3[2]*u4[0] +
@@ -101,11 +101,10 @@ inline double su2trace4(double *u1, double *u2, double *u3, double *u4) {
 */
 double su2ptrace(fields f, params p, long i, int dir1, int dir2) {
 
-	// set pointers to point to the component arrays of the links
-	double *u1 = &(*f.su2link[i][dir1]);
-	double *u2 = &(*f.su2link[ p.next[i][dir1] ][dir2]);
-	double *u3 = &(*f.su2link[ p.next[i][dir2] ][dir1]);
-	double *u4 = &(*f.su2link[i][dir2]);
+	double *u1 = f.su2link[i][dir1];
+	double *u2 = f.su2link[ p.next[i][dir1] ][dir2];
+	double *u3 = f.su2link[ p.next[i][dir2] ][dir1];
+	double *u4 = f.su2link[i][dir2];
 
 	return su2trace4(u1, u2, u3, u4);
 
