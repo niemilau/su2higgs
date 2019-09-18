@@ -445,6 +445,8 @@ Note that there are also contributions not proportional to $a_2$.
 	
 	\item Updating the lattice is done with checkerboard style sweeps (imagine a chessboard). We specify parity of a site to be EVEN if $x + y + z + \dots $ is an even number, ODD otherwise. When sweeping, we first update all sites with EVEN parity, including halos, and then repeat for ODD sites. Gauge links are updated one direction at a time, because the directions are not independent (think of the Wilson plaquette).  
 	
+	\item \textbf{18.9.2019:} I have crosschecked carefully against David's code using the same seed for drand48(), and verified that our programs produce exactly the same numbers with $\gr{SU(2)}$ links, Higgs and real triplet all included in the simulation. By "same numbers" I mean that starting from the same initial configuration, fields change exactly the same way in all local updates in both programs, and consequently the measured values for all observables are exactly the same (some care was needed with precision, since David's inputs $g$ instead of $\beta_G$). The comparison was done by arranging update routines in David's version so that everything happens in the same order as in my implementation. I used serial version of David's code and parallel version of my code (but with 1 MPI node) on a $32 \times 32 \times 32$ lattice. I performed separate tests on full Metropolis and scalar Metropolis + gauge heatbath, and both work (did not compare overrelaxation).
+
 	
 \end{itemize}
 

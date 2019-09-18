@@ -38,6 +38,10 @@ int main(int argc, char *argv[]) {
 	long seed = (long) (time(NULL) * (p.rank + 1.0));
 	srand48(seed);
 
+	if (!p.rank) {
+		printf("Seed in root node: %ld\n", seed);
+	}
+
 	// read in the config file.
 	// This needs to be done before allocating anything since we don't know the dimensions otherwise
 	get_parameters(argv[1], &p);
@@ -145,7 +149,7 @@ int main(int argc, char *argv[]) {
 
 			c.total_time += timing; c.iter = iter; // store for I/O
 			if (!p.rank) {
-				printf("\nCheckpointing at iteration %lu. Total timing: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
+				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
 				print_acceptance(p, c);
 			}
 
@@ -180,8 +184,8 @@ int main(int argc, char *argv[]) {
 	#ifdef MPI
 	MPI_Barrier(MPI_COMM_WORLD);
 	#endif
-	printf("Node %d ready, timing spent waiting: %.1lfs \n", p.rank, waittime);
-	printf0(p, "Reached end! Total timing taken: %.1lfs, of which %.2lf%% comms. timing per iteration: %.3lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
+	printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
+	printf0(p, "Reached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.3lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
 	#ifdef MPI
   MPI_Finalize();
 	#endif
