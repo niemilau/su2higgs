@@ -336,7 +336,20 @@ m^2_\text{\Sigma} &= -\frac{2\beta_2^A}{\beta_G} = -0.189333 \\
 b_\text{4} &= \frac{4\beta_4^A}{\beta_G^2} = 0.00531667 \\
 a_\text{2} &= \frac{2}{\beta_G} = \frac16 = 0.16666667.
 \end{align}
-Running simulations with these, we obtain histograms shown in Fig~\ref{fig:hgrams_SM_A0}. We see that although the small-volume histograms agree quite well with Kari, the histograms for $32^3$ and $40^3$ lattices \textbf{do not agree}. I am tempted to think that this is because the inputs are off (since I have no means of really verifying what they used), but perhaps the code could still use some more testing for larger volumes...
+Running simulations with these, we obtain histograms shown in Fig~\ref{fig:hgrams_SM_A0}. We see that although the small-volume histograms agree quite well with Kari, the histograms for $32^3$ and $40^3$ lattices \textbf{do not agree}. I am tempted to think that this is because the inputs are off (since I have no means of really verifying what they used). Note that it looks like the temperature is just slightly off here (insufficient numerical accuracy in the inputs??).
+
+Some possible explanations for the discrepancy: 
+\begin{itemize}
+
+	\item Kari's original simulations with $A_0$ are based on their older paper, Ref.~\cite{Farakos:1994kj}. It is possible that their lattice-continuum relations used in these runs are not complete (at some point they only had 1-loop counterterms). However I took the inputs directly in Kari's lattice parametrization, so this does not explain why I get different histograms, assuming that my inputs really correspond to what Kari used. 
+
+	\item Thermalization seems to occur quite slowly especially in the large-volume runs, so perhaps Kari had worse statistics? 
+
+	\item Kari ran these simulations with his old Fortran code, could it have a bug in it? Kari mumbled something about using a wrong heatbath update in one of his early papers...
+
+\end{itemize}
+In any case, Kari did not seem  too worried about this discrepancy, especially since the small-volume histograms agree well. 
+
 
 \begin{figure}[H]
 	\includegraphics[scale=0.5]{hgrams_SM+A0}
@@ -445,7 +458,7 @@ Note that there are also contributions not proportional to $a_2$.
 	
 	\item Updating the lattice is done with checkerboard style sweeps (imagine a chessboard). We specify parity of a site to be EVEN if $x + y + z + \dots $ is an even number, ODD otherwise. When sweeping, we first update all sites with EVEN parity, including halos, and then repeat for ODD sites. Gauge links are updated one direction at a time, because the directions are not independent (think of the Wilson plaquette).  
 	
-	\item \textbf{18.9.2019:} I have crosschecked carefully against David's code using the same seed for drand48(), and verified that our programs produce exactly the same numbers with $\gr{SU(2)}$ links, Higgs and real triplet all included in the simulation. By "same numbers" I mean that starting from the same initial configuration, fields change exactly the same way in all local updates in both programs, and consequently the measured values for all observables are exactly the same (some care was needed with precision, since David's inputs $g$ instead of $\beta_G$). The comparison was done by arranging update routines in David's version so that everything happens in the same order as in my implementation. I used serial version of David's code and parallel version of my code (but with 1 MPI node) on a $32 \times 32 \times 32$ lattice. I performed separate tests on full Metropolis and scalar Metropolis + gauge heatbath, and both work (did not compare overrelaxation).
+	\item \textbf{18.9.2019:} I have crosschecked carefully against David's code using the same seed for drand48(), and verified that our programs produce exactly the same numbers with $\gr{SU(2)}$ links, Higgs and real triplet all included in the simulation. By "same numbers" I mean that starting from the same initial configuration, fields change exactly the same way in all local updates in both programs, and consequently the measured values for all observables are exactly the same (some care was needed with precision, since David inputs $g$ instead of $\beta_G$). The comparison was done by arranging update routines in David's version so that everything happens in the same order as in my implementation. I used serial version of David's code and parallel version of my code (but with 1 MPI node) on a $32 \times 32 \times 32$ lattice. I performed separate tests on full Metropolis and scalar Metropolis + gauge heatbath, and both work (did not compare overrelaxation).
 
 	
 \end{itemize}
@@ -534,6 +547,17 @@ doi:10.1016/S0550-3213(98)00530-6
   [hep-lat/9705003].
   %%CITATION = doi:10.1016/S0550-3213(97)00709-8;%%
   %67 citations counted in INSPIRE as of 12 Aug 2019
+
+
+%\cite{Farakos:1994kj}
+\bibitem{Farakos:1994kj}
+  K.~Farakos, K.~Kajantie, K.~Rummukainen and M.~E.~Shaposhnikov,
+  %``The Electroweak phase transition at m(H) approximately = m(W),''
+  Phys.\ Lett.\ B {\bf 336} (1994) 494
+  doi:10.1016/0370-2693(94)90563-0
+  [hep-ph/9405234].
+  %%CITATION = doi:10.1016/0370-2693(94)90563-0;%%
+  %82 citations counted in INSPIRE as of 19 Sep 2019
 
 
 \end{thebibliography}
