@@ -1,3 +1,4 @@
+
 /** @file alloc.c
 *
 * Routines for memory allocation.
@@ -32,14 +33,14 @@ double *make_singletfield(long sites) {
 double **make_field(long sites, int dofs) {
 
 	double **field = malloc(sites * sizeof(**field));
-	
+
 	if (field == NULL) {
 		printf("Failed to allocate memory for a field!\n");
 		die(11);
-	} 
-	
+	}
+
 	field[0] = malloc(sites * dofs * sizeof(field[0]));
-	
+
 	for (long i=0; i<sites; i++) {
 		field[i] = field[0] + i * dofs;
 	}
@@ -63,19 +64,18 @@ double ***make_gaugefield(long sites, int dim, int dofs) {
 		printf("Failed to allocate memory for a gauge field!\n");
 		die(10);
 	}
-	
+
 	for (long i=0; i<sites; i++) {
 		field[i] = malloc(dim * sizeof(field[i]));
 		for (int dir=0; dir<dim; dir++) {
 			field[i][dir] = &f[i * dim * dofs + dir * dofs];
 		}
 	}
-	
+
 	field[0][0] = f;
 
   return field;
 }
-
 
 
 /* Free the memory allocated by make_singletfield()
@@ -103,7 +103,7 @@ void free_gaugefield(long sites, double ***field) {
 	for (long i=0; i<sites; i++) {
 		free(field[i]);
 	}
-	
+
   free(field);
 }
 
@@ -121,6 +121,12 @@ void alloc_fields(params p, fields *f) {
 	#ifdef TRIPLET
 		f->su2triplet = make_field(sites, SU2TRIP);
 	#endif
+  #ifdef U1
+    /* allocate U(1) gauge field, accessed as u1link[i][dir]. Note that memory
+    * wise this is essentially just a non-gauge field with p.dim components.
+    */
+    f->u1link = make_field(sites, p.dim);
+  #endif
 	if (!p.rank)
 		printf("Allocated memory for fields.\n");
 }
@@ -138,13 +144,16 @@ void free_fields(params p, fields *f) {
 	#ifdef TRIPLET
 		free_field(f->su2triplet);
 	#endif
+  #ifdef U1
+    free_field(f->u1link);
+  #endif
 	if (!p.rank)
 		printf("Freed memory allocated for fields.\n");
 
 }
 
 
-/* Allocate contiguous memory for long-valued 2D array. 
+/* Allocate contiguous memory for long-valued 2D array.
 * These are mainly used for navigating on the lattice
 */
 long **alloc_latticetable(ushort dim, long sites) {
@@ -154,8 +163,8 @@ long **alloc_latticetable(ushort dim, long sites) {
 	for (long i=0; i<sites; i++) {
 		array[i] = array[0] + i * dim;
 	 }
-	 
-  return array;	
+
+  return array;
 }
 
 
@@ -175,10 +184,10 @@ void alloc_lattice_arrays(params *p) {
 
 
 /* Free all memory reserved for layouting and lookup tables.
-* 
+*
 */
 void free_lattice_arrays(params *p) {
-	
+
 	// lookup tables and parity:
 	free(p->parity);
 	free_latticetable(p->next);
@@ -188,7 +197,7 @@ void free_lattice_arrays(params *p) {
 	free(p->nslices);
 	// then finally the full lattice size, allocated in get_parameters()
 	free(p->L);
-	
+
 	if (!p->rank)
 		printf("Freed memory allocated for layouting.\n");
 }
@@ -201,7 +210,7 @@ void free_latticetable(long** list) {
 
 // Free memory allocated for comlist and its substructures
 void free_comlist(comlist_struct* comlist) {
-	
+
 	for (int k=0; k<comlist->neighbors; k++) {
 		free(comlist->recv_from[k].sitelist);
 		free(comlist->send_to[k].sitelist);

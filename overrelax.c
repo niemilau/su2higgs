@@ -46,8 +46,6 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 * and new X' is solved from S(X') - S(X) = 0 that is accepted with probability
 * p(X') = min(p0, 1), p0 = (dS(X)/dX) / (dS(X')/dX'). If new X is accepted,
 * the Y overrelaxation reads: phi'_a = -phi_a + f_a (X' + X).
-* (could probably just ignore the Y reflection a la Kari? So that
-* 	phi'_a = Y + X' f_a )
 *
 */
 int overrelax_doublet(fields f, params p, long i) {
@@ -58,35 +56,60 @@ int overrelax_doublet(fields f, params p, long i) {
 
 	// calculate hopping staple s_a (denote. s_a = F_a)
 	for (int dir=0; dir<p.dim; dir++) {
-		u[0] = f.su2link[i][dir][0];
-		u[1] = f.su2link[i][dir][1];
-		u[2] = f.su2link[i][dir][2];
-		u[3] = f.su2link[i][dir][3];
+
+		for (int k=0; k<SU2LINK; k++) {
+			u[k] = f.su2link[i][dir][k];
+		}
 		long next = p.next[i][dir];
 		// Phi at next site
-		b[0] = f.su2doublet[next][0];
-		b[1] = f.su2doublet[next][1];
-		b[2] = f.su2doublet[next][2];
-		b[3] = f.su2doublet[next][3];
-		s[0] += -(b[0]*u[0]) + b[1]*u[1] + b[2]*u[2] + b[3]*u[3];
-		s[1] += -(b[1]*u[0]) - b[0]*u[1] + b[3]*u[2] - b[2]*u[3];
-		s[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
-		s[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
+		for (int k=0; k<SU2DB; k++) {
+			b[k] = f.su2doublet[next][k];
+		}
+		// these were obtained in Mathematica:
+		#ifndef U1
+			s[0] += -(b[0]*u[0]) + b[1]*u[1] + b[2]*u[2] + b[3]*u[3];
+			s[1] += -(b[1]*u[0]) - b[0]*u[1] + b[3]*u[2] - b[2]*u[3];
+			s[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
+			s[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
+		#else
+			double ss = sin(f.u1link[i][dir]);
+			double cc = cos(f.u1link[i][dir]);
+			s[0] += -(cc*b[0]*u[0]) - ss*b[3]*u[0] + cc*b[1]*u[1] + ss*b[2]*u[1]
+							- ss*b[1]*u[2] + cc*b[2]*u[2] - ss*b[0]*u[3] + cc*b[3]*u[3];
+			s[1] += -(cc*b[1]*u[0]) - ss*b[2]*u[0] - cc*b[0]*u[1] - ss*b[3]*u[1]
+							- ss*b[0]*u[2] + cc*b[3]*u[2] + ss*b[1]*u[3] - cc*b[2]*u[3];
+			s[2] += ss*b[1]*u[0] - cc*b[2]*u[0] + ss*b[0]*u[1] - cc*b[3]*u[1]
+							- cc*b[0]*u[2] - ss*b[3]*u[2] + cc*b[1]*u[3] + ss*b[2]*u[3];
+			s[3] += ss*b[0]*u[0] - cc*b[3]*u[0] - ss*b[1]*u[1] + cc*b[2]*u[1]
+							- cc*b[1]*u[2] - ss*b[2]*u[2] - cc*b[0]*u[3] - ss*b[3]*u[3];
+		#endif
 		// same for backwards directions
 		long prev = p.prev[i][dir];
-		u[0] = f.su2link[prev][dir][0];
-		u[1] = f.su2link[prev][dir][1];
-		u[2] = f.su2link[prev][dir][2];
-		u[3] = f.su2link[prev][dir][3];
+		for (int k=0; k<SU2LINK; k++) {
+			u[k] = f.su2link[prev][dir][k];
+		}
 		// Phi at previous site
-		b[0] = f.su2doublet[prev][0];
-		b[1] = f.su2doublet[prev][1];
-		b[2] = f.su2doublet[prev][2];
-		b[3] = f.su2doublet[prev][3];
-		s[0] += -(b[0]*u[0]) - b[1]*u[1] - b[2]*u[2] - b[3]*u[3];
-		s[1] += -(b[1]*u[0]) + b[0]*u[1] - b[3]*u[2] + b[2]*u[3];
-		s[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
-		s[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
+		for (int k=0; k<SU2DB; k++) {
+			b[k] = f.su2doublet[prev][k];
+		}
+
+		#ifndef U1
+			s[0] += -(b[0]*u[0]) - b[1]*u[1] - b[2]*u[2] - b[3]*u[3];
+			s[1] += -(b[1]*u[0]) + b[0]*u[1] - b[3]*u[2] + b[2]*u[3];
+			s[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
+			s[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
+		#else
+			ss = sin(f.u1link[prev][dir]);
+			cc = cos(f.u1link[prev][dir]);
+			s[0] += -(cc*b[0]*u[0]) + ss*b[3]*u[0] - cc*b[1]*u[1] + ss*b[2]*u[1]
+			 				- ss*b[1]*u[2] - cc*b[2]*u[2] - ss*b[0]*u[3] - cc*b[3]*u[3];
+			s[1] += -(cc*b[1]*u[0]) + ss*b[2]*u[0] + cc*b[0]*u[1] - ss*b[3]*u[1]
+							- ss*b[0]*u[2] - cc*b[3]*u[2] + ss*b[1]*u[3] + cc*b[2]*u[3];
+			s[2] += -(ss*b[1]*u[0]) - cc*b[2]*u[0] + ss*b[0]*u[1] + cc*b[3]*u[1]
+							+ cc*b[0]*u[2] - ss*b[3]*u[2] - cc*b[1]*u[3] + ss*b[2]*u[3];
+			s[3] += -(ss*b[0]*u[0]) - cc*b[3]*u[0] - ss*b[1]*u[1] - cc*b[2]*u[1]
+							+ cc*b[1]*u[2] - ss*b[2]*u[2] + cc*b[0]*u[3] - ss*b[3]*u[3];
+		#endif
 	}
 	// staple normalization
 	double F = 0.0;

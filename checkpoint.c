@@ -1,3 +1,4 @@
+
 /** @file checkpoint.c
 *
 * Routines for storing lattice configuration in a file,
@@ -22,6 +23,13 @@ void print_acceptance(params p, counters c) {
 		printf("SU(2) link %.2lf%%, ",
 			100.0*c.accepted_su2link/c.total_su2link);
 	}
+
+	#ifdef U1
+		if (p.algorithm_u1link == METROPOLIS) {
+			printf("U(1) link %.2lf%%, ",
+				100.0*c.accepted_u1link/c.total_u1link);
+		}
+	#endif
 
 	#ifdef HIGGS
 		if (p.algorithm_su2doublet == METROPOLIS) {
@@ -74,8 +82,11 @@ void save_lattice(params p, fields f, counters c) {
 		fwrite(&c.comms_time, sizeof(c.comms_time), 1, file);
 	}
 
-	// fields. file is only open in root node, so other's can't use it here.
+	// fields. file is only open in root node, so others cannot use it here.
 	write_field(p, file, &f.su2link[0][0][0], p.dim * SU2LINK);
+	#ifdef U1
+	write_field(p, file, &f.u1link[0][0], p.dim);
+	#endif
 	#ifdef HIGGS
 	write_field(p, file, &f.su2doublet[0][0], SU2DB);
 	#endif
@@ -95,14 +106,14 @@ void save_lattice(params p, fields f, counters c) {
 * Note that this assumes that layouting is exactly the same
 * as when the file was written, including the relative "locations"
 * of MPI nodes. Hence, perform a crosscheck here.
-* ALL nodes read the first few lines of the latticefile so that 
+* ALL nodes read the first few lines of the latticefile so that
 * counters and iteration number can be kept in sync, while only the root node
 * reads fields and distributes them to others.
 */
 void load_lattice(params p, fields f, counters* c) {
 
 	FILE *file;
-	
+
 	file = fopen(p.latticefile, "rb");
 	// first line: p.size p.dim L1 L2 ... Ln
 	// note that these are int type (need to be careful with this)
@@ -153,12 +164,15 @@ void load_lattice(params p, fields f, counters* c) {
 	read += fread(&c->total_time, sizeof(c->total_time), 1, file);
 	read += fread(&c->comms_time, sizeof(c->comms_time), 1, file);
 
-	// if not root node, can close the file here 
-	if (p.rank != 0) 
+	// if not root node, can close the file here
+	if (p.rank != 0)
 		fclose(file);
 
 	// Read fields. Ordering HAS to be same as in save_lattice()
 	read_field(p, file, &f.su2link[0][0][0], p.dim * SU2LINK);
+	#ifdef U1
+	read_field(p, file, &f.u1link[0][0], p.dim);
+	#endif
 	#ifdef HIGGS
 	read_field(p, file, &f.su2doublet[0][0], SU2DB);
 	#endif
@@ -207,7 +221,7 @@ void write_field(params p, FILE *file, double *field, int size) {
 			int count;
 			MPI_Probe(rank, 0, MPI_COMM_WORLD, &status);
 			MPI_Get_count(&status, MPI_DOUBLE, &count);
-			long newmax = count; // got to hope this does not overflow... 
+			long newmax = count; // got to hope this does not overflow...
 
 			if (newmax != max) {
 				buf = realloc(buf, newmax * sizeof(*buf));

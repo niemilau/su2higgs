@@ -8,21 +8,21 @@
 
 dim 3
 
-L1 24
-L2 42
-L3 12
+L1 14
+L2 14
+L3 14
 
 # start new simulation (initial configuration still read from latticefile)?
 reset 0
 
 # iterations
-iterations 10000
+iterations 50000
 
 # how often to write measurements
 interval 10
 
 # how often to write lattice configuration to file 
-checkpoint 1000
+checkpoint 2000
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -37,9 +37,10 @@ latticefile lattice
 
 # gauge couplings
 betasu2 12.0
+betau1 8.0
 
 # doublet
-msq -0.162345
+msq -0.262345
 lambda 0.0410249
 
 # triplet
@@ -54,8 +55,9 @@ sigma0 0.2
 
 ### update algorithms
 
-# SU(2) links: metropolis or heatbath
+# gauge links: metropolis or heatbath
 algorithm_su2link heatbath
+algorithm_u1link metropolis
 # SU(2) doublets: metropolis or overrelax
 algorithm_su2doublet overrelax
 # SU(2) triplet: metropolis or overrelax

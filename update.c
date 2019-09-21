@@ -26,11 +26,32 @@ void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, in
 	for (long i=offset; i<max; i++) {
 		if (p.algorithm_su2link == HEATBATH) {
 			c->accepted_su2link += heatbath_su2link(f, p, i, dir);
-			c->total_su2link++;
 		} else if (p.algorithm_su2link == METROPOLIS) {
 			c->accepted_su2link += metro_su2link(f, p, i, dir);
-			c->total_su2link++;
 		}
+		c->total_su2link++;
+	}
+
+}
+
+/* Same as checkerboard_sweep_su2link(), but for U(1) links instead.
+*/
+void checkerboard_sweep_u1link(fields f, params p, counters* c, char parity, int dir) {
+	// EVEN sites come before ODD
+	long offset, max;
+	if (parity == EVEN) {
+		offset = 0; max = p.evensites;
+	} else {
+		offset = p.evensites; max = p.sites;
+	}
+
+	for (long i=offset; i<max; i++) {
+		if (p.algorithm_u1link == HEATBATH) {
+			//c->accepted_u1link += heatbath_su2link(f, p, i, dir);
+		} else if (p.algorithm_u1link == METROPOLIS) {
+			c->accepted_u1link += metro_u1link(f, p, i, dir);
+		}
+		c->total_u1link++;
 	}
 
 }
@@ -93,12 +114,24 @@ void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity,
 */
 void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, char metro) {
 
+	// EVEN and ODD sweeps for gauge links
 	for (int dir=0; dir<p.dim; dir++) {
 		checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
 		c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
 		checkerboard_sweep_su2link(*f, p, c, ODD, dir);
 		c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
 	}
+	#ifdef U1
+	// here I use update_halo() instead of update_gaugehalo(), so halo is
+	// actually updated for all directions after updating just one direction.
+	// this is of course OK, but could be optimized. 
+	for (int dir=0; dir<p.dim; dir++) {
+		checkerboard_sweep_u1link(*f, p, c, EVEN, dir);
+		c->comms_time += update_halo(comlist, EVEN, f->u1link, p.dim);
+		checkerboard_sweep_u1link(*f, p, c, ODD, dir);
+		c->comms_time += update_halo(comlist, ODD, f->u1link, p.dim);
+	}
+	#endif
 
 	// EVEN sweeps for scalars
 	#ifdef HIGGS
