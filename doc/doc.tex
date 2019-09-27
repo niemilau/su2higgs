@@ -179,7 +179,15 @@ S_{a_2} = \sum_\textbf{x} (a a_2) \frac12 \Tr (a\he\Phi\Phi) \Tr (a\Sigma^2).
 
 \subsection{Adding the $\gr{U(1)_Y}$ subgroup}
 
-Simulations in the electroweak $\gr{SU(2) \times U(1)}$ effective theory in 3d were discussed in \cite{Kajantie:1996qd}. Including the $\gr{U(1)}$ gauge field to the actions above is straightforward. The link variable is just the complex number $U_i(x) = \exp(i g' B_i(x)) \equiv \exp(i \alpha_i(x))$, where $B_i = a (B_i)_\text{cont}$ is the associated gauge field in the $\gr{U(1)}$ algebra; the simulation will operate on the real numbers $\alpha_i(x)$ (in code: u1field[x][dir]). The Higgs doublet $\Phi$, in matrix parametrization, transforms under a $\gr{SU(2) \times U(1)}$ gauge transformation as 
+Simulations in the electroweak $\gr{SU(2) \times U(1)}$ effective theory in 3d were discussed in \cite{Kajantie:1996qd}. Including the $\gr{U(1)}$ gauge field to the actions above is straightforward. 
+
+The link variable is just the complex number $U_i(x) = \exp(i g' B_i(x)) \equiv \exp(i \alpha_i(x))$, where $B_i = a (B_i)_\text{cont}$ is the associated gauge field in the $\gr{U(1)}$ algebra; the simulation will operate on the real numbers $\alpha_i(x)$ (in code: u1field[x][dir]). The Higgs covariant derivative in continuum is taken to be 
+\begin{align}
+D_i \phi = \partial_i \phi + \frac12 i g A^a_i \sigma_a + \frac12 i g' B_i 
+\end{align}
+\lauri{(do the signs matter at all here?!)}
+
+The Higgs doublet $\Phi$, in matrix parametrization, transforms under a $\gr{SU(2) \times U(1)}$ gauge transformation as 
 \begin{align}
 \Phi(x) \rightarrow G(x) \Phi(x) e^{-i \alpha(x)\sigma_3},
 \end{align}
@@ -191,7 +199,10 @@ Taking the real part, we obtain the Wilson action as
 \begin{align}
 S_\gr{U(1)} = \beta_G' \sum_{x, i<j} \Big[ 1 - \frac12 \Big(p_{ij}^{1/\gamma} + (p_{ij}^*)^{-1/\gamma}\Big)\Big] 
 \end{align}
-where $\gamma > 0$ is an arbitrary parameter that can be adjusted to reduce finite-size effects. Note that all values of $\gamma$ should give the same continuum limit, but to get proper representations of the $\gr{U(1)}$ group one has to choose  $\gamma = 1, 1/2, 1/3, \dots$ \lauri{(understand this!!)}. I use $\gamma = 1$ because then the above action is very simple to implement in the code.
+where $\gamma > 0$ is an arbitrary parameter that can be adjusted to reduce finite-size effects. Note that all values of $\gamma$ should give the same continuum limit, but to get proper representations of the $\gr{U(1)}$ group one has to choose  $\gamma = 1, 1/2, 1/3, \dots$ \lauri{(understand this!!)}. I use $\gamma = 1$ because then the above action is very simple to implement in the code. We denote 
+\begin{align}
+\beta_G' = \frac{2}{a {g'}^2} = \frac12 \beta_G \frac{g^2}{{g'}^2}.
+\end{align}
 
 The only change to the scalar sector is in the hopping terms, modifying update algorithms for the Higgs and also the $\gr{SU(2)}$ links. \lauri{Adjoint scalars are assumed to be singlets under hypercharge transformations.} The Higgs covariant derivative becomes 
 \begin{align}
@@ -390,7 +401,7 @@ In any case, Kari did not seem  too worried about this discrepancy, especially s
 \section{Lattice-continuum relations}
 \label{sec:lat-cont}
 
-Due to renormalization scheme dependence, the relation between continuum and lattice parameter is nontrivial. In a superrenormalizable 3d theory, \MSbar masses run at two loops while dimensionless couplings are RG invariant. Furthermore, the condensates such as $\langle \phi^\dagger\phi \rangle$ are scheme dependent and need to be matched, although their renormalization is additive and does not affect differences (which are sufficient for extracting the physics). In practice the condensates can be matched by calculating the unphysical zero-point divergence of the effective potential. The schemes can be matched exactly at two loop level, so that the lattice-continuum relations do not obtain further corrections at higher orders. This has been done in Refs.~\cite{Laine:1995np, Laine:1997dy} for the SM and some extensions. Here we collect the results relevant for our cases.
+Due to renormalization scheme dependence, the relation between continuum and lattice parameter is nontrivial. In a superrenormalizable 3d theory, \MSbar masses run at two loops while dimensionless couplings are RG invariant. Furthermore, the condensates such as $\langle \phi^\dagger\phi \rangle$ are scheme dependent and need to be matched, although their renormalization is additive and does not affect differences (which are sufficient for extracting the physics). In practice the condensates can be matched by calculating the unphysical zero-point divergence of the effective potential. The schemes can be matched exactly (in the continuum limit!) at two loop level, so that the lattice-continuum relations do not obtain further corrections at higher orders. This has been done in Refs.~\cite{Laine:1995np, Laine:1997dy} for the SM and some extensions. Here we collect the results relevant for our cases.
 
 Denoting $m_i = \text{lattice mass}, \mu_i = \text{\MSbar mass}$, the two are related as 
 \begin{align}
@@ -417,12 +428,24 @@ where
 
 The full mass counterterm is
 \begin{align}
-(\delta m^2_\phi)_\text{fund} =& -(\frac32 g^2 + 6\lambda) \frac{\Sigma}{4\pi a} \nonumber \\
+(\delta m^2_\phi)_\text{fund} =& -\Big(\frac32 g^2 + 6\lambda\Big) \frac{\Sigma}{4\pi a} \nonumber \\
 &- \frac{1}{16\pi^2}\Big[ \Big( \frac{51}{16}g^4 + 9\lambda g^2 - 12\lambda^2 \Big)\Big( \ln \frac{6}{a\Lambda}+\zeta \Big)
  + 9\lambda g^2 \Big( \frac14 \Sigma^2 - \delta \Big) \nonumber \\ 
 & + \frac34 g^4 \Big( \frac{15}{16}\Sigma^2 + \frac{\pi}{3} \Sigma + \frac54 - \frac72 \delta - 4\rho +4\kappa_1 - \kappa_2 - \kappa_3 - 3\kappa_4  \Big) \Big].
 \end{align}
 
+
+If the hypercharge field is included, the counterterms are instead 
+\begin{align}
+\delta V_{\gr{U(1)}} =& - 2 m^2_\phi \frac{\Sigma}{4\pi a} - \frac{1}{16\pi^2} (3g^2 + {g'}^2) m^2_\phi \Big( \ln \frac{6}{a \Lambda} +\zeta + \frac{\Sigma^2}{4} - \delta \Big),
+\end{align}
+\begin{align}
+(\delta m^2_\phi)_{\text{fund}, \gr{U(1)}} =& -\Big(\frac32 g^2 + \frac12 {g'}^2 + 6\lambda\Big) \frac{\Sigma}{4\pi a} \nonumber \\
+&- \frac{1}{16\pi^2}\Big[ \Big( \frac{51}{16}g^4 - \frac98 g^2 {g'}^2 - \frac{5}{16} {g'}^4 + 9\lambda g^2 + 3\lambda {g'}^2 - 12\lambda^2 \Big)\Big( \ln \frac{6}{a\Lambda}+\zeta \Big) \nonumber \\ 
+& + 3\lambda(3g^2 + {g'}^2)  \Big( \frac14 \Sigma^2 - \delta \Big) + \lauri{A {g'}^4 + B g^2 {g'}^2 }\nonumber \\
+& + \frac34 g^4 \Big( \frac{15}{16}\Sigma^2 + \frac{\pi}{3} \Sigma + \frac54 - \frac72 \delta - 4\rho +4\kappa_1 - \kappa_2 - \kappa_3 - 3\kappa_4  \Big) \Big].
+\end{align}
+These were taken from \cite{Kajantie:1996qd}, with some guessing based on similarity of $\gr{SU(2)}$ and $\gr{U(1)}$ Feynman diagrams. This was necessary because they only gave numerical values for terms on the last two rows. \lauri{I did not manage to figure out exact expressions for the coefficients $A$ and $B$!!}
 
 \subsection{$\gr{SU(2)}$ + adjoint scalar}
 
@@ -468,6 +491,8 @@ where the new contributions read
 \end{align}
 Note that there are also contributions not proportional to $a_2$.
 
+
+\lauri{TODO $\gr{U(1)}$ parts!!}
 
 \section{Code technicalities}
 

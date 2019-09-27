@@ -124,7 +124,7 @@ void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, c
 	#ifdef U1
 	// here I use update_halo() instead of update_gaugehalo(), so halo is
 	// actually updated for all directions after updating just one direction.
-	// this is of course OK, but could be optimized. 
+	// this is of course OK, but could be optimized.
 	for (int dir=0; dir<p.dim; dir++) {
 		checkerboard_sweep_u1link(*f, p, c, EVEN, dir);
 		c->comms_time += update_halo(comlist, EVEN, f->u1link, p.dim);
@@ -185,6 +185,18 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 		checkerboard_sweep_su2link(*f, p, c, ODD, dir);
 		c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
 	}
+
+	#ifdef U1
+	// here I use update_halo() instead of update_gaugehalo(), so halo is
+	// actually updated for all directions after updating just one direction.
+	// this is of course OK, but could be optimized.
+	for (int dir=0; dir<p.dim; dir++) {
+		checkerboard_sweep_u1link(*f, p, c, EVEN, dir);
+		c->comms_time += update_halo(comlist, EVEN, f->u1link, p.dim);
+		checkerboard_sweep_u1link(*f, p, c, ODD, dir);
+		c->comms_time += update_halo(comlist, ODD, f->u1link, p.dim);
+	}
+	#endif
 
 	// parity loop for scalars. EVEN = 0, ODD = 1; defined in su2.h
 	for (char par=0; par<=1; par++) {
