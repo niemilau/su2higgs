@@ -197,22 +197,23 @@ p_{ij}(x) = \exp\{i[\alpha_i(x) + \alpha_j(x+i) - \alpha_i(x+j) - \alpha_j(x)]\}
 \end{align}
 Taking the real part, we obtain the Wilson action as 
 \begin{align}
-S_\gr{U(1)} = \beta_G' \sum_{x, i<j} \Big[ 1 - \frac12 \Big(p_{ij}^{1/\gamma} + (p_{ij}^*)^{-1/\gamma}\Big)\Big] 
+S_\gr{U(1)} = \beta_G' \sum_{x, i<j} \Big[ 1 - \frac12 \Big(p_{ij}^{1/\gamma} + (p_{ij}^*)^{1/\gamma}\Big)\Big] 
 \end{align}
 where $\gamma > 0$ is an arbitrary parameter that can be adjusted to reduce finite-size effects. Note that all values of $\gamma$ should give the same continuum limit, but to get proper representations of the $\gr{U(1)}$ group one has to choose  $\gamma = 1, 1/2, 1/3, \dots$ \lauri{(understand this!!)}. I use $\gamma = 1$ because then the above action is very simple to implement in the code. We denote 
 \begin{align}
-\beta_G' = \frac{2}{a {g'}^2} = \frac12 \beta_G \frac{g^2}{{g'}^2}.
+\beta_G' = \frac{4}{a {g'}^2} = \beta_G \frac{g^2}{{g'}^2}.
 \end{align}
+\lauri{Careful:} sometimes this $\beta$ is defined differently. In the end what matters is the number multiplying the plaquettes, as the constant part can always be adjusted without changing physics. I believe this is the definition for $\beta_G'$ used in \cite{Kajantie:1996qd}.
 
 The only change to the scalar sector is in the hopping terms, modifying update algorithms for the Higgs and also the $\gr{SU(2)}$ links. \lauri{Adjoint scalars are assumed to be singlets under hypercharge transformations.} The Higgs covariant derivative becomes 
 \begin{align}
 \sum_{x, i} \Big[ \Tr \he\Phi(x)\Phi(x) - \RE\Tr \he\Phi(x)U_i(x)\Phi(x+i)e^{-i \alpha_i(x)\sigma_3}\Big].
 \end{align}
-Note that it is important to only take the real part as the trace is no longer real in general. Because of this, it is often convenient to write 
+To calculate this, it is often convenient to write 
 \begin{align}
 e^{-i \alpha\sigma_3} = \sigma_0\cos\alpha - i \sigma_3 \sin\alpha,
 \end{align}
-with $\sigma_0$ again being the $2\times 2$ identity matrix. The choice of $\gamma$ does not affect the Higgs hopping term.
+with $\sigma_0$ again being the $2\times 2$ identity matrix. The choice of $\gamma$ does not affect the Higgs hopping term. Note that this trace is still real.
 
 \section{Local update algorithms}
 
