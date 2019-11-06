@@ -404,8 +404,8 @@ double localact_u1link(fields f, params p, long i, int dir) {
 
 	for (int dir2 = 0; dir2<p.dim; dir2++) {
 		if (dir2 != dir) {
-			tot += (1.0 - 0.5 * u1ptrace(f, p, i, dir, dir2));
-			tot += (1.0 - 0.5 * u1ptrace(f, p, p.prev[i][dir2], dir, dir2));
+			tot += (1.0 - u1ptrace(f, p, i, dir, dir2));
+			tot += (1.0 - u1ptrace(f, p, p.prev[i][dir2], dir, dir2));
 		}
 	}
 	tot *= p.betau1;
@@ -413,9 +413,6 @@ double localact_u1link(fields f, params p, long i, int dir) {
 	// hopping terms:
 	#ifdef HIGGS
 		tot += hopping_doublet_forward(f, p, i, dir);
-	#endif
-	#ifdef TRIPLET
-		tot += hopping_triplet_forward(f, p, i, dir);
 	#endif
 
 	return tot;
