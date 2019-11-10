@@ -10,7 +10,7 @@
 
 #include "su2.h"
 
-/* Print data labels for measurements (into a separate file for now)
+/* Print data labels for measurements (into a separate label file)
 */
 void print_labels() {
 	FILE* f = fopen("labels", "w+");
@@ -32,6 +32,9 @@ void print_labels() {
 	#if defined HIGGS && defined TRIPLET
 		fprintf(f, "%d phi^2 Sigma^2\n", k); k++;
 	#endif
+	#ifdef U1
+		fprintf(f, "%d U(1) Wilson\n", k); k++;
+	#endif
 
 	fclose(f);
 }
@@ -48,6 +51,8 @@ void measure(fields f, params p, counters* c, weight* w) {
 
 	double action = 0.0, action_tot;
 	double wilson = 0.0, wilson_tot;
+	double u1wilson = 0.0, u1_tot;
+
 	// Higgs doublet:
 	double hopping_phi = 0.0, hopping_phi_tot;
 	double phi2 = 0.0, phi2_tot;
@@ -59,12 +64,17 @@ void measure(fields f, params p, counters* c, weight* w) {
 	double Sigma2 = 0.0, Sigma2_tot;
 	double Sigma4 = 0.0, Sigma4_tot;
 
+
+
 	double mod = 0.0;
 
 	// some overlap here. action_local() already calculates local wilson action, hopping terms etc.
 	for (long i=0; i<p.sites; i++) {
 		action += action_local(f, p, i);
 		wilson += local_su2wilson(f, p, i);
+		#ifdef U1
+			u1wilson += local_u1wilson(f, p, i);
+		#endif
 
 		#ifdef HIGGS
 			for (int dir=0; dir<p.dim; dir++) {
@@ -102,6 +112,9 @@ void measure(fields f, params p, counters* c, weight* w) {
 
 	action_tot = reduce_sum(action);
 	wilson_tot = reduce_sum(wilson);
+	#ifdef U1
+	u1_tot = reduce_sum(u1wilson);
+	#endif
 	#ifdef HIGGS
 	hopping_phi_tot = reduce_sum(hopping_phi);
 	phi2_tot = reduce_sum(phi2);
@@ -122,6 +135,7 @@ void measure(fields f, params p, counters* c, weight* w) {
 	c->comms_time += time;
 
 	// write to resultsfile. This is very fast performance wise
+	// the ordering here should be the same as in print_labels()
 	if (!p.rank) {
 		fprintf(p.resultsfile, "%g ", weight);
 		fprintf(p.resultsfile, "%g %g ",
@@ -141,6 +155,9 @@ void measure(fields f, params p, counters* c, weight* w) {
 			);
 			#endif
 		#endif
+		#ifdef U1
+			fprintf(p.resultsfile, "%g ", u1_tot/((double)p.vol) );
+		#endif
 		fprintf(p.resultsfile, "\n");
 		fflush(p.resultsfile);
 	}
@@ -155,6 +172,10 @@ double action_local(fields f, params p, long i) {
 
 	double tot = 0.0;
 	tot += local_su2wilson(f, p, i);
+
+	#ifdef U1
+		tot += local_u1wilson(f, p, i);
+	#endif
 
 	#ifdef HIGGS
 		tot += covariant_doublet(f, p, i) + higgspotential(f, p, i);

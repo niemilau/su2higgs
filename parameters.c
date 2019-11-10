@@ -39,6 +39,7 @@ void get_parameters(char *filename, params *p) {
   int set_checks = 0;
 
   int set_su2alg = 0;
+  int set_u1alg = 0;
   int set_su2DBalg = 0;
 	int set_su2triplet_alg = 0;
 
@@ -50,6 +51,7 @@ void get_parameters(char *filename, params *p) {
   int set_latticefile = 0;
 
 	int set_betasu2 = 0;
+  int set_betau1 = 0;
 	// doublet
 	int set_lambda_phi = 0;
 	int set_msq_phi = 0;
@@ -140,6 +142,10 @@ void get_parameters(char *filename, params *p) {
       p->betasu2 = strtod(value,NULL);
       set_betasu2 = 1;
     }
+    else if(!strcasecmp(key,"betau1")) {
+      p->betau1 = strtod(value,NULL);
+      set_betau1 = 1;
+    }
 		// Higgs parameters
 		else if(!strcasecmp(key,"msq")) {
       p->msq_phi = strtod(value,NULL);
@@ -202,6 +208,21 @@ void get_parameters(char *filename, params *p) {
       }
       set_su2alg = 1;
     }
+
+    #ifdef U1
+      else if(!strcasecmp(key,"algorithm_u1link")) {
+        if(!strcasecmp(value,"metropolis")) {
+  	       p->algorithm_u1link = METROPOLIS;
+        } else if(!strcasecmp(value,"heatbath")) {
+          printf("U(1) heatbath not implemented!!!!!!\n");
+  	      p->algorithm_u1link = METROPOLIS;
+        } else {
+          printf("Unknown algorithm for U(1) gauge fields, using metropolis\n");
+          p->algorithm_u1link = METROPOLIS;
+        }
+        set_u1alg = 1;
+      }
+    #endif
 
     #ifdef HIGGS
       else if(!strcasecmp(key,"algorithm_su2doublet")) {
@@ -312,8 +333,13 @@ void get_parameters(char *filename, params *p) {
 
   check_set(set_su2alg, "algorithm_su2link");
 	check_set(set_betasu2, "betasu2");
-
-	#ifdef HIGGS // now these parameters are attempted to read but the checks are skipped
+  #ifdef U1
+  check_set(set_betau1, "betau1");
+  check_set(set_u1alg, "algorithm_u1link");
+  #endif
+  // these parameters are attempted to read but the checks are skipped
+  // if preprocessor identifier not defined
+	#ifdef HIGGS
   check_set(set_su2DBalg, "algorithm_su2doublet");
 	check_set(set_update_doublet, "update_doublet");
 	check_set(set_phi0, "phi0");
@@ -487,6 +513,9 @@ void print_parameters(params p) {
 
 	printf("-------------------------- Lattice parameters --------------------------\n");
 	printf("SU(2) beta %.1lf\n", p.betasu2);
+  #ifdef U1
+  printf("U(1) beta %.1lf\n", p.betau1);
+  #endif
 	#ifdef HIGGS
 	printf("msq (Higgs) %lf, lambda (Higgs) %lf, ", p.msq_phi, p.lambda_phi);
 	printf("initial phi0 %.2lf\n",p.phi0);

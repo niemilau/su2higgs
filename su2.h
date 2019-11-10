@@ -84,6 +84,7 @@ typedef struct {
 	// possible generalization: make separate structures
 	// for each field in the theory that contain their respective params
 	double betasu2; // 4/(g^2)
+	double betau1; // 2/(g'^2)
 	// doublet
 	double msq_phi; // Higgs mass
 	double lambda_phi; // Higgs quartic
@@ -98,6 +99,7 @@ typedef struct {
 
 	// How to update the fields
 	short algorithm_su2link;
+	short algorithm_u1link;
 	short algorithm_su2doublet;
 	short algorithm_su2triplet;
 
@@ -117,6 +119,7 @@ typedef struct {
 	double ***su2link;
 	double **su2doublet;
 	double **su2triplet;
+	double **u1link;
 
 	// backup arrays. these are used in global multicanonical steps in case the update sweep needs to be undone
 	double **backup_doublet;
@@ -132,6 +135,7 @@ typedef struct {
 
 	// count metropolis updates
 	long total_su2link, accepted_su2link;
+	long total_u1link, accepted_u1link;
 	long total_doublet, accepted_doublet;
 	long total_triplet, accepted_triplet;
 	// count overrelax updates
@@ -234,7 +238,7 @@ void free_latticetable(long** list);
 void free_lattice_arrays(params *p);
 void free_comlist(comlist_struct* comlist);
 
-// su2.c
+// su2u1.c
 double su2sqr(double *u);
 void su2rot(double *u1, double *u2);
 double su2ptrace(fields f, params p, long i, int dir1, int dir2);
@@ -242,6 +246,10 @@ long double local_su2wilson(fields f, params p, long i);
 double localact_su2link(fields f, params p, long i, int dir);
 void su2staple_wilson(fields f, params p, long i, int dir, double* V);
 void su2link_staple(fields f, params p, long i, int dir, double* V);
+// U(1) routines
+double u1ptrace(fields f, params p, long i, int dir1, int dir2);
+long double local_u1wilson(fields f, params p, long i);
+double localact_u1link(fields f, params p, long i, int dir);
 // doublet routines
 double doubletsq(double* a);
 long double avg_doublet2(fields f, params p);
@@ -260,6 +268,7 @@ double localact_triplet(fields f, params p, long i);
 
 // metropolis.c
 int metro_su2link(fields f, params p, long i, int dir);
+int metro_u1link(fields f, params p, long i, int dir);
 int metro_doublet(fields f, params p, long i);
 int metro_triplet(fields f, params p, long i);
 
@@ -275,12 +284,14 @@ int overrelax_triplet(fields f, params p, long i);
 void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, char metro);
 void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w, counters* c, char metro);
 void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, int dir);
+void checkerboard_sweep_u1link(fields f, params p, counters* c, char parity, int dir);
 void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro);
 void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro);
 
 // init.c
 void setsu2(fields f, params p);
 void random_su2link(double *su2);
+void setu1(fields f, params p);
 void setfields(fields f, params p);
 void setdoublets(fields f, params p);
 void settriplets(fields f, params p);

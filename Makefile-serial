@@ -1,7 +1,8 @@
 # non-parallel makefile
 
-CC := gcc -g -O3 -D HIGGS -D TRIPLET
+#CC := gcc -g -O3 -D HIGGS -D TRIPLET
 
+CC := gcc -g -O3 -D HIGGS -D U1 -D TRIPLET
 
 CFLAGS := 
 

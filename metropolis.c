@@ -41,6 +41,36 @@ int metro_su2link(fields f, params p, long i, int dir) {
 	}
 }
 
+/*
+* Update a single U(1) link using Metropolis.
+* Remember that our links are U_i(x) = exp(i a_i(x))
+* and a_i(x) is in f.u1link
+* Returns 1 if update was accepted and 0 if rejected.
+*/
+int metro_u1link(fields f, params p, long i, int dir) {
+
+	double oldlink = f.u1link[i][dir];
+
+	double linkact_old = localact_u1link(f, p, i, dir);
+
+	// multiply link by a random phase (can adjust the overall number here)
+	f.u1link[i][dir] += 1.0*(drand48() - 0.5);
+
+	double linkact_new = localact_u1link(f, p, i, dir);
+
+	double diff = linkact_new - linkact_old;
+	if (diff < 0) {
+		return 1;
+	}
+	else if (diff > 0 && ( exp(-(diff)) > drand48() )) {
+		return 1;
+	}
+	else {
+		f.u1link[i][dir] = oldlink;
+		return 0;
+	}
+}
+
 
 /*
 * Update a single SU(2) scalar doublet using Metropolis.
