@@ -205,7 +205,7 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 			checkerboard_sweep_su2triplet(*f, p, c, par, metro);
 
 			// multicanonical step
-			if (w->orderparam == SIGMASQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
+			if (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
 				double muca_param_new = calc_orderparam(p, *f, w, par); // this also updates w->param_value[par]
 				accept = multicanonical_acceptance(p, w, muca_param_old, muca_param_new);
 
@@ -228,7 +228,7 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 			checkerboard_sweep_su2doublet(*f, p, c, par, metro);
 
 			// multicanonical step if the order parameter depends on the Higgs
-			if (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
+			if (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
 				double muca_param_new = calc_orderparam(p, *f, w, par); // this also updates w->param_value[par]
 				accept = multicanonical_acceptance(p, w, muca_param_old, muca_param_new);
 

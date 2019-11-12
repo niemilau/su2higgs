@@ -32,7 +32,8 @@ typedef unsigned short ushort;
 // multicanonical order parameters
 #define PHISQ 1
 #define SIGMASQ 2
-#define PHI2SIGMA2 3
+#define PHI2MINUSSIGMA2 3
+#define PHI2SIGMA2 4
 
 // nasty global...
 double waittime;
@@ -51,7 +52,7 @@ typedef struct {
 	long vol;
 	// slicing the lattice for MPI
 	int *nslices; // how many slices in each direction
-	uint *sliceL; // how many sites per slice in each direction
+	long *sliceL; // how many sites per slice in each direction
 	long sites; // how many sites in total in one hypercubic slice
 	long halos; // how many artificial sites are needed for haloing
 	// how many actual sites we have. This can be less than sites + halos,
@@ -190,6 +191,7 @@ double allreduce(double res);
 void bcast_int(int *res);
 void bcast_long (long *res);
 void bcast_double(double *res);
+void barrier();
 // gauge links:
 double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
 #ifdef MPI
@@ -233,7 +235,7 @@ void free_gaugefield(long sites, double ***field);
 void alloc_fields(params p, fields *f);
 void free_fields(params p, fields *f);
 void alloc_lattice_arrays(params *p);
-long **alloc_latticetable(ushort dim, long sites);
+long **alloc_latticetable(int dim, long sites);
 void free_latticetable(long** list);
 void free_lattice_arrays(params *p);
 void free_comlist(comlist_struct* comlist);
