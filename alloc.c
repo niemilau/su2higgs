@@ -9,8 +9,9 @@
 
 #include "su2.h"
 #include "comms.h"
-
-
+#ifdef WALL
+  #include "wallprofile.h"
+#endif
 
 /* Allocates memory for a field with a single degree of freedom per site.
 *
@@ -156,7 +157,7 @@ void free_fields(params p, fields *f) {
 /* Allocate contiguous memory for long-valued 2D array.
 * These are mainly used for navigating on the lattice
 */
-long **alloc_latticetable(ushort dim, long sites) {
+long **alloc_latticetable(int dim, long sites) {
 
 	long **array = malloc(sites * sizeof(*(array)));
 	array[0] = malloc(sites * dim * sizeof(array[0]));
@@ -178,6 +179,7 @@ void alloc_lattice_arrays(params *p) {
 
 	// allocate parity arrays
 	p->parity = malloc(p->sites_total * sizeof(*(p->parity)));
+
 	if (!p->rank)
 		printf("Allocated memory for lookup tables.\n");
 }
@@ -192,6 +194,9 @@ void free_lattice_arrays(params *p) {
 	free(p->parity);
 	free_latticetable(p->next);
 	free_latticetable(p->prev);
+  #ifdef WALL
+    free_latticetable(wallcoord);
+  #endif
 	// slicing:
 	free(p->sliceL);
 	free(p->nslices);

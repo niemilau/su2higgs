@@ -800,8 +800,14 @@ void bcast_double(double *res) {
   MPI_Bcast(res, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 }
 
+// Barrier MPI_COMM_WORLD
+void barrier() {
+	MPI_Barrier(MPI_COMM_WORLD);
+}
 
 #else // No MPI, dummy routines. comlist is not even needed in this case
+
+void barrier() {}
 
 double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir) {
 	return 0;

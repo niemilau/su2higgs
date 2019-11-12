@@ -9,9 +9,11 @@
 
 #include "su2.h"
 #include "comms.h"
+#ifdef WALL
+		#include "wallprofile.h"
+#endif
 
 #ifdef MPI
-
 
 /* layout()
 * Perform all required steps to get sites and halos in place,
@@ -86,6 +88,47 @@ void layout(params *p, comlist_struct *comlist) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
+	#ifdef WALL
+		printf0(*p, "Initializing wall profile structures\n");
+		// initialize stuff defined in wallprofile.h
+
+		sites_per_z = 1;
+		if (p->dim == 1) {
+			sites_per_z = p->sliceL[0];
+		}
+		else {
+			for (int d=0; d<p->dim-1; d++) {
+				sites_per_z *= p->sliceL[d];
+			}
+		}
+
+		// allocate table so that wallcoord[z][n] gives the site index i
+		// of site with z-coordinate z, and n runs over all sites with that z index.
+		wallcoord = alloc_latticetable(sites_per_z, p->sliceL[p->dim-1]);
+
+		long* xnode = malloc(p->dim * sizeof(xnode)); // coordinates of the MPI nodes
+		indexToCoords(p->dim, p->nslices, p->rank, xnode);
+
+		offset_z = xnode[p->dim-1] * p->sliceL[p->dim-1];
+
+		for (long nz=0; nz<p->sliceL[p->dim-1]; nz++) {
+			long tot = 0;
+			for (long i=0; i<p->sites; i++) {
+				if (nz + offset_z == xphys[i][p->dim-1]) {
+					wallcoord[nz][tot] = i;
+					tot++;
+				}
+			}
+			if (tot != sites_per_z) {
+				printf("Error in wall profile routines in layout.c!\n");
+				die(420);
+			}
+		}
+
+		free(xnode);
+
+	#endif // end WALL
+
 	free_latticetable(xphys);
 	free(newindex);
 
@@ -138,7 +181,7 @@ void make_slices(params *p) {
 	// Now factorize the lattice side lengths in terms of these primes.
 	// We start with full lengths in p->L[dir] and slice the largest length to get a smaller slice,
 	// then just repeat. So the steps are: 1) find currently largest slice 2) slice it 3) repeat.
-	uint slice[p->dim]; // how many lattice sites in one slice in direction dir
+	long slice[p->dim]; // how many lattice sites in one slice in direction dir
 	int nslices[p->dim]; // how many hypercubes can we fit in one direction
 	int dir;
 	// initialize these
@@ -147,6 +190,18 @@ void make_slices(params *p) {
 		nslices[dir] = 1;
 	}
 
+	int firstdim;
+	#ifdef WALL
+		// for wall profiling, ONLY slice the last direction!
+		if (p->L[p->dim-1] % nodes != 0) {
+			printf0(*p, "Wall routines failed: cannot split z-direction into %d pieces! in layout.c\n", nodes);
+			die(419);
+		}
+		firstdim = p->dim-1;
+	#else
+		firstdim = 0;
+	#endif
+
 	// start with the largest prime!
 	for (int n=n_primes-1; n>=0; n--) {
 		// whatever we do for one prime, repeat as many times as it appears in node factorization
@@ -154,14 +209,14 @@ void make_slices(params *p) {
 
 			// find largest slice direction that we can still chop with this prime.
 			int largest=1;
-			for (dir=0; dir<p->dim; dir++) {
+			for (dir=firstdim; dir<p->dim; dir++) {
 				if ( (slice[dir] > largest) && (slice[dir] % prime[n] == 0) ) {
 					largest = slice[dir];
 				}
 			}
 
 			// now chop the longest direction
-			for (dir=0; dir<p->dim; dir++) {
+			for (dir=firstdim; dir<p->dim; dir++) {
 				if (slice[dir] == largest) {
 					slice[dir] = slice[dir] / prime[n];
 					nslices[dir] *= prime[n];
@@ -187,7 +242,7 @@ void make_slices(params *p) {
 		printf("\nSites on each node: ");
 		for (dir=0; dir<p->dim; dir++) {
 			if (dir>0) printf(" x ");
-			printf("%d", slice[dir]);
+			printf("%ld", slice[dir]);
 		}
 	}
 
