@@ -1,7 +1,9 @@
 
 #include "su2.h"
 #include "comms.h"
-
+#ifdef WALL
+	#include "wallprofile.h"
+#endif
 
 int main(int argc, char *argv[]) {
 
@@ -80,6 +82,12 @@ int main(int argc, char *argv[]) {
 		p.reset = 1;
 	}
 
+	#ifdef WALL
+		// setup wall. NB! this overrides any other field initializations
+		prepare_wall(&f, p);
+		measure_wall(&f, p);
+	#endif
+
 	// labels for results file
 	if (!p.rank) {
 		print_labels();
@@ -125,6 +133,9 @@ int main(int argc, char *argv[]) {
 		// measure & update fields first, then checkpoint if needed
 		if (iter % p.interval == 0) {
 			measure(f, p, &c, &w);
+			#ifdef WALL
+				measure_wall(&f, p);
+			#endif
 		}
 
 		if (iter % metro_interval == 0) {
@@ -133,6 +144,8 @@ int main(int argc, char *argv[]) {
 			metro = 0;
 		}
 
+		// keep halos in sync...
+		barrier();
 		if (!p.multicanonical) {
 			update_lattice(&f, p, &comlist, &c, metro);
 		} else {
