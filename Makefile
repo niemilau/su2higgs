@@ -11,8 +11,6 @@ CC := mpicc -g -O3
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET #-D U1
 CFLAGS := -D MPI -D HIGGS -D TRIPLET -D WALL
 
-WALLDEFINES := -D WALL
-
 LIBS := -lm
 
 OBJECTS := main.o layout.o comms.o alloc.o init.o parameters.o su2u1.o measure.o \

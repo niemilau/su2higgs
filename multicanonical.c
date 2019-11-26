@@ -4,7 +4,8 @@
 *
 * We assume that a range of order parameter values (min, max) is given
 * in the config file, and restrict weighting to this range.
-* This range is divided into given number of bins of equal width.
+* This range is divided into given number of bins.
+* Bin width does NOT need to be the same in all bins!
 *
 * Weight is stored in struct weight, w.pos[i] being the "starting" value of
 * i. bin and w.W[i] being the value of the weight function at w.pos[i].
@@ -60,7 +61,7 @@
 
 /* Save the current weight into file.
 * There will be w.bins + 1 lines, the first one being:
-* 	w.bins w.increment w.last_max
+* 	w.bins w.increment w.last_max w.min w.max
 * the lines after that read:
 * 	w.pos[i] w.W[i]
 *
@@ -75,7 +76,7 @@ void save_weight(params p, weight w) {
 	if(!p.rank) {
 		FILE *wfile = fopen(w.weightfile, "w");
 
-		fprintf(wfile, "%ld %lf %d\n", w.bins, w.increment, w.last_max);
+		fprintf(wfile, "%ld %lf %d %lf %lf \n", w.bins, w.increment, w.last_max, w.min, w.max);
 		for(long i=0; i<w.bins; i++) {
 			fprintf(wfile, "%lf %lf\n", w.pos[i], w.W[i]);
 		}
@@ -90,7 +91,6 @@ void save_weight(params p, weight w) {
 * If file does not exist, initializes a new flat weight.
 * DO NOT call this more than once per run.
 *
-* Original implementation by David Weir.
 */
 void load_weight(params p, weight *w) {
 
@@ -100,22 +100,22 @@ void load_weight(params p, weight *w) {
   w->W = malloc(w->bins * sizeof(*(w->W)));
 	w->hits = malloc(w->bins * sizeof(*(w->hits)));
 
-	w->dbin = (w->max - w->min)/((double)w->bins);
-
 	w->update_interval = 500; // Kari used 500-2000 in MSSM
 
   long i;
 
   if(access(w->weightfile, R_OK) != 0) {
-		// no weight found
+		// no weight found; initialize a flat weight according to config file
     printf0(p,"Unable to access weightfile!!\n");
 		if (w->readonly) {
 			printf0(p, "No multicanonical weight given for a read-only run! Exiting...\n");
 			die(20);
 		}
 
+		double dbin = (w->max - w->min)/((double)w->bins);
+
     for(i=0; i<w->bins; i++) {
-      w->pos[i] = w->min + ((double) i) * w->dbin;
+      w->pos[i] = w->min + ((double) i) * dbin;
       w->W[i] = 0.0;
     }
 		w->last_max = 0; // assume starting from min
@@ -123,22 +123,23 @@ void load_weight(params p, weight *w) {
 		printf0(p, "Initialized new weight \n");
 
   } else {
-		// found existing weight, check that bins and the range matches those in config file
+		// found existing weight, use it instead of the one specified in config
 		FILE *wfile = fopen(w->weightfile, "r");
 
-		// check that binning matches to values in config
 		// read = how many elements read per in a line
 		int read;
 		long bins_read;
 
-
 		// first line:
-		read = fscanf(wfile, "%ld %lf %d", &bins_read, &w->increment, &w->last_max);
+		read = fscanf(wfile, "%ld %lf %d %lf %lf ", &bins_read, &w->increment, &w->last_max, &w->min, &w->max);
 
-		if (read != 3 || bins_read != w->bins) {
-			printf0(p, "Error reading first line of weightfile! Check bins \n");
+		if (read != 5) {
+			printf0(p, "Error reading first line of weightfile! \n");
 			die(22);
 		}
+
+		// override initial options with the values read from the actual weightfile
+		w->bins = bins_read;
 
     for(i=0; i<w->bins; i++) {
       read = fscanf(wfile, "%lf %lf", &(w->pos[i]), &(w->W[i]));
@@ -150,16 +151,10 @@ void load_weight(params p, weight *w) {
 
     fclose(wfile);
 
-		// check that the range in weight matches to what was given in config
-		double readmax = w->pos[w->bins-1] + w->dbin;
-		if ( fabs(w->pos[0] - w->min) > 0.00001 || fabs(readmax - w->max) > 0.00001) {
-			printf0(p, "Error: Wrong range weightfile!\n Found min=%lf, max=%lf was supposed to be min=%lf, max=%lf\n", w->pos[0], readmax, w->min, w->max);
-			die(23);
-		}
-
-		printf0(p, "Starting with weight increment %lf, last_max %d\n", w->increment, w->last_max);
-
   }
+
+	printf0(p, "Using weight function with %ld bins in range %lf, %lf\n", w->bins, w->min, w->max);
+	printf0(p, "Starting weighting with increment %lf, last_max %d\n", w->increment, w->last_max);
 
 	// restart accumulation of muca hits even if existing weight is loaded
 	w->m = 0;
@@ -197,7 +192,7 @@ double get_weight(weight w, double val) {
 	long bin = whichbin(w, val);
 
 	// linearize the weight function in this bin
-	double val_prev = w.min + bin * w.dbin;
+	double val_prev = w.pos[bin];
 	double nextW, val_next;
 	if (bin >= w.bins - 1) {
 		// last bin, use constant weight
@@ -205,7 +200,7 @@ double get_weight(weight w, double val) {
 		val_next = w.max;
 	} else {
 		nextW = w.W[bin+1];
-		val_next = val_prev + w.dbin;
+		val_next = w.pos[bin+1];
 	}
 
 	return w.W[bin] + (val - val_prev) * (nextW - w.W[bin]) / (val_next - val_prev);
@@ -327,8 +322,7 @@ int multicanonical_acceptance(params p, weight* w, double oldval, double newval)
 
 /* Return bin index corresponding to given value of order parameter.
 * If out of range, we return the closest bin index. The calling
-* functions should ensure that this does not happen, however,
-* as it may lead to accidents....
+* functions should ensure that this does not happen, however.
 */
 long whichbin(weight w, double val) {
 	if (val < w.min) {
@@ -336,7 +330,37 @@ long whichbin(weight w, double val) {
 	} else if (val >= w.max) {
 		return w.bins - 1;
 	} else {
-		return (long) ((val - w.min) / w.dbin);
+		// do a quick binary search
+		long bin;
+		long bmin = 0; long bmax = w.bins-1;
+		double current, next;
+
+		while (bmin <= bmax) {
+			bin = bmin + (bmax - bmin) / 2;
+			current = w.pos[bin];
+
+			if (bin == w.bins-1) {
+				// last bin
+				next = w.max;
+			} else {
+				next = w.pos[bin+1];
+			}
+
+			if ((val < next && val > current) || (fabs(val - current) < 1e-10) ) {
+				return bin;
+			}
+
+			if (val > current) {
+				bmin = bin + 1;
+			} else {
+				bmax = bin - 1;
+			}
+		}
+		// end binary search, if we got here then something went wrong!
+		printf("Error in multicanonical.c: failed to find bin!\n");
+
+
+		return w.bins - 1;
 	}
 }
 
