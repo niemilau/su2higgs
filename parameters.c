@@ -472,6 +472,12 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
   	       w->orderparam = PHI2SIGMA2;
            printf0(*p, "Multicanonical order parameter: phi^2 Tr Sigma^2 \n");
         }
+          #ifdef HIGGS
+          else if (!strcasecmp(value,"phi2minusSigma2")) {
+    	       w->orderparam = PHI2MINUSSIGMA2;
+             printf0(*p, "Multicanonical order parameter: phi^2 - Tr Sigma^2 \n");
+          }
+          #endif
 				#endif
 				else {
           printf0(*p, "Unknown multicanonical order parameter!!\n");
