@@ -164,8 +164,8 @@ void load_weight(params p, weight *w) {
 
 	// weight outside the binning range?
 	if (w->absolute_bounds) {
-		w->outsideW_max = 500;
-		w->outsideW_min = 500;
+		w->outsideW_max = 100;
+		w->outsideW_min = 100;
 	} else {
 		w->outsideW_max = w->W[w->bins-1];
 		w->outsideW_min = w->W[0];
@@ -412,14 +412,13 @@ double calc_orderparam(params p, fields f, weight* w, char par) {
 /* Backup all fields contributing to the order parameter,
 * in case an update sweep is rejected later by the global acc/rej.
 * Ordering in the backup array is exactly the same as in the original field array.
-* Depending on the order parameter, we may have to also backup halo fields.
+* This does not store halos, so remember to do the muca test before updating any halos.
 * Some optimization is achieved by only including halos here if it is scrictly necessary.
 */
 void store_muca_fields(params p, fields* f, weight* w) {
 
 	switch(w->orderparam) {
 		case SIGMASQ :
-			// no halos
 			for (long i=0; i<p.sites; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
@@ -428,15 +427,13 @@ void store_muca_fields(params p, fields* f, weight* w) {
 			break;
     case PHI2MINUSSIGMA2 :
 		case PHI2SIGMA2 :
-			// need real sites AND halos
-			for (long i=0; i<p.sites_total; i++) {
+			for (long i=0; i<p.sites; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
 				}
 			}
 			// continue to store Higgs
 		case PHISQ :
-			// no halos
 			for (long i=0; i<p.sites; i++) {
 				for (int dof=0; dof<SU2DB; dof++) {
 					f->backup_doublet[i][dof] = f->su2doublet[i][dof];
@@ -448,22 +445,18 @@ void store_muca_fields(params p, fields* f, weight* w) {
 
 
 /* Undo field updates if the multicanonical step is rejected.
-* Here we may need to undo halo updates as well, depending on
-* the order parameter (see store_muca_fields()). For optimization,
-* we do NOT include halos for the Higgs, so it should be updated last in a sweep.
 */
 void reset_muca_fields(params p, fields* f, weight* w, char par) {
 
-	long offset, max, halo_offset, halo_max;
+	long offset, max;
 	if (par == EVEN) {
-		offset = 0; max = p.evensites; halo_offset = p.sites; halo_max = p.sites + p.evenhalos;
+		offset = 0; max = p.evensites;
 	} else {
-		offset = p.evensites; max = p.sites; halo_offset = p.sites + p.evenhalos; halo_max = p.sites_total;
+		offset = p.evensites; max = p.sites;
 	}
 
 	switch(w->orderparam) {
 		case SIGMASQ :
-			// no need to undo halos
 			for (long i=offset; i<max; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
@@ -472,21 +465,13 @@ void reset_muca_fields(params p, fields* f, weight* w, char par) {
 			break;
     case PHI2MINUSSIGMA2 :
 		case PHI2SIGMA2 :
-			// need real sites AND halos
 			for (long i=offset; i<max; i++) {
-				for (int dof=0; dof<SU2TRIP; dof++) {
-					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
-				}
-			}
-			// then halos
-			for (long i=halo_offset; i<halo_max; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
 				}
 			}
 		// continue to undo Higgs changes
 		case PHISQ :
-			// no need to undo halos
 			for (long i=offset; i<max; i++) {
 				for (int dof=0; dof<SU2DB; dof++) {
 					f->su2doublet[i][dof] = f->backup_doublet[i][dof];
@@ -501,11 +486,11 @@ void reset_muca_fields(params p, fields* f, weight* w, char par) {
 void alloc_backup_arrays(params p, fields* f, weight w) {
 	switch(w.orderparam) {
 		case SIGMASQ :
-			f->backup_triplet = make_field(p.sites_total, SU2TRIP);
+			f->backup_triplet = make_field(p.sites, SU2TRIP);
 			break;
 		case PHI2SIGMA2 :
     case PHI2MINUSSIGMA2 :
-			f->backup_triplet = make_field(p.sites_total, SU2TRIP);
+			f->backup_triplet = make_field(p.sites, SU2TRIP);
 		case PHISQ :
 			f->backup_doublet = make_field(p.sites, SU2DB);
 			break;

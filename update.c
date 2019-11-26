@@ -175,8 +175,6 @@ void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, c
 void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w, counters* c, char metro) {
 
 	int accept;
-	double muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
-	store_muca_fields(p, f, w);
 
 	for (int dir=0; dir<p.dim; dir++) {
 		checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
@@ -200,6 +198,9 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 	// parity loop for scalars. EVEN = 0, ODD = 1; defined in su2.h
 	for (char par=0; par<=1; par++) {
 
+		double muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
+		store_muca_fields(p, f, w);
+
 		#ifdef TRIPLET
 		for (int k=0; k<p.update_su2triplet; k++) {
 			checkerboard_sweep_su2triplet(*f, p, c, par, metro);
@@ -216,7 +217,13 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 				} else {
 					// accepted, so update muca_param_old in case other fields still need muca
 					muca_param_old = w->param_value[EVEN] +  w->param_value[ODD];
+					// need to also store the new triplet field, in case reset_muca_fields()
+					// is called later in the same sweep
+					store_muca_fields(p, f, w);
 				}
+
+				c->accepted_muca += accept;
+				c->total_muca++;
 			}
 
 			c->comms_time += update_halo(comlist, par, f->su2triplet, SU2TRIP);
@@ -239,16 +246,15 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 				} else {
 					muca_param_old = w->param_value[EVEN] +  w->param_value[ODD];
 				}
+
+				c->accepted_muca += accept;
+				c->total_muca++;
 			}
 
 			c->comms_time += update_halo(comlist, par, f->su2doublet, SU2DB);
 		}
 		#endif
 
-		// update muca_param_old for the next parity
-		muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
-		c->accepted_muca += accept;
-		c->total_muca++;
 	} // end parity loop
 
 }

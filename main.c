@@ -110,6 +110,7 @@ int main(int argc, char *argv[]) {
 	long iter;
 	if (p.reset) {
 		iter = 1;
+		measure(f, p, &c, &w);
 		printf0(p, "\nStarting new simulation!\n");
 	} else {
 		iter = c.iter + 1;
@@ -134,7 +135,7 @@ int main(int argc, char *argv[]) {
 		if (iter % p.interval == 0) {
 			measure(f, p, &c, &w);
 			#ifdef WALL
-				measure_wall(&f, p);
+				//measure_wall(&f, p);
 			#endif
 		}
 

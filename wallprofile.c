@@ -68,17 +68,12 @@ void measure_wall(fields* f, params p) {
 
   barrier();
 
-  char fname[200], temp[200];
-  sprintf(temp, "%ld", wall_count);
-  strcpy(fname, "wallprofile_");
-  strcat(fname, temp);
-
   // temporary arrays for storing the observables as functions of z
   double* f1 = make_singletfield(nz);
   double* f2 = make_singletfield(nz);
 
   if (!p.rank)
-    wallfile = fopen(fname, "a");
+    wallfile = fopen("wallprofile", "a");
 
   for (long z=0; z<nz; z++) {
     double phi2 = 0.0;
