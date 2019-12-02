@@ -21,8 +21,8 @@ def lin_int(x, b, k):
 
 
 ## read in temperature T and beta_G
-if not len(sys.argv) in [4]:
-    sys.stderr.write('Usage: %s <input file> <T> <beta_G>\n' %
+if not len(sys.argv) in [4,5]:
+    sys.stderr.write('Usage: %s <input file> <T> <beta_G> <volume (optional)>\n' %
                      sys.argv[0])
     sys.exit(1)
 
@@ -30,6 +30,8 @@ datafile = sys.argv[1]
 T = float(sys.argv[2])
 beta = float(sys.argv[3])
 
+if len(sys.argv) == 5:
+    volume = int(sys.argv[4])
 
 params = genfromtxt(datafile, names=True)
 
@@ -125,7 +127,7 @@ mW = 0.5 * math.sqrt(gsq) * v
 mh = math.sqrt(abs(2.0 * muphisq))
 mSigma = math.sqrt(abs(muSigmasq + 0.5 * a2 * v**2))
 ## some symmetric phase masses
-mSigmaSymm = math.sqrt(muSigmasq)
+mSigmaSymm = math.sqrt(abs(muSigmasq))
 masses = [mW, mh, mSigma, mSigmaSymm]
 xi_min = 1.0/max(masses)
 xi_max = 1.0/min(masses)
@@ -188,7 +190,6 @@ def convert_lattice(pars):
     = convert_lattice([T0, gsq, gpsq, muphisq, muSigmasq, lam, a2, b4, RGscale])
 
 print('---- Lattice parameters for beta_G = '+str(beta)+' ----')
-#print('David\'s convention assumed: everything here is scaled by factors of a to get dimensionless numbers.\n')
 
 print('g %g, gp %g, muphisq %g, muSigmasq %g, lambda %g, b4 %g, a2 %g, a %g\n\n'
                      % (gLat, gpLat, mphisqLat, mSigmasqLat, lamLat, b4Lat, a2Lat, a))
@@ -230,5 +231,19 @@ print('---- Temperature dependence of lattice parameters near T = '+str(T)+' ---
 print('g %g, gp %g, muphisq %g, muSigmasq %g, lambda %g, a2 %g, b4 %g, a %g\n\n'
                      % (k[0], k[1], k[2], k[3], k[4], k[5], k[6], k[7]))
 
-#print('Note that in our scheme the lattice gauge coupling g is not temperature dependent as it is fixed by beta_G.')
-#print('Instead, the lattice spacing a depends on T as a ~ 1/T ')
+
+if len(sys.argv) == 5:
+    ## if volume was given, print reweight string for Kari's FSH program.
+    ## Note that we do multiply by volume here.
+    ## Wilson action for SU(2) is not included, because beta_G does not depend on T by construction.
+    ## also, more precision here just in case.
+    print('---- Reweight string ----\n')
+    print('%.16f * #5 + %.16f * #6 + %.16f * #8 + %.16f * #9 + %.16f * #10 \n' %
+        (volume*k[2], volume*k[4], volume*k[3], volume*k[6], volume*k[5]))
+
+    print('---- Same without spaces, for aa: ----\n')
+    print('%.16f*#5+%.16f*#6+%.16f*#8+%.16f*#9+%.16f*#10\n' %
+        (volume*k[2], volume*k[4], volume*k[3], volume*k[6], volume*k[5]))
+
+# explanation: #n is the n.th column in measure file.
+# So Kari's aa knows how to interpret this string
