@@ -134,9 +134,6 @@ int main(int argc, char *argv[]) {
 		// measure & update fields first, then checkpoint if needed
 		if (iter % p.interval == 0) {
 			measure(f, p, &c, &w);
-			#ifdef WALL
-				//measure_wall(&f, p);
-			#endif
 		}
 
 		if (iter % metro_interval == 0) {
@@ -166,6 +163,10 @@ int main(int argc, char *argv[]) {
 				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
 				print_acceptance(p, c);
 			}
+
+			#ifdef WALL
+				measure_wall(&f, p);
+			#endif
 
 			save_lattice(p, f, c);
 			// update max iterations if the config file has been changed by the user
