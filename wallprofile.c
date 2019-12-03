@@ -73,7 +73,7 @@ void measure_wall(fields* f, params p) {
   double* f2 = make_singletfield(nz);
 
   if (!p.rank)
-    wallfile = fopen("wallprofile", "a");
+    wallfile = fopen("wallprofile", "w");
 
   for (long z=0; z<nz; z++) {
     double phi2 = 0.0;
