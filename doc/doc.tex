@@ -397,6 +397,158 @@ In any case, Kari did not seem  too worried about this discrepancy, especially s
 \end{figure}
 
 
+\section{Measuring physical stuff}
+
+\subsection{Reweighting}
+
+Suppose the action depends on some variable $x$, and consider a canonical probability distribution of some quantity $O$ evaluated at fixed $x$: 
+\begin{align}
+p_x(O) \propto e^{-S(x)}.
+\end{align}
+Suppose we then want to study the system with a slightly different value $x'$. Expanding $S$ around this point we have
+\begin{align}
+S(x) = S(x') + \frac{dS}{dx}\Big\vert_{x=x'} (x-x') + \mathcal{O(x-x')^2},
+\end{align}
+and in practice we can often approximate the derivative to be constant, at least if the values of $x$ are not very far from each other: $\frac{dS}{dx}\Big\vert_{x=x'} (x-x') \equiv k = \text{const}$. 
+
+Then 
+\begin{align}
+p_{x}(O) \propto e^{-S(x')} e^{-k(x-x')} = C p_{x'}(O) e^{-k(x-x')}.
+\end{align}
+The expectation value is
+\begin{align}
+\langle O \rangle_x = \frac{1}{Z_x} \int D\phi \; O p_{x}(O) = \frac{Z_{x'}}{Z_x}C \langle O e^{-k(x-x')} \rangle_{x'},
+\end{align}
+and taking $O=1$ fixes the proportionality constant to be  
+\begin{align}
+\frac{Z_{x'}}{Z_x}C = \frac{1}{\langle e^{-k(x-x')}\rangle }_{x'}.
+\end{align}
+So we have the reweighting formula: If a canonical expectation value is known at value $x'$, at some other value $x$ the expectation value can be obtained from
+\begin{align}
+\langle O \rangle_x =  \frac{\langle O e^{-k(x-x')} \rangle_{x'}}{\langle e^{-k(x-x')}\rangle_{x'}}
+\end{align}
+provided that $x$ is not too far from the original $x'$. In Monte Carlo, 
+\begin{align}
+\langle O \rangle_x = \frac{1}{Z_x} \sum_{\{\phi\}} \; O(\phi) e^{-S} \approx \frac{1}{N_\text{meas}} \sum_{i=1}^{N_\text{meas}} O_i,
+\end{align}
+where we sum over measurements on the right-hand side. Hence the reweighting formula becomes
+\begin{align}
+\langle O \rangle_x \approx \frac{\sum_i O_i e^{-(x -x')k_i}}{\sum_i e^{-(x -x')k_i}}.
+\end{align}
+
+\paragraph{Reweighting with respect to the temperature.}
+
+Now 
+\begin{align}
+\langle O \rangle_T \approx \frac{\sum_i O_i e^{-(T -T')k_i}}{\sum_i e^{-(T -T')k_i}}.
+\end{align}
+and on the lattice 
+\begin{align}
+k = \frac{dS}{dT} = \sum_x \frac{d}{dT} \left( m^2 \frac12 \Tr\Phi^\dagger\Phi + \dots \right) =  \sum_x \left( \frac{dm^2}{dT} \frac12 \Tr\Phi^\dagger\Phi + \dots \right).
+\end{align}
+Why does the derivative not act on the fields, even though our lattice field is clearly scaled by $T$ to make it dimensionless? The reason is that the fields are just integration variables in the path integral, which should anyway be evaluated at a fixed temperature. The scaling of fields affects the couplings, and this effect is captured in the above expression (\lauri{I haven't come up with a better argument...}). 
+
+Now in a simulation we measure volume averages such as 
+\begin{align}
+\left\langle \frac12 \Tr\Phi^\dagger\Phi \right\rangle_i = \frac{1}{N} \sum_x \frac12 (\Tr\Phi^\dagger\Phi)_i.
+\end{align}
+Here the index $i$ refers to a fixed configuration (or measurement) and $N$ is the number of lattice sites, so that the physical volume is $V=a^3N$. The "reweighting factor" $k_i$ can therefore be written in terms of observables as 
+\begin{align}
+k_i = N \left( \frac{dm^2}{dT} \left\langle \frac12 \Tr\Phi^\dagger\Phi  \right\rangle_i + \dots \right). 
+\end{align}
+So to summarize, temperature reweighting can be once the $T$ dependence of all couplings appearing in the (lattice) action is known and volume averages of all operators in the action are measured. In practice, the derivatives can be evaluated at the original temperature $T'$ and approximated as constants. 
+
+Note that in statistical mechanics, the canonical probability weight is $e^{-\beta E} = e^{-E/T}$, so reweighting with respect to $T$ would be performed using the energy. In our case the energy would be (from standard statistical physics) 
+\begin{align}
+E = T^2 \frac{\partial \ln Z}{\partial T} = -\frac{T^2}{Z} \int D\phi\; e^{-S} \frac{\partial S}{\partial T} = -T^2 \left\langle \frac{\partial S}{\partial T} \right\rangle.
+\end{align}
+In terms of Monte Carlo measurements:
+\begin{align}
+E = -T^2 \frac{1}{N_\text{meas}} \sum_i^{N_\text{meas}}\frac{\partial S_i}{\partial T},
+\end{align}
+which is not terribly useful because in reweighting, we need the energy at each measurement (but can be used for determining latent heat).
+
+\subsection{Latent heat}
+
+Latent heat is defined as the change in energy density across a phase transition. I can come up with two ways of measuring it from simulations (that hopefully should agree). 
+
+\paragraph{Option 1.} As discussed above, the total energy for our system is given by 
+\begin{align}
+E = -T^2 \left\langle \frac{\partial S}{\partial T} \right\rangle,
+\end{align}
+which is now an average over Monte Carlo measurements. On the other hand, 
+\begin{align}
+\frac{\partial S_i}{\partial T} = N \left( \frac{dm^2}{dT} \left\langle \frac12 \Tr\Phi^\dagger\Phi  \right\rangle_i + \dots \right)
+\end{align}
+is constructed from volume averages of local operators (which is what we measure). Note that this is the same quantity that we use for reweighting. 
+
+Now, it of course makes no sense to average over all configurations when looking for energy discontinuities. Instead we want to find the energies of the bulk phases and subtract them, so we should look at the histogram of $\partial S_i / \partial T$. Recipe for finding the latent heat is then to calculate the condensates of relevant operators in the bulk phases (histogram peaks), and take the difference. So the latent heat over $T^4$ (to make it dimensionless) is 
+\begin{align}
+\frac{L}{T^4} =& \frac{1}{T^4} \Delta\frac{E}{V} = -\frac{T^2}{T^4 a^3 N} \Delta \left\langle\frac{\partial S}{\partial T}\right\rangle \nonumber \\
+=& -\frac{1}{T^2 a^3 N} \Delta \underbrace{N \left( \frac{dm^2}{dT} \left\langle \frac12 \Tr\Phi^\dagger\Phi  \right\rangle + \dots \right)}_{\text{"reweight string"}},
+\end{align}
+where $\Delta \langle \dots \rangle = \langle \dots \rangle_\text{low-$T$ phase} - \langle \dots \rangle_\text{high-$T$ phase}$.
+
+\begin{comment}
+Latent heat is defined as the change in energy density across a phase transition. It can be calculated directly from the 3d action as follows. Our partition function is
+\begin{align}
+Z = \int D\phi \; e^{-\beta S_3}, 
+\end{align}
+while in statistical mechanics it is customary to write the exponential in terms of the energy as $e^{-\beta E}$. So we have the clear analogue $E = S_3$, but remember that often the prefactor $\beta = 1/T$ is included in our action. 
+
+\paragraph{Option 1.} In lattice discretization the exponential is $e^{-S_L}$ with
+\begin{align*}
+S_L =& \sum_x a^3 \mathcal{L}_\text{L} = \sum_x \left( m^2_L \frac12 \Tr\Phi^\dagger\Phi + \lambda_L \left(\frac12 \Tr\Phi^\dagger\Phi\right)^2 + \dots \right) = \frac{E}{T}. 
+\end{align*}
+In simulations we measure volume averages such as 
+\begin{align*}
+\left\langle \frac12 \Tr\Phi^\dagger\Phi \right\rangle = \frac{1}{N} \sum_x \frac12 \Tr\Phi(x)^\dagger\Phi(x),
+\end{align*}
+where $N$ is the number of lattice sites, so the physical volume is $V = a^3 N$. With some abuse of notation, we can then write the energy in terms of these volume averages as 
+\begin{align*}
+\frac{E}{T} = N \left( m^2_L \left\langle\frac12 \Tr\Phi^\dagger\Phi\right\rangle + \lambda_L \left\langle\left(\frac12 \Tr\Phi^\dagger\Phi\right)^2\right\rangle + \dots \right) = N \langle S_L \rangle.
+\end{align*}
+Since $S_L$ approaches the continuum action as $a\rightarrow 0$, it is justified to measure the energy directly from the lattice action. 
+
+The latent heat can then be calculated from condensate discontinuities as 
+\begin{align*}
+L = \Delta \left(\frac{E}{V}\right) = \frac{T N}{a^3 N} \Delta\langle{S_L}\rangle = \frac{T}{a^3} \left( m^2_L \Delta \left\langle\frac12 \Tr\Phi^\dagger\Phi\right\rangle + \lambda_L \Delta \left\langle\left(\frac12 \Tr\Phi^\dagger\Phi\right)^2\right\rangle + \dots \right).
+\end{align*}
+Here $\Delta \langle \dots \rangle = \langle \dots \rangle_\text{low-$T$ phase} - \langle \dots \rangle_\text{high-$T$ phase}$, and local condensates of all (discontinuous) operators appearing in the action should be included (and obviously $T$ fixed to the transition temperature). Note that often the dimensionless $L / T^4$ is considered instead.
+
+\paragraph{Option 2.} Starting from the statistical definition of $E$:
+\begin{align*}
+E = T^2 \frac{\partial \ln Z}{\partial T} = -T^2 \frac{1}{Z} \int D\phi\; \frac{\partial S}{\partial T} e^{-S} = -T^2 \left\langle \frac{\partial S}{\partial T} \right\rangle
+\end{align*}
+
+\end{comment}
+
+\subsection{Finding the critical temperature without sampling pure phases}
+
+For strong transitions with strongly metastable phases (especially 2-steps) it can be difficult to find a good starting temperature for multicanonical sampling. This is because it is then practically impossible to get the system to tunnel even once near $T_c$, and tunneling may occur only at temperatures much lower than the critical temperature. In this case it is convenient to use the following method, which only samples mixed-phase configurations.
+
+The recipe is as follows:
+\begin{enumerate}
+	\item Use a long lattice, $n_z \gg n_x, n_y$, and prepare the system in a mixed configuration where sites with $z < n_z/2$ are in phase 1 and sites with $z > n_z/2$ are in phase 2. 
+	
+	\item For a suitable order parameter (\textit{e.g.} $\langle\phi^\dagger\phi - \Tr\Sigma^2\rangle$), use a multicanonical weight to constrain the system to a very narrow range around the starting value. In practice, choose the order parameter so that it starts with value 0, then set zero weight in, for example, range $(-0.1, 0.1)$ and infinite ($=$absurdly large) weight elsewhere (keep the weight constant during the simulation!). This corresponds to sampling the mixed-phase configurations only, because the weight prevents the system from evolving into a pure phase. On a long lattice, the phase boundaries (2 on a periodic lattice) stay perpendicular to the $z$-axis, and at critical temperature both phases should occupy half of the lattice.
+	
+	\item Look at the histogram of the order parameter in the range of interest, and find the temperature where the histogram is flat. Easily done by reweighting.
+	
+\end{enumerate}
+Once the $T_c$ is known, latent heat can be found simply by preparing the system in a pure phase and finding the expectation values of condensates there, and then repeating for the other phase. Getting the surface tension without actually studying tunneling is less straightforward, but Kari had some trick in mind for this too.
+
+Some practical notes:
+\begin{itemize}
+	\item If the system manages to escape outside the weighting range, there is nothing stopping it from getting stuck in a pure phase. Lesson: either use steep linear weight a la Kari that forces the system to "roll" back near the initial value if it attempts to escape, or just make sure that the "infinite" weight really is practically infinite.
+	
+	\item With this method, it often takes a longer time than normal for the system to thermalize. 
+	
+	\item If the temperature is far from $T_c$, it is not rare to find the system occupying only one end of the weight range.
+	
+\end{itemize}
+
+
 \appendix 
 
 \section{Lattice-continuum relations}
