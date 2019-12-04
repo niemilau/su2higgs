@@ -541,9 +541,9 @@ Once the $T_c$ is known, latent heat can be found simply by preparing the system
 Some practical notes:
 \begin{itemize}
 	\item If the system manages to escape outside the weighting range, there is nothing stopping it from getting stuck in a pure phase. Lesson: either use steep linear weight a la Kari that forces the system to "roll" back near the initial value if it attempts to escape, or just make sure that the "infinite" weight really is practically infinite.
-	
-	\item With this method, it often takes a longer time than normal for the system to thermalize. 
-	
+
+	\item For thermalization, it (probably) helps to allow for small initial fluctuations when setting up the wall. However, in this case it's better to use a "linearly infinite" weight function (like Kari did) because the initial order parameter is now slightly random.
+
 	\item If the temperature is far from $T_c$, it is not rare to find the system occupying only one end of the weight range.
 	
 \end{itemize}
