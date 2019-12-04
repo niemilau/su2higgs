@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
 	#ifdef WALL
 		// setup wall. NB! this overrides any other field initializations
-		prepare_wall(&f, p);
+		prepare_wall(&f, p, &comlist);
 		measure_wall(&f, p);
 	#endif
 

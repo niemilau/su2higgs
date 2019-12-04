@@ -20,7 +20,7 @@
 * NB! need a long lattice in one direction, this routine assumes the longest
 * direction is the "last" direction (z-coordinate).
 */
-void prepare_wall(fields* f, params p) {
+void prepare_wall(fields* f, params p, comlist_struct* comlist) {
 
   wall_count = 0;
   long nz = p.sliceL[p.dim-1];
@@ -31,29 +31,63 @@ void prepare_wall(fields* f, params p) {
       long i = wallcoord[z][x];
       if (z + offset_z < 0.5 * p.L[p.dim-1]) {
         // for small z:
-        f->su2doublet[i][0] = 0.2;
-        f->su2doublet[i][1] = 0.0;
-        f->su2doublet[i][2] = 0.0;
-        f->su2doublet[i][3] = 0.0;
-        #ifdef TRIPLET
-        f->su2triplet[i][0] = 1.5;
-        f->su2triplet[i][1] = 0.0;
-        f->su2triplet[i][2] = 0.0;
+        #ifdef HIGGS
+        f->su2doublet[i][0] = 0.2 + 0.01*drand48();
+        f->su2doublet[i][1] = 0.01*drand48();
+        f->su2doublet[i][2] = 0.01*drand48();
+        f->su2doublet[i][3] = 0.01*drand48();
         #endif
+        #ifdef TRIPLET
+        f->su2triplet[i][0] = 1.5 + 0.05*drand48();
+        f->su2triplet[i][1] = 0.05*drand48();
+        f->su2triplet[i][2] = 0.05*drand48();
+        #endif
+        // also set gauge links to (hopefully) help with thermalization
+        for (int dir=0; dir<p.dim; dir++) {
+          double u = 1.0 - 0.03*drand48();
+    			f->su2link[i][dir][0] = u;
+    			f->su2link[i][dir][1] = sqrt((double)(1.0 - u*u));
+    			f->su2link[i][dir][2] = 0.0;
+    			f->su2link[i][dir][3] = 0.0;
+    		}
       } else {
         // for large z:
-        f->su2doublet[i][0] = 1.5;
-        f->su2doublet[i][1] = 0.0;
-        f->su2doublet[i][2] = 0.0;
-        f->su2doublet[i][3] = 0.0;
-        #ifdef TRIPLET
-        f->su2triplet[i][0] = 0.2;
-        f->su2triplet[i][1] = 0.0;
-        f->su2triplet[i][2] = 0.0;
+        #ifdef HIGGS
+        f->su2doublet[i][0] = 1.5 + 0.05*drand48();
+        f->su2doublet[i][1] = 0.05*drand48();
+        f->su2doublet[i][2] = 0.05*drand48();
+        f->su2doublet[i][3] = 0.05*drand48();
         #endif
+        #ifdef TRIPLET
+        f->su2triplet[i][0] = 0.2 + 0.01*drand48();
+        f->su2triplet[i][1] = 0.01*drand48();
+        f->su2triplet[i][2] = 0.01*drand48();
+        #endif
+        // gauge links:
+        for (int dir=0; dir<p.dim; dir++) {
+          double u = 1.0 - 0.4*drand48();
+    			f->su2link[i][dir][0] = u;
+    			f->su2link[i][dir][1] = sqrt((double)(1.0 - u*u));
+    			f->su2link[i][dir][2] = 0.0;
+    			f->su2link[i][dir][3] = 0.0;
+    		}
       }
     }
   }
+  // wall initialized, now just need to sync halo fields
+  for (int par=0; par<=1; par++) {
+    #ifdef HIGGS
+    update_halo(comlist, par, f->su2doublet, SU2DB);
+    #endif
+    #ifdef TRIPLET
+    update_halo(comlist, par, f->su2triplet, SU2TRIP);
+    #endif
+
+    for (int dir=0; dir<p.dim; dir++) {
+      update_gaugehalo(comlist, par, f->su2link, SU2LINK, dir);
+    }
+  }
+
   printf0(p, "Wall profile initialized.\n");
 
 }
@@ -81,13 +115,16 @@ void measure_wall(fields* f, params p) {
 
     for (long x=0; x<sites_per_z; x++) {
       long i = wallcoord[z][x];
+      #ifdef HIGGS
       phi2 += doubletsq(f->su2doublet[i]);
+      #endif
       #ifdef TRIPLET
       Sigma2 += tripletsq(f->su2triplet[i]);
       #endif
     } // end x loop
-
+    #ifdef HIGGS
     f1[z] = phi2 / ((double) sites_per_z);
+    #endif
     #ifdef TRIPLET
     f2[z] = Sigma2 / ((double) sites_per_z);
     #endif

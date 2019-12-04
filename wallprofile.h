@@ -8,6 +8,7 @@
 */
 
 #include "su2.h"
+#include "comms.h"
 
 #ifndef WALL_H
 #define WALL_H
@@ -19,11 +20,11 @@
 long** wallcoord;
 long offset_z; // z coordinate of the MPI node times p.sliceL[p.dim-1]
 long sites_per_z; // how many lattice sites for a given z coord
-long wall_count; // how many times have we measured the wall 
+long wall_count; // how many times have we measured the wall
 
 
 // wallprofile.c
-void prepare_wall(fields* f, params p);
+void prepare_wall(fields* f, params p, comlist_struct* comlist);
 void measure_wall(fields* f, params p);
 
 #endif
