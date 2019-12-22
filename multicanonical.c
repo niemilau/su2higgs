@@ -270,8 +270,6 @@ void check_tunnel(params p, weight *w) {
 /* Global accept/reject step for multicanonical updating.
 * oldval is the old order parameter value before field was updated locally
 * Return 1 if update was accepted, 0 otherwise.
-* TODO specify arbitrary order param. need some function that calculates the order param value when I give it some label as an argument...
-* TODO optimize calculation of order param diff
 */
 int multicanonical_acceptance(params p, weight* w, double oldval, double newval) {
 
@@ -390,8 +388,9 @@ double calc_orderparam(params p, fields f, weight* w, char par) {
 			}
 			break;
     case PHI2MINUSSIGMA2 :
-      for (long i=offset; i<max; i++) {
-        tot += doubletsq(f.su2doublet[i]) - tripletsq(f.su2triplet[i]);
+      for (long i=offset; i<max; i++) { // modified for testing
+        //tot += doubletsq(f.su2doublet[i]) - 2.0*tripletsq(f.su2triplet[i]);
+				tot += 0.4*doubletsq(f.su2doublet[i]) - tripletsq(f.su2triplet[i]);
       }
       break;
 		case PHISQ :

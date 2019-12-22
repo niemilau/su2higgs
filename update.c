@@ -115,21 +115,25 @@ void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity,
 void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, char metro) {
 
 	// EVEN and ODD sweeps for gauge links
-	for (int dir=0; dir<p.dim; dir++) {
-		checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
-		c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
-		checkerboard_sweep_su2link(*f, p, c, ODD, dir);
-		c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
+	for (int k=0; k<p.update_links; k++) {
+		for (int dir=0; dir<p.dim; dir++) {
+			checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
+			c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
+			checkerboard_sweep_su2link(*f, p, c, ODD, dir);
+			c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
+		}
 	}
 	#ifdef U1
 	// here I use update_halo() instead of update_gaugehalo(), so halo is
 	// actually updated for all directions after updating just one direction.
 	// this is of course OK, but could be optimized.
-	for (int dir=0; dir<p.dim; dir++) {
-		checkerboard_sweep_u1link(*f, p, c, EVEN, dir);
-		c->comms_time += update_halo(comlist, EVEN, f->u1link, p.dim);
-		checkerboard_sweep_u1link(*f, p, c, ODD, dir);
-		c->comms_time += update_halo(comlist, ODD, f->u1link, p.dim);
+	for (int k=0; k<p.update_links; k++) {
+		for (int dir=0; dir<p.dim; dir++) {
+			checkerboard_sweep_u1link(*f, p, c, EVEN, dir);
+			c->comms_time += update_halo(comlist, EVEN, f->u1link, p.dim);
+			checkerboard_sweep_u1link(*f, p, c, ODD, dir);
+			c->comms_time += update_halo(comlist, ODD, f->u1link, p.dim);
+		}
 	}
 	#endif
 
@@ -176,22 +180,26 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 
 	int accept;
 
-	for (int dir=0; dir<p.dim; dir++) {
-		checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
-		c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
-		checkerboard_sweep_su2link(*f, p, c, ODD, dir);
-		c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
+	for (int k=0; k<p.update_links; k++) {
+		for (int dir=0; dir<p.dim; dir++) {
+			checkerboard_sweep_su2link(*f, p, c, EVEN, dir);
+			c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
+			checkerboard_sweep_su2link(*f, p, c, ODD, dir);
+			c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
+		}
 	}
 
 	#ifdef U1
 	// here I use update_halo() instead of update_gaugehalo(), so halo is
 	// actually updated for all directions after updating just one direction.
 	// this is of course OK, but could be optimized.
-	for (int dir=0; dir<p.dim; dir++) {
-		checkerboard_sweep_u1link(*f, p, c, EVEN, dir);
-		c->comms_time += update_halo(comlist, EVEN, f->u1link, p.dim);
-		checkerboard_sweep_u1link(*f, p, c, ODD, dir);
-		c->comms_time += update_halo(comlist, ODD, f->u1link, p.dim);
+	for (int k=0; k<p.update_links; k++) {
+		for (int dir=0; dir<p.dim; dir++) {
+			checkerboard_sweep_u1link(*f, p, c, EVEN, dir);
+			c->comms_time += update_halo(comlist, EVEN, f->u1link, p.dim);
+			checkerboard_sweep_u1link(*f, p, c, ODD, dir);
+			c->comms_time += update_halo(comlist, ODD, f->u1link, p.dim);
+		}
 	}
 	#endif
 
@@ -206,7 +214,7 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 			checkerboard_sweep_su2triplet(*f, p, c, par, metro);
 
 			// multicanonical step
-			if (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
+			if (w->orderparam == SIGMASQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
 				double muca_param_new = calc_orderparam(p, *f, w, par); // this also updates w->param_value[par]
 				accept = multicanonical_acceptance(p, w, muca_param_old, muca_param_new);
 

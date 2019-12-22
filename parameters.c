@@ -62,7 +62,7 @@ void get_parameters(char *filename, params *p) {
 	int set_b4 = 0;
 	int set_sigma0 = 0;
 
-
+  int set_update_links = 0;
   int set_update_doublet = 0;
 	int set_update_triplet = 0;
 
@@ -207,6 +207,9 @@ void get_parameters(char *filename, params *p) {
         p->algorithm_su2link = METROPOLIS;
       }
       set_su2alg = 1;
+    } else if(!strcasecmp(key,"update_links")) {
+      p->update_links = strtol(value,NULL,10);
+      set_update_links = 1;
     }
 
     #ifdef U1
@@ -221,6 +224,9 @@ void get_parameters(char *filename, params *p) {
           p->algorithm_u1link = METROPOLIS;
         }
         set_u1alg = 1;
+      } else if(!strcasecmp(key,"update_links")) {
+        p->update_links = strtol(value,NULL,10);
+        set_update_links = 1;
       }
     #endif
 
@@ -333,6 +339,7 @@ void get_parameters(char *filename, params *p) {
 
   check_set(set_su2alg, "algorithm_su2link");
 	check_set(set_betasu2, "betasu2");
+  check_set(set_update_links, "update_links");
   #ifdef U1
   check_set(set_betau1, "betau1");
   check_set(set_u1alg, "algorithm_u1link");
