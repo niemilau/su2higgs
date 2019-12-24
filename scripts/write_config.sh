@@ -9,7 +9,7 @@ inputfile=$1
 T=$2
 beta=$3
 
-python read_params.py $inputfile $T $beta
+read_params.py $inputfile $T $beta
 
 # read the file created by the python script
 
