@@ -105,9 +105,9 @@ typedef struct {
 	short algorithm_su2triplet;
 
 	// How many times to update a field per sweep
+	short update_links;
 	short update_su2doublet;
 	short update_su2triplet;
-	short globalradial;
 
 } params;
 
