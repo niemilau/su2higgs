@@ -4,6 +4,9 @@
 #ifdef WALL
 	#include "wallprofile.h"
 #endif
+#ifdef NUCLEATION
+	#include "nucleation.h"
+#endif
 
 int main(int argc, char *argv[]) {
 
@@ -77,14 +80,20 @@ int main(int argc, char *argv[]) {
 		printf0(p, "\nLoading latticefile: %s\n", p.latticefile);
 		load_lattice(p, f, &c);
 	} else {
+		#ifdef NUCLEATION
+			printf0(p, "Existing lattice file is required for nucleation trajectories!! Exiting...\n");
+			die(-421);
+		#endif
 		printf0(p, "No latticefile found; starting with cold configuration.\n");
 		setfields(f, p);
 		p.reset = 1;
 	}
 
+	sync_halos(&f, p, &comlist);
+
 	#ifdef WALL
 		// setup wall. NB! this overrides any other field initializations
-		prepare_wall(&f, p, &comlist);
+		prepare_wall(&f, p, &comlist); // halos re-synced here
 		measure_wall(&f, p);
 	#endif
 
@@ -105,6 +114,19 @@ int main(int argc, char *argv[]) {
 			printf0(p, "Read-only run, will not modify weight. \n");
 		}
 	}
+
+	#ifdef NUCLEATION
+		if (!p.multicanonical) {
+			printf0(p, "Multicanonical order parameter required for nucleation (but use flat weight)! Exiting...\n");
+			die(-223);
+		} else {
+			current_traj = 0;
+			// create directory "trajectories" if it does not exist
+			// and clear current measure file
+			printf0(p, "Bubble nucleation study: will store Langevin trajectories to a subdirectory\n");
+			printf0(p, "CAUTION: measure file WILL be overriden!!\n");
+		}
+	#endif
 
 	// main iteration loop
 	long iter;
@@ -150,6 +172,26 @@ int main(int argc, char *argv[]) {
 			update_lattice_muca(&f, p, &comlist, &w, &c, metro);
 		}
 
+		// if studying nucleation trajectories, check here if the order parameter
+		// crossed the min or max value. If yes, store the trajectory and reset
+		#ifdef NUCLEATION
+			double order_param = w.param_value[EVEN] + w.param_value[ODD];
+			if (order_param < traj_min || order_param > traj_max) {
+				current_traj++;
+				// copy current measure file to trajectory subdir
+				printf0("Langevin trajectory #%d ready\n", current_traj);
+				if (current_traj >= n_traj) {
+					// trajectories ready, so finish here
+					printf0(p, "Constructed %d Langevin trajectories! Finishing...\n", n_traj);
+					iter = p.iterations + 1;
+				} else {
+					// start over
+					iter = 1;
+					load_lattice(p, f, &c);
+				}
+			}
+		#endif // end nucleation if
+
 
 		if ((iter % p.checkpoint == 0)) {
 			// Checkpoint time; print acceptance and save fields to latticefile
@@ -168,9 +210,11 @@ int main(int argc, char *argv[]) {
 				measure_wall(&f, p);
 			#endif
 
-			save_lattice(p, f, c);
-			// update max iterations if the config file has been changed by the user
-			read_updated_parameters(argv[1], &p);
+			#ifndef NUCLEATION // do NOT override the configuration file if studying nucleation trajectories
+				save_lattice(p, f, c);
+				// update max iterations if the config file has been changed by the user
+				read_updated_parameters(argv[1], &p);
+			#endif
 		} // end checkpoint
 
 		iter++;
@@ -184,8 +228,8 @@ int main(int argc, char *argv[]) {
 	end_time = clock();
 	timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 
-	// save final configuration
 	c.total_time += timing; c.iter = iter;
+	// save final configuration
 	save_lattice(p, f, c);
 
 	// free memory and finish

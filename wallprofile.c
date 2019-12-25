@@ -75,18 +75,7 @@ void prepare_wall(fields* f, params p, comlist_struct* comlist) {
     }
   }
   // wall initialized, now just need to sync halo fields
-  for (int par=0; par<=1; par++) {
-    #ifdef HIGGS
-    update_halo(comlist, par, f->su2doublet, SU2DB);
-    #endif
-    #ifdef TRIPLET
-    update_halo(comlist, par, f->su2triplet, SU2TRIP);
-    #endif
-
-    for (int dir=0; dir<p.dim; dir++) {
-      update_gaugehalo(comlist, par, f->su2link, SU2LINK, dir);
-    }
-  }
+  sync_halos(f, p, comlist);
 
   printf0(p, "Wall profile initialized.\n");
 

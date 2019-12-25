@@ -289,6 +289,7 @@ void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, in
 void checkerboard_sweep_u1link(fields f, params p, counters* c, char parity, int dir);
 void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro);
 void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro);
+void sync_halos(fields* f, params p, comlist_struct* comlist);
 
 // init.c
 void setsu2(fields f, params p);

@@ -266,3 +266,29 @@ void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w
 	} // end parity loop
 
 }
+
+/* Routine sync_halos()
+* This is to be called before starting the simulation, to ensure that
+* all halo fields are in sync.
+*/
+void sync_halos(fields* f, params p, comlist_struct* comlist) {
+
+	for (int parity=0; parity<=1; parity++) {
+
+		for (int dir=0; dir<p.dim; dir++) {
+			update_gaugehalo(comlist, parity, f->su2link, SU2LINK, dir);
+			#ifdef U1
+				update_halo(comlist, parity, f->u1link, p.dim);
+			#endif
+		}
+
+		#ifdef HIGGS
+			update_halo(comlist, parity, f->su2doublet, SU2DB);
+		#endif
+
+		#ifdef TRIPLET
+			update_halo(comlist, parity, f->su2triplet, SU2TRIP);
+		#endif
+
+	}
+}
