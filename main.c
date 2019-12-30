@@ -10,7 +10,6 @@
 
 int main(int argc, char *argv[]) {
 
-
 	// temp
 	waittime = 0.0;
 
@@ -38,6 +37,12 @@ int main(int argc, char *argv[]) {
 	p.rank = 0;
 	p.size = 1;
 	#endif
+
+	// print usage if the arguments are invalid
+	if (argc != 2) {
+		printf0(p, "Usage: ./<program name> <config file>\n");
+		die(0);
+	}
 
 	// set RNG seed: different for each node!
 	long seed = (long) (time(NULL) * (p.rank + 1.0));
