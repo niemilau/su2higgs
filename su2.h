@@ -334,5 +334,14 @@ void reset_muca_fields(params p, fields* f, weight* w, char par);
 void alloc_backup_arrays(params p, fields* f, weight w);
 void free_muca_arrays(fields* f, weight *w);
 
+#ifdef TRIPLET
+	// magfield.c
+	void matmat(double *in1, double *in2, int dag);
+	void projector(double *proj, double *adjoint);
+	void project_u1(params* p, fields* f, long i, int dir, double* pro);
+	double alpha_proj(params* p, fields* f, long i, int dir1, int dir2);
+	double magfield(params* p, fields* f, long i, int dir);
+	double magcharge_cube(params* p, fields* f, long i);
+#endif
 
 #endif

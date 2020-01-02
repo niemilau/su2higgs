@@ -95,6 +95,9 @@ void measure(fields f, params p, counters* c, weight* w) {
 			for (int dir=0; dir<p.dim; dir++) {
 				hopping_Sigma += hopping_triplet_forward(f, p, i, dir);
 			}
+
+			// TEMPORARY: monopoles
+			magcharge_cube(&p, &f, i);
 		#endif
 	}
 

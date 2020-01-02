@@ -8,21 +8,21 @@
 
 dim 3
 
-L1 14
-L2 14
-L3 14
+L1 24
+L2 24
+L3 92
 
 # start new simulation (initial configuration still read from latticefile)?
-reset 0
+reset 1
 
 # iterations
-iterations 50000
+iterations 2000000
 
 # how often to write measurements
-interval 10
+interval 4
 
 # how often to write lattice configuration to file 
-checkpoint 2000
+checkpoint 50000
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -37,20 +37,20 @@ latticefile lattice
 
 # gauge couplings
 betasu2 12.0
-betau1 8.0
+#betau1 8.0
 
 # doublet
-msq -0.262345
-lambda 0.0410249
+msq -0.60720864104826422
+lambda 0.11910401024225445
 
 # triplet
-msq_triplet -0.189333
-b4 0.00531667
-a2 0.1666667
+msq_triplet -0.9996431046956139
+b4 0.16687071616247076
+a2 0.98768170630443963
 
 # initial values for fields (overwritten by existing lattice file)
 phi0 0.2
-sigma0 0.2 
+sigma0 0.2
 
 
 ### update algorithms
@@ -64,26 +64,27 @@ algorithm_su2doublet overrelax
 algorithm_su2triplet overrelax
 
 
-# how many times per sweep to update the two fields
+# how many times per sweep to update the fields
 update_doublet 1
 update_triplet 1
+update_links 1
 
 ### multicanonical
 multicanonical 0
 bins 80
-min 0.41
-max 2.50
+min 0.45
+max 0.62
 # where to store the weight?
 weightfile weight
 # set infinite weight outside the binning range? 
 absolute_bounds 0
 
 ## order parameter for multicanonical
-# phisq, Sigmasq
-orderparam phisq
+# phisq, Sigmasq, phi2minusSigma2
+orderparam Sigmasq
 
 # update weight on the go?
-readonly 0
+readonly 1
 
 # initial weight update factor (if weight exists, uses the value there instead)
-increment 0.5
+increment 0.3
