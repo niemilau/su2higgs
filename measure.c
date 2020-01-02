@@ -35,6 +35,10 @@ void print_labels() {
 	#ifdef U1
 		fprintf(f, "%d U(1) Wilson\n", k); k++;
 	#endif
+	#ifdef TRIPLET
+		fprintf(f, "%d total magnetic charge density\n", k); k++;
+		fprintf(f, "%d total density of magnetic charges, abs value\n", k); k++;
+	#endif
 
 	fclose(f);
 }
@@ -63,7 +67,8 @@ void measure(fields f, params p, counters* c, weight* w) {
 	double hopping_Sigma = 0.0, hopping_Sigma_tot;
 	double Sigma2 = 0.0, Sigma2_tot;
 	double Sigma4 = 0.0, Sigma4_tot;
-
+	double mag_charge = 0.0;
+	double mag_charge_abs = 0.0;
 
 
 	double mod = 0.0;
@@ -96,8 +101,10 @@ void measure(fields f, params p, counters* c, weight* w) {
 				hopping_Sigma += hopping_triplet_forward(f, p, i, dir);
 			}
 
-			// TEMPORARY: monopoles
-			magcharge_cube(&p, &f, i);
+			// calculate charge density of magnetic monopoles
+			double charge = magcharge_cube(&p, &f, i);
+			mag_charge += charge;
+			mag_charge_abs += fabs(charge);
 		#endif
 	}
 
@@ -127,6 +134,11 @@ void measure(fields f, params p, counters* c, weight* w) {
 	hopping_Sigma_tot = reduce_sum(hopping_Sigma);
 	Sigma2_tot = reduce_sum(Sigma2);
 	Sigma4_tot = reduce_sum(Sigma4);
+	mag_charge = reduce_sum(mag_charge);
+	mag_charge_abs = reduce_sum(mag_charge_abs);
+	// magnetic charge should be quantized in units of 4pi/g
+	mag_charge /= (2.0*M_PI*sqrt(p.betasu2));
+	mag_charge_abs /= (2.0*M_PI*sqrt(p.betasu2));
 		#ifdef HIGGS
 		phi2Sigma2_tot = reduce_sum(phi2Sigma2);
 		#endif
@@ -160,6 +172,9 @@ void measure(fields f, params p, counters* c, weight* w) {
 		#endif
 		#ifdef U1
 			fprintf(p.resultsfile, "%g ", u1_tot/((double)p.vol) );
+		#endif
+		#ifdef TRIPLET
+			fprintf(p.resultsfile, "%g %g ", mag_charge, mag_charge_abs );
 		#endif
 		fprintf(p.resultsfile, "\n");
 		fflush(p.resultsfile);
