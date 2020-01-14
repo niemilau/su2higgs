@@ -14,7 +14,7 @@ if [ ! -d "$TEMPDIR" ]; then
   mkdir $TEMPDIR
 fi
 
-LABELS_H='T avg error autoc ind.meas betaG gsq gpsq muphisq muSigmasq lambda b4 a2 RGscale'
+LABELS_H='T avg error autoc ind.meas susc suscErr betaG gsq gpsq muphisq muSigmasq lambda b4 a2 RGscale'
 
 
 Tmin=$1
@@ -31,12 +31,29 @@ do
   		continue
 	fi
 
-	aa -d5 -s100 $MEASUREMENTDIR/measure > $TEMPDIR/h1temp_$T.dat
-	aa -d8 -s100 $MEASUREMENTDIR/measure > $TEMPDIR/h2temp_$T.dat
+	if [ ! -f "$MEASUREMENTDIR/measure" ]; then
+  		continue
+	fi
+
+
+	aa -d5 -s130 $MEASUREMENTDIR/measure > $TEMPDIR/h1temp.dat
+	aa -d8 -s130 $MEASUREMENTDIR/measure > $TEMPDIR/h2temp.dat
+
+	## now get the expectation values values and calculate susceptibility 
+	## TODO proper error bars...
+	h1avg=$(awk '{print $2}' $TEMPDIR/h1temp.dat)
+	h2avg=$(awk '{print $2}' $TEMPDIR/h2temp.dat)
+
+	aa -s130 -D"($h1avg-#5)^2" $MEASUREMENTDIR/measure > $TEMPDIR/h1susctemp.dat
+	aa -s130 -D"($h2avg-#8)^2" $MEASUREMENTDIR/measure > $TEMPDIR/h2susctemp.dat
+	# susceptibility and its error
+	awk '{print $2, $3}' $TEMPDIR/h1susctemp.dat >> $TEMPDIR/h1susc.dat
+	awk '{print $2, $3}' $TEMPDIR/h2susctemp.dat >> $TEMPDIR/h2susc.dat
 	
 	# cut aa label and write into a combined file
-	awk '{print}' $TEMPDIR/h1temp_$T.dat | cut -d '1' -f2- >> $TEMPDIR/data_h1.dat
-	awk '{print}' $TEMPDIR/h2temp_$T.dat | cut -d '1' -f2- >> $TEMPDIR/data_h2.dat
+	awk '{print}' $TEMPDIR/h1temp.dat | cut -d '1' -f2- >> $TEMPDIR/data_h1.dat
+	awk '{print}' $TEMPDIR/h2temp.dat | cut -d '1' -f2- >> $TEMPDIR/data_h2.dat
+
 
 	echo $T >> $TEMPDIR/T.dat
 
@@ -49,17 +66,12 @@ done
 echo $LABELS_H > h1_T.dat 
 echo $LABELS_H > h2_T.dat 
 
-paste $TEMPDIR/T.dat $TEMPDIR/data_h1.dat $TEMPDIR/beta_temp $TEMPDIR/params_temp >> h1_T.dat
-paste $TEMPDIR/T.dat $TEMPDIR/data_h2.dat $TEMPDIR/beta_temp $TEMPDIR/params_temp >> h2_T.dat
+paste $TEMPDIR/T.dat $TEMPDIR/data_h1.dat $TEMPDIR/h1susc.dat $TEMPDIR/beta_temp $TEMPDIR/params_temp >> h1_T.dat
+paste $TEMPDIR/T.dat $TEMPDIR/data_h2.dat $TEMPDIR/h2susc.dat $TEMPDIR/beta_temp $TEMPDIR/params_temp >> h2_T.dat
 
 # delete unnecessary temp files 
-rm $TEMPDIR/h1temp*.dat
-rm $TEMPDIR/h2temp*.dat
-rm $TEMPDIR/data_h1.dat
-rm $TEMPDIR/data_h2.dat
-rm $TEMPDIR/T.dat
-rm $TEMPDIR/params_temp 
-rm $TEMPDIR/beta_temp
+rm $TEMPDIR/*
+rm -r $TEMPDIR
 
 
 # problem: sometimes the autocorrelation column comes with numbers in scientific notation:

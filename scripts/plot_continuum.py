@@ -19,7 +19,7 @@ matplotlib.rcParams.update({'font.size': 14})
 # but make legend smaller
 matplotlib.rcParams.update({'legend.fontsize': 14})
 
-matplotlib.rcParams['legend.numpoints'] = 1 
+matplotlib.rcParams['legend.numpoints'] = 1
 #plt.figure(figsize=(1,1))
 #linestyles = ['_', '-', '--', ':']
 
@@ -93,20 +93,36 @@ err2 = err2 / (1.0*a)
 # plot: error bars included. remember to change the errors to match what we plot
 # also: multiply by 2 to compare with usual VEV
 plt.errorbar(T, 2.0*h1cont/T, yerr=2.0*err1/T, fmt='o', label = r"2\langle\phi^\dagger\phi\rangle / T")
-plt.errorbar(T, h2cont/T, yerr=err2/T, fmt='o', label = r"\langle\text{Tr}\Sigma^2\rangle / T")
+plt.errorbar(T, 2.0*h2cont/T, yerr=2.0*err2/T, fmt='o', label = r"2\langle\text{Tr}\Sigma^2\rangle / T")
 
 
 # draw horizontal line at y = 0
 plt.axhline(y=0, color='black', linestyle='-')
 
-plt.title(r'$\beta_g = 16$',fontsize=12)
+plt.title(r'$\beta_G = 10, V = 24^3$. NB! starting from cold configuration',fontsize=12)
 plt.xlabel(r'$T$ / GeV')
 #h = plt.ylabel(r'$2\langle\phi^\dagger\phi\rangle/T ')
 #h.set_rotation(0)
-#plt.xlim([0,0.2])
-#plt.ylim([-0.5,2.0])
+#plt.xlim([105,200])
+#plt.ylim([-1.0,8.0])
 #plt.xticks(np.arange(min(T), max(T)+1, 1.0)) # set denser ticks
 plt.grid();
 pyplot.legend();
 pyplot.savefig('test_triplet.pdf')
+plt.gcf().clear()
+
+## plot also susceptibility
+h1susc = data1['susc']
+h2susc = data2['susc']
+suscErr1 = data1['suscErr']
+suscErr2 = data2['suscErr']
+
+plt.errorbar(T, h1susc, yerr=suscErr1, fmt='o', label = r"$\phi$")
+plt.errorbar(T, h2susc, yerr=suscErr2, fmt='o', label = r"$\Sigma$")
+
+plt.xlabel(r'$T$ / GeV')
+plt.ylabel(r'$\chi$')
+plt.grid();
+pyplot.legend();
+pyplot.savefig('susceptibility.pdf')
 plt.gcf().clear()
