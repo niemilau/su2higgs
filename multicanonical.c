@@ -389,8 +389,7 @@ double calc_orderparam(params p, fields f, weight* w, char par) {
 			break;
     case PHI2MINUSSIGMA2 :
       for (long i=offset; i<max; i++) { // modified for testing
-        //tot += doubletsq(f.su2doublet[i]) - 2.0*tripletsq(f.su2triplet[i]);
-				tot += 0.4*doubletsq(f.su2doublet[i]) - tripletsq(f.su2triplet[i]);
+				tot += doubletsq(f.su2doublet[i]) - tripletsq(f.su2triplet[i]);
       }
       break;
 		case PHISQ :
