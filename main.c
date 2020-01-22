@@ -97,8 +97,10 @@ int main(int argc, char *argv[]) {
 	sync_halos(&f, p, &comlist);
 
 	#ifdef WALL
-		// setup wall. NB! this overrides any other field initializations
-		prepare_wall(&f, p, &comlist); // halos re-synced here
+		if (p.reset) {
+			// setup wall. This overrides any other field initializations!!
+			prepare_wall(&f, p, &comlist); // halos re-synced here
+		}
 		measure_wall(&f, p);
 	#endif
 
