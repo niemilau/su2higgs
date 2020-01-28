@@ -72,7 +72,7 @@ void su2rot(double *u1, double *u2) {
 *  	Re Tr U1.U2.U3^+.U4^+
 *	Note that for SU(2), the trace is always real.
 */
-inline double su2trace4(double *u1, double *u2, double *u3, double *u4) {
+double su2trace4(double *u1, double *u2, double *u3, double *u4) {
 
 	return 2.0 * (u1[0]*u2[0]*u3[0]*u4[0] - u1[1]*u2[1]*u3[0]*u4[0] - u1[2]*u2[2]*u3[0]*u4[0] -
    u1[3]*u2[3]*u3[0]*u4[0] + u1[1]*u2[0]*u3[1]*u4[0] + u1[0]*u2[1]*u3[1]*u4[0] +
@@ -121,7 +121,7 @@ double su2ptrace(fields f, params p, long i, int dir1, int dir2) {
 * Specifically, calculates:
 * 	U1 U2^+ U3^+
 */
-inline void su2staple_counterwise(double* V, double* u1, double* u2, double* u3) {
+void su2staple_counterwise(double* V, double* u1, double* u2, double* u3) {
 
 	V[0] = u1[0]*u2[0]*u3[0] + u1[1]*u2[1]*u3[0] + u1[2]*u2[2]*u3[0] + u1[3]*u2[3]*u3[0] +
    u1[1]*u2[0]*u3[1] - u1[0]*u2[1]*u3[1] - u1[3]*u2[2]*u3[1] +
@@ -153,7 +153,7 @@ inline void su2staple_counterwise(double* V, double* u1, double* u2, double* u3)
 * Specifically, calculates:
 * 	U1^+ U2^+ U3
 */
-inline void su2staple_clockwise(double* V, double* u1, double* u2, double* u3) {
+void su2staple_clockwise(double* V, double* u1, double* u2, double* u3) {
 
 	V[0] = u1[0]*u2[0]*u3[0] - u1[1]*u2[1]*u3[0] - u1[2]*u2[2]*u3[0] - u1[3]*u2[3]*u3[0] +
    u1[1]*u2[0]*u3[1] + u1[0]*u2[1]*u3[1] - u1[3]*u2[2]*u3[1] +
@@ -436,7 +436,7 @@ double doubletsq(double* a) {
 *		Tr \Phi_1^+ U \Phi_2.
 * Note that this is always real.
 */
-inline double hopping_trace(double* phi1, double* u, double* phi2) {
+double hopping_trace(double* phi1, double* u, double* phi2) {
 
 	return phi1[0]*phi2[0]*u[0] + phi1[1]*phi2[1]*u[0] + phi1[2]*phi2[2]*u[0] +
    phi1[3]*phi2[3]*u[0] + phi1[1]*phi2[0]*u[1] - phi1[0]*phi2[1]*u[1] -
@@ -450,7 +450,7 @@ inline double hopping_trace(double* phi1, double* u, double* phi2) {
 * Specifically, calculates:
 *		Re Tr \Phi_1^+ U \Phi_2 exp[-i a sigma_3].
 */
-inline double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
+double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 	double s = sin(a);
 	double c = cos(a);
 
@@ -595,7 +595,7 @@ double tripletsq(double* a) {
 *		Tr A1 U A2 U^+.
 * Note that this is always real.
 */
-inline double hopping_trace_triplet(double* a1, double* u, double* a2) {
+double hopping_trace_triplet(double* a1, double* u, double* a2) {
 
 	return 0.5 * ( a1[0]*a2[0]*(u[0]*u[0]) + a1[1]*a2[1]*(u[0]*u[0]) + a1[2]*a2[2]*(u[0]*u[0]) -
    2.0*a1[2]*a2[1]*u[0]*u[1] + 2.0*a1[1]*a2[2]*u[0]*u[1] + a1[0]*a2[0]*(u[1]*u[1]) -

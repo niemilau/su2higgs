@@ -248,6 +248,12 @@ long double local_su2wilson(fields f, params p, long i);
 double localact_su2link(fields f, params p, long i, int dir);
 void su2staple_wilson(fields f, params p, long i, int dir, double* V);
 void su2link_staple(fields f, params p, long i, int dir, double* V);
+double su2trace4(double *u1, double *u2, double *u3, double *u4);
+void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
+void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
+double hopping_trace(double* phi1, double* u, double* phi2);
+double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a);
+double hopping_trace_triplet(double* a1, double* u, double* a2);
 // U(1) routines
 double u1ptrace(fields f, params p, long i, int dir1, int dir2);
 long double local_u1wilson(fields f, params p, long i);
