@@ -74,6 +74,7 @@ typedef struct {
 	int reset;
 	long iterations;
 	long checkpoint;
+	long n_thermalize;
 	long interval;
 	FILE *resultsfile;
 	char latticefile[100];

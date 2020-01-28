@@ -135,29 +135,47 @@ int main(int argc, char *argv[]) {
 		}
 	#endif
 
-	// main iteration loop
-	long iter;
-	if (p.reset) {
-		iter = 1;
-		measure(f, p, &c, &w);
-		printf0(p, "\nStarting new simulation!\n");
-	} else {
-		iter = c.iter + 1;
-		printf0(p, "\nContinuing from iteration %ld!\n", iter-1);
-	}
 	// metro = 1 if we force metropolis sweep, 0 otherwise
 	char metro = 0;
 	// how often to force metropolis
 	int metro_interval = 5;
 
-	#ifdef MPI
+	// if no lattice file was given or if reset=1 in config, start by thermalizing
+	long iter = 1;
+	if (p.reset) {
+		printf0(p, "Thermalizing %ld iterations\n", p.n_thermalize);
+		start_time = clock();
+		while (iter <= p.n_thermalize) {
+
+			if (iter % metro_interval == 0) {
+				metro = 1;
+			} else {
+				metro = 0;
+			}
+
+			barrier(); // see main loop below
+			update_lattice(&f, p, &comlist, &c, metro);
+			iter++;
+		}
+
+		end_time = clock();
+		timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+		printf0(p, "Thermalization done, took %lf seconds.\n", timing);
+
+		iter = 1;
+		printf0(p, "\nStarting new simulation!\n");
+	} else {
+		iter = c.iter + 1;
+		printf0(p, "\nContinuing from iteration %ld!\n", iter-1);
+	}
+
 	// make sure weight is not written before all nodes get the initial weight.
 	// should not happen, but just to be sure
-	MPI_Barrier(MPI_COMM_WORLD);
-	#endif
+	barrier();
 
 	start_time = clock();
 
+	// main iteration loop
 	while (iter <= p.iterations) {
 
 		// measure & update fields first, then checkpoint if needed
@@ -171,34 +189,15 @@ int main(int argc, char *argv[]) {
 			metro = 0;
 		}
 
-		// keep halos in sync...
+		// keep nodes in sync. without this things can go wrong if some node is much
+		// faster than others, so that it sends new fields to others before they managed
+		// to receive the earlier ones. Todo: optimize this
 		barrier();
 		if (!p.multicanonical) {
 			update_lattice(&f, p, &comlist, &c, metro);
 		} else {
 			update_lattice_muca(&f, p, &comlist, &w, &c, metro);
 		}
-
-		// if studying nucleation trajectories, check here if the order parameter
-		// crossed the min or max value. If yes, store the trajectory and reset
-		#ifdef NUCLEATION
-			double order_param = w.param_value[EVEN] + w.param_value[ODD];
-			if (order_param < traj_min || order_param > traj_max) {
-				current_traj++;
-				// copy current measure file to trajectory subdir
-				printf0("Langevin trajectory #%d ready\n", current_traj);
-				if (current_traj >= n_traj) {
-					// trajectories ready, so finish here
-					printf0(p, "Constructed %d Langevin trajectories! Finishing...\n", n_traj);
-					iter = p.iterations + 1;
-				} else {
-					// start over
-					iter = 1;
-					load_lattice(p, f, &c);
-				}
-			}
-		#endif // end nucleation if
-
 
 		if ((iter % p.checkpoint == 0)) {
 			// Checkpoint time; print acceptance and save fields to latticefile

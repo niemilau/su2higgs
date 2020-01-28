@@ -36,6 +36,7 @@ void get_parameters(char *filename, params *p) {
   int set_iterations = 0;
   int set_checkpoint = 0;
 	int set_interval = 0;
+  int set_n_thermalize = 0;
   int set_checks = 0;
 
   int set_su2alg = 0;
@@ -65,6 +66,12 @@ void get_parameters(char *filename, params *p) {
   int set_update_links = 0;
   int set_update_doublet = 0;
 	int set_update_triplet = 0;
+
+  #ifdef NUCLEATION
+  int set_traj_min = 0;
+  int set_traj_max = 0;
+  int set_n_traj = 0;
+  #endif
 
   char key[100];
   char value[100];
@@ -133,6 +140,10 @@ void get_parameters(char *filename, params *p) {
     else if(!strcasecmp(key,"checkpoint")) {
       p->checkpoint = strtol(value,NULL,10);
       set_checkpoint = 1;
+    }
+    else if(!strcasecmp(key,"n_thermalize")) {
+      p->n_thermalize = strtol(value,NULL,10);
+      set_n_thermalize = 1;
     }
     else if(!strcasecmp(key,"run_checks")) {
       p->run_checks = strtol(value,NULL,10);
@@ -264,6 +275,20 @@ void get_parameters(char *filename, params *p) {
       }
     #endif
     // end reading update algorithms
+
+    #ifdef NUCLEATION
+      else if(!strcasecmp(key,"traj_min")) {
+        traj_min = strtod(value,NULL);
+        set_traj_min = 1;
+      } else if(!strcasecmp(key,"traj_max")) {
+        traj_max = strtod(value,NULL);
+        set_traj_max = 1;
+      } else if(!strcasecmp(key,"n_traj")) {
+        n_traj = strtol(value,NULL);
+        set_n_traj = 1;
+      }
+    #endif
+
   }
 
 	check_set(set_dim, "dim");
@@ -334,6 +359,7 @@ void get_parameters(char *filename, params *p) {
   check_set(set_reset, "reset");
   check_set(set_iterations, "iterations");
 	check_set(set_interval, "measure interval");
+  check_set(set_n_thermalize, "n_thermalize");
   check_set(set_checkpoint, "checkpoint");
   check_set(set_checks, "run_checks");
 
@@ -362,6 +388,13 @@ void get_parameters(char *filename, params *p) {
 	#endif
   #if defined (TRIPLET) && defined (HIGGS)
   check_set(set_a2, "a2");
+  #endif
+
+  // bubble nucleation:
+  #ifdef NUCLEATION
+    check_set(set_traj_min, "traj_min");
+    check_set(set_traj_max, "traj_max");
+    check_set(set_n_traj, "n_traj");
   #endif
 
   check_set(set_resultsfile, "resultsfile");
