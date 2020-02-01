@@ -108,7 +108,7 @@ void projector(double *proj, double *adjoint) {
  * in terms of real numbers times Pauli matrices. Note the comments
  * identifying elements below.
  */
- void project_u1(params* p, fields* f, long i, int dir, double* pro) {
+ void project_u1(params const* p, fields const* f, long i, int dir, double* pro) {
 	 /* Notation: hl = "left" adjoint field, normalized
 	 * 						hr = "right" adjoint field, normalized
 	 *						u = SU(2) link variable between "left" and "right"
@@ -183,7 +183,7 @@ void projector(double *proj, double *adjoint) {
 * eq (3.3) in hep-lat/0512006, at a given site i and directions dir1, dir2.
 * So the return value is alpha(x_i)_{dir1, dir2}
 */
-double alpha_proj(params* p, fields* f, long i, int dir1, int dir2) {
+double alpha_proj(params const* p, fields const* f, long i, int dir1, int dir2) {
 	long nextsite;
 
 	// produce the projected link variables
@@ -216,7 +216,7 @@ double alpha_proj(params* p, fields* f, long i, int dir1, int dir2) {
 * eq. 3.4 in hep-lat/0512006 (B_i(x) = 0.5 * eps_{ijk} alpha_{jk}).
 * Works in arbitrary p.dim dimensions.
 */
-double magfield(params* p, fields* f, long i, int dir) {
+double magfield(params const* p, fields const* f, long i, int dir) {
 
 	/* Two loops over the directions, with always d1 < d2.
 	* Also, need to account for the Levi-Civita symbol eps_{ijk}, with i = dir fixed.
@@ -258,7 +258,7 @@ double magfield(params* p, fields* f, long i, int dir) {
 /* Calculate magnetic charge density in a hypercube running in the positive directions
 * from lattice site i. Eq. (3.5) in hep-lat/0512006.
 */
-double magcharge_cube(params* p, fields* f, long i) {
+double magcharge_cube(params const* p, fields const* f, long i) {
 
 	double res = 0.0;
 	for (int dir=0; dir<p->dim; dir++) {

@@ -47,7 +47,7 @@ void print_labels() {
 /* Measure observables and write them to file.
 *
 */
-void measure(fields f, params p, counters* c, weight* w) {
+void measure(fields const* f, params const* p, counters* c, weight* w) {
 
 	double start, end, time;
 
@@ -74,7 +74,7 @@ void measure(fields f, params p, counters* c, weight* w) {
 	double mod = 0.0;
 
 	// some overlap here. action_local() already calculates local wilson action, hopping terms etc.
-	for (long i=0; i<p.sites; i++) {
+	for (long i=0; i<p->sites; i++) {
 		action += action_local(f, p, i);
 		wilson += local_su2wilson(f, p, i);
 		#ifdef U1
@@ -82,27 +82,27 @@ void measure(fields f, params p, counters* c, weight* w) {
 		#endif
 
 		#ifdef HIGGS
-			for (int dir=0; dir<p.dim; dir++) {
+			for (int dir=0; dir<p->dim; dir++) {
 				hopping_phi += hopping_doublet_forward(f, p, i, dir);
 			}
-			mod = doubletsq(f.su2doublet[i]);
+			mod = doubletsq(f->su2doublet[i]);
 			phi2 += mod;
 			phi4 += mod*mod;
 			#ifdef TRIPLET
-				phi2Sigma2 += mod * tripletsq(f.su2triplet[i]);
+				phi2Sigma2 += mod * tripletsq(f->su2triplet[i]);
 			#endif
 		#endif
 
 		#ifdef TRIPLET
-			double tripletmod = tripletsq(f.su2triplet[i]);
+			double tripletmod = tripletsq(f->su2triplet[i]);
 			Sigma2 += tripletmod;
 			Sigma4 += tripletmod * tripletmod;
-			for (int dir=0; dir<p.dim; dir++) {
+			for (int dir=0; dir<p->dim; dir++) {
 				hopping_Sigma += hopping_triplet_forward(f, p, i, dir);
 			}
 
 			// calculate charge density of magnetic monopoles
-			double charge = magcharge_cube(&p, &f, i);
+			double charge = magcharge_cube(p, f, i);
 			mag_charge += charge;
 			mag_charge_abs += fabs(charge);
 		#endif
@@ -112,7 +112,7 @@ void measure(fields f, params p, counters* c, weight* w) {
 	start = clock();
 
 	double weight = 0.0; // if not multicanonical, just use zero weight
-	if (p.multicanonical) {
+	if (p->multicanonical) {
 		double muca_param = w->param_value[EVEN] + w->param_value[ODD];
 		weight = get_weight(*w, muca_param);
 	}
@@ -137,8 +137,8 @@ void measure(fields f, params p, counters* c, weight* w) {
 	mag_charge = reduce_sum(mag_charge);
 	mag_charge_abs = reduce_sum(mag_charge_abs);
 	// magnetic charge should be quantized in units of 4pi/g
-	mag_charge /= (2.0*M_PI*sqrt(p.betasu2));
-	mag_charge_abs /= (2.0*M_PI*sqrt(p.betasu2));
+	mag_charge /= (2.0*M_PI*sqrt(p->betasu2));
+	mag_charge_abs /= (2.0*M_PI*sqrt(p->betasu2));
 		#ifdef HIGGS
 		phi2Sigma2_tot = reduce_sum(phi2Sigma2);
 		#endif
@@ -151,33 +151,33 @@ void measure(fields f, params p, counters* c, weight* w) {
 
 	// write to resultsfile. This is very fast performance wise
 	// the ordering here should be the same as in print_labels()
-	if (!p.rank) {
-		fprintf(p.resultsfile, "%g ", weight);
-		fprintf(p.resultsfile, "%g %g ",
-			action_tot, wilson_tot/((double)p.vol) );
+	if (!p->rank) {
+		fprintf(p->resultsfile, "%g ", weight);
+		fprintf(p->resultsfile, "%g %g ",
+			action_tot, wilson_tot/((double)p->vol) );
 		#ifdef HIGGS
-			fprintf(p.resultsfile, "%g %g %g ",
-				hopping_phi_tot/((double)p.vol), phi2_tot/((double)p.vol), phi4_tot/((double)p.vol)
+			fprintf(p->resultsfile, "%g %g %g ",
+				hopping_phi_tot/((double)p->vol), phi2_tot/((double)p->vol), phi4_tot/((double)p->vol)
 			);
 		#endif
 		#ifdef TRIPLET
-			fprintf(p.resultsfile, "%g %g %g ",
-				hopping_Sigma_tot/((double)p.vol), Sigma2_tot/((double)p.vol), Sigma4_tot/((double)p.vol)
+			fprintf(p->resultsfile, "%g %g %g ",
+				hopping_Sigma_tot/((double)p->vol), Sigma2_tot/((double)p->vol), Sigma4_tot/((double)p->vol)
 			);
 			#ifdef HIGGS
-			fprintf(p.resultsfile, "%g ",
-				phi2Sigma2_tot/((double)p.vol)
+			fprintf(p->resultsfile, "%g ",
+				phi2Sigma2_tot/((double)p->vol)
 			);
 			#endif
 		#endif
 		#ifdef U1
-			fprintf(p.resultsfile, "%g ", u1_tot/((double)p.vol) );
+			fprintf(p->resultsfile, "%g ", u1_tot/((double)p->vol) );
 		#endif
 		#ifdef TRIPLET
-			fprintf(p.resultsfile, "%g %g ", mag_charge, mag_charge_abs );
+			fprintf(p->resultsfile, "%g %g ", mag_charge, mag_charge_abs );
 		#endif
-		fprintf(p.resultsfile, "\n");
-		fflush(p.resultsfile);
+		fprintf(p->resultsfile, "\n");
+		fflush(p->resultsfile);
 	}
 
 }
@@ -186,7 +186,7 @@ void measure(fields f, params p, counters* c, weight* w) {
 /* Calculate local action for the system at site i.
 *	The construction is so that a loop over i gives the total action.
 */
-double action_local(fields f, params p, long i) {
+double action_local(fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
 	tot += local_su2wilson(f, p, i);
@@ -199,9 +199,9 @@ double action_local(fields f, params p, long i) {
 		tot += covariant_doublet(f, p, i) + higgspotential(f, p, i);
 	#endif
 	#ifdef TRIPLET
-		double mod = tripletsq(f.su2triplet[i]);
+		double mod = tripletsq(f->su2triplet[i]);
 		// potential + covariant derivative. Higgs portal term is included in higgspotential().
-		tot += p.msq_triplet * mod + p.b4 * mod * mod;
+		tot += p->msq_triplet * mod + p->b4 * mod * mod;
 		tot += covariant_triplet(f, p, i);
 	#endif
 

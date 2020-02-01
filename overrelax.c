@@ -48,22 +48,22 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 * the Y overrelaxation reads: phi'_a = -phi_a + f_a (X' + X).
 *
 */
-int overrelax_doublet(fields f, params p, long i) {
+int overrelax_doublet(fields* f, params const* p, long i) {
 
 	double s[4] = {0.0, 0.0, 0.0, 0.0};
 	double u[4];
 	double b[4];
 
 	// calculate hopping staple s_a (denote. s_a = F_a)
-	for (int dir=0; dir<p.dim; dir++) {
+	for (int dir=0; dir<p->dim; dir++) {
 
 		for (int k=0; k<SU2LINK; k++) {
-			u[k] = f.su2link[i][dir][k];
+			u[k] = f->su2link[i][dir][k];
 		}
-		long next = p.next[i][dir];
+		long next = p->next[i][dir];
 		// Phi at next site
 		for (int k=0; k<SU2DB; k++) {
-			b[k] = f.su2doublet[next][k];
+			b[k] = f->su2doublet[next][k];
 		}
 		// these were obtained in Mathematica:
 		#ifndef U1
@@ -72,8 +72,8 @@ int overrelax_doublet(fields f, params p, long i) {
 			s[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
 			s[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
 		#else
-			double ss = sin(f.u1link[i][dir]);
-			double cc = cos(f.u1link[i][dir]);
+			double ss = sin(f->u1link[i][dir]);
+			double cc = cos(f->u1link[i][dir]);
 			s[0] += -(cc*b[0]*u[0]) - ss*b[3]*u[0] + cc*b[1]*u[1] + ss*b[2]*u[1]
 							- ss*b[1]*u[2] + cc*b[2]*u[2] - ss*b[0]*u[3] + cc*b[3]*u[3];
 			s[1] += -(cc*b[1]*u[0]) - ss*b[2]*u[0] - cc*b[0]*u[1] - ss*b[3]*u[1]
@@ -84,13 +84,13 @@ int overrelax_doublet(fields f, params p, long i) {
 							- cc*b[1]*u[2] - ss*b[2]*u[2] - cc*b[0]*u[3] - ss*b[3]*u[3];
 		#endif
 		// same for backwards directions
-		long prev = p.prev[i][dir];
+		long prev = p->prev[i][dir];
 		for (int k=0; k<SU2LINK; k++) {
-			u[k] = f.su2link[prev][dir][k];
+			u[k] = f->su2link[prev][dir][k];
 		}
 		// Phi at previous site
 		for (int k=0; k<SU2DB; k++) {
-			b[k] = f.su2doublet[prev][k];
+			b[k] = f->su2doublet[prev][k];
 		}
 
 		#ifndef U1
@@ -99,8 +99,8 @@ int overrelax_doublet(fields f, params p, long i) {
 			s[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
 			s[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
 		#else
-			ss = sin(f.u1link[prev][dir]);
-			cc = cos(f.u1link[prev][dir]);
+			ss = sin(f->u1link[prev][dir]);
+			cc = cos(f->u1link[prev][dir]);
 			s[0] += -(cc*b[0]*u[0]) + ss*b[3]*u[0] - cc*b[1]*u[1] + ss*b[2]*u[1]
 			 				- ss*b[1]*u[2] - cc*b[2]*u[2] - ss*b[0]*u[3] - cc*b[3]*u[3];
 			s[1] += -(cc*b[1]*u[0]) + ss*b[2]*u[0] + cc*b[0]*u[1] - ss*b[3]*u[1]
@@ -121,21 +121,21 @@ int overrelax_doublet(fields f, params p, long i) {
 	// Cartesian X and Y coordinates for the Higgs.
 	double X = 0.0;
 	for (int k=0; k<SU2DB; k++) {
-		X += f.su2doublet[i][k] * s[k];
+		X += f->su2doublet[i][k] * s[k];
 	}
 	X /= F;
 	double Y[4], Ysq = 0.0;
 	for (int k=0; k<SU2DB; k++) {
-		Y[k] = f.su2doublet[i][k] - X * s[k] / F;
+		Y[k] = f->su2doublet[i][k] - X * s[k] / F;
 		Ysq += Y[k] * Y[k];
 	}
 
 	// remaining terms in the local action
-	double B = 0.5 * p.msq_phi + 1.0 * p.dim;
+	double B = 0.5 * p->msq_phi + 1.0 * p->dim;
 	#ifdef TRIPLET
-		B += 0.5 * p.a2 * tripletsq(f.su2triplet[i]);
+		B += 0.5 * p->a2 * tripletsq(f->su2triplet[i]);
 	#endif
-	double C = 0.25 * p.lambda_phi;
+	double C = 0.25 * p->lambda_phi;
 
 	// we need to solve V(X') - V(X) = 0, where Y is kept constant. Write this as
 	// (x - y) (alpha x^3 + beta * x^2 + gamma * x + delta) = 0
@@ -161,7 +161,7 @@ int overrelax_doublet(fields f, params p, long i) {
 		// this should agree with what Kari has in XORsu2Higgs.c; he probably has
 		// his y variable with a different sign
 		for (int k=0; k<SU2DB; k++) {
-			f.su2doublet[i][k] = -1.0*f.su2doublet[i][k] + (newX + X) * s[k] / F;
+			f->su2doublet[i][k] = -1.0*f->su2doublet[i][k] + (newX + X) * s[k] / F;
 		}
 		return 1;
 	} else {
@@ -174,22 +174,22 @@ int overrelax_doublet(fields f, params p, long i) {
 
 /* Same Cartesian overrelax as overrelax_doublet(), but for adjoint scalar.
 */
-int overrelax_triplet(fields f, params p, long i) {
+int overrelax_triplet(fields* f, params const* p, long i) {
 
 	double s[3] = {0.0, 0.0, 0.0};
 	double u[SU2LINK];
 	double b[SU2TRIP];
 
 	// calculate hopping staple s_a (denote. s_a = F_a)
-	for (int dir=0; dir<p.dim; dir++) {
-		long next = p.next[i][dir];
+	for (int dir=0; dir<p->dim; dir++) {
+		long next = p->next[i][dir];
 		// link variable
 		for (int d=0; d<SU2LINK; d++) {
-			u[d] = f.su2link[i][dir][d];
+			u[d] = f->su2link[i][dir][d];
 		}
 		// Sigma at next site
 		for (int d=0; d<SU2TRIP; d++) {
-			b[d] = f.su2triplet[next][d];
+			b[d] = f->su2triplet[next][d];
 		}
 		s[0] += -(b[0]*(u[0]*u[0])) - b[0]*(u[1]*u[1]) + 2*b[2]*u[0]*u[2] -
 		 				2*b[1]*u[1]*u[2] + b[0]*(u[2]*u[2]) - 2*b[1]*u[0]*u[3]
@@ -201,12 +201,12 @@ int overrelax_triplet(fields f, params p, long i) {
 						- 2*b[0]*u[0]*u[2] + b[2]*(u[2]*u[2]) - 2*b[0]*u[1]*u[3]
 						- 2*b[1]*u[2]*u[3] - b[2]*(u[3]*u[3]);
 		// same for backwards directions
-		long prev = p.prev[i][dir];
+		long prev = p->prev[i][dir];
 		for (int d=0; d<SU2LINK; d++) {
-			u[d] = f.su2link[prev][dir][d];
+			u[d] = f->su2link[prev][dir][d];
 		}
 		for (int d=0; d<SU2TRIP; d++) {
-			b[d] = f.su2triplet[prev][d];
+			b[d] = f->su2triplet[prev][d];
 		}
 		s[0] += -(b[0]*(u[0]*u[0])) - b[0]*(u[1]*u[1]) - 2*b[2]*u[0]*u[2]
 						- 2*b[1]*u[1]*u[2] + b[0]*(u[2]*u[2]) + 2*b[1]*u[0]*u[3]
@@ -228,21 +228,21 @@ int overrelax_triplet(fields f, params p, long i) {
 	// Cartesian X and Y coordinates
 	double X = 0.0;
 	for (int k=0; k<SU2TRIP; k++) {
-		X += f.su2triplet[i][k] * s[k];
+		X += f->su2triplet[i][k] * s[k];
 	}
 	X /= F;
 	double Y[SU2TRIP], Ysq = 0.0;
 	for (int k=0; k<SU2TRIP; k++) {
-		Y[k] = f.su2triplet[i][k] - X * s[k] / F;
+		Y[k] = f->su2triplet[i][k] - X * s[k] / F;
 		Ysq += Y[k] * Y[k];
 	}
 
 	// remaining terms in the local action
-	double B = 0.5 * p.msq_triplet + 1.0 * p.dim;
+	double B = 0.5 * p->msq_triplet + 1.0 * p->dim;
 	#ifdef HIGGS
-		B += 0.5 * p.a2 * doubletsq(f.su2doublet[i]);
+		B += 0.5 * p->a2 * doubletsq(f->su2doublet[i]);
 	#endif
-	double C = 0.25 * p.b4;
+	double C = 0.25 * p->b4;
 
 	// we need to solve V(X') - V(X) = 0, where Y is kept constant. Write this as
 	// (x - y) (alpha x^3 + beta * x^2 + gamma * x + delta) = 0
@@ -265,7 +265,7 @@ int overrelax_triplet(fields f, params p, long i) {
 	if (beta >= drand48()) {
 		// accept, so overrelax Y' = -Y using the new X
 		for (int k=0; k<SU2TRIP; k++) {
-			f.su2triplet[i][k] = -1.0*f.su2triplet[i][k] + (newX + X) * s[k] / F;
+			f->su2triplet[i][k] = -1.0*f->su2triplet[i][k] + (newX + X) * s[k] / F;
 		}
 		return 1;
 	} else {

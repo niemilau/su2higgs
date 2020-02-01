@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 			// setup wall. This overrides any other field initializations!!
 			prepare_wall(&f, &p, &comlist); // halos re-synced here
 		}
-		measure_wall(&f, p);
+		measure_wall(&f, &p);
 	#endif
 
 	// labels for results file
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
 
 		// measure & update fields first, then checkpoint if needed
 		if (iter % p.interval == 0) {
-			measure(f, p, &c, &w);
+			measure(&f, &p, &c, &w);
 		}
 
 		if (iter % metro_interval == 0) {
@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
 			}
 
 			#ifdef WALL
-				measure_wall(&f, p);
+				measure_wall(&f, &p);
 			#endif
 
 			save_lattice(p, f, c);

@@ -104,12 +104,12 @@ double su2trace4(double *u1, double *u2, double *u3, double *u4) {
 * 	Re Tr U_mu(x) U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
 *	where mu = dir1, nu = dir2, x = site at index i
 */
-double su2ptrace(fields f, params p, long i, int dir1, int dir2) {
+double su2ptrace(fields const* f, params const* p, long i, int dir1, int dir2) {
 
-	double *u1 = f.su2link[i][dir1];
-	double *u2 = f.su2link[ p.next[i][dir1] ][dir2];
-	double *u3 = f.su2link[ p.next[i][dir2] ][dir1];
-	double *u4 = f.su2link[i][dir2];
+	double *u1 = f->su2link[i][dir1];
+	double *u2 = f->su2link[ p->next[i][dir1] ][dir2];
+	double *u3 = f->su2link[ p->next[i][dir2] ][dir1];
+	double *u4 = f->su2link[i][dir2];
 
 	return su2trace4(u1, u2, u3, u4);
 
@@ -188,26 +188,26 @@ void su2staple_clockwise(double* V, double* u1, double* u2, double* u3) {
  																	+ U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu) )
 * where mu = dir.
 */
-void su2staple_wilson(fields f, params p, long i, int dir, double* V) {
+void su2staple_wilson(fields const* f, params const* p, long i, int dir, double* V) {
 	double tot[4] = {0.0, 0.0, 0.0, 0.0};
 	double* u1 = NULL;
 	double* u2 = NULL;
 	double* u3 = NULL;
 
-	for (int j=0; j<p.dim; j++) {
+	for (int j=0; j<p->dim; j++) {
 		if (j != dir) {
 			// "upper" staple
-			u1 = f.su2link[ p.next[i][dir] ][j];
-			u2 = f.su2link[ p.next[i][j] ][dir];
-			u3 = f.su2link[i][j];
+			u1 = f->su2link[ p->next[i][dir] ][j];
+			u2 = f->su2link[ p->next[i][j] ][dir];
+			u3 = f->su2link[i][j];
 			su2staple_counterwise(V, u1, u2, u3);
 			for(int k=0; k<4; k++){
 				tot[k] += V[k];
 			}
 			// "lower" staple
-			u1 = f.su2link[ p.prev[(p.next[i][dir])][j] ][j];
-			u2 = f.su2link[(p.prev[i][j])][dir];
-			u3 = f.su2link[(p.prev[i][j])][j];
+			u1 = f->su2link[ p->prev[(p->next[i][dir])][j] ][j];
+			u2 = f->su2link[(p->prev[i][j])][dir];
+			u3 = f->su2link[(p->prev[i][j])][j];
 			su2staple_clockwise(V, u1, u2, u3);
 			//su2staple_counterwise(V, u1, u2, u3);
 			for(int k=0; k<4; k++){
@@ -237,36 +237,36 @@ void su2staple_wilson(fields f, params p, long i, int dir, double* V) {
 *   |     |
 *    -----
 */
-void su2link_staple(fields f, params p, long i, int dir, double* V) {
+void su2link_staple(fields const* f, params const* p, long i, int dir, double* V) {
 
 	su2staple_wilson(f, p, i, dir, V);
 	for (int k=0; k<4; k++) {
-		V[k] *= -0.5 * p.betasu2;
+		V[k] *= -0.5 * p->betasu2;
 	}
 	#ifdef HIGGS
 		// add hopping term: -Tr U_j Phi(x+j) exp(-i a_j(x) sigma_3) Phi(x)^+,
 		// a_j(x) = 0 if hypercharge is neglected.
 		double nextphi[4];
 		double currentphi[4];
-		long nextsite = p.next[i][dir];
+		long nextsite = p->next[i][dir];
 		// we want Hermitian conjugate of Phi(x):
 
-		currentphi[0] = f.su2doublet[i][0];
-		currentphi[1] = -1.0*f.su2doublet[i][1];
-		currentphi[2] = -1.0*f.su2doublet[i][2];
-		currentphi[3] = -1.0*f.su2doublet[i][3];
-		nextphi[0] = f.su2doublet[nextsite][0];
-		nextphi[1] = f.su2doublet[nextsite][1];
-		nextphi[2] = f.su2doublet[nextsite][2];
-		nextphi[3] = f.su2doublet[nextsite][3];
+		currentphi[0] = f->su2doublet[i][0];
+		currentphi[1] = -1.0*f->su2doublet[i][1];
+		currentphi[2] = -1.0*f->su2doublet[i][2];
+		currentphi[3] = -1.0*f->su2doublet[i][3];
+		nextphi[0] = f->su2doublet[nextsite][0];
+		nextphi[1] = f->su2doublet[nextsite][1];
+		nextphi[2] = f->su2doublet[nextsite][2];
+		nextphi[3] = f->su2doublet[nextsite][3];
 
 		#ifdef U1
 			// the U(1) contribution can be written as
 			// I cos(a) - i sin(a) sigma_3, so in our notation it can be
 			// treated as a doublet field with components
 			// a[0] = sqrt(2) cos(a), a[1] = 0, a[2] = 0, a[3] = -sqrt(2) sin(a)
-			double s = sin(f.u1link[i][dir]);
-			double c = cos(f.u1link[i][dir]);
+			double s = sin(f->u1link[i][dir]);
+			double c = cos(f->u1link[i][dir]);
 			double b[4];
 			for (int k=0; k<4; k++) {
 				b[k] = nextphi[k];
@@ -296,17 +296,17 @@ void su2link_staple(fields f, params p, long i, int dir, double* V) {
 /* Calculate Wilson action for a single SU(2) link.  Explicitly, calculates:
 * beta * \Sum_{i < j} ( 1 - 0.5 Re Tr U_i (x) U_j (x+i) U_i(x+j)^+ U_j(x)^+ )
 */
-long double local_su2wilson(fields f, params p, long i) {
+long double local_su2wilson(fields const* f, params const* p, long i) {
 
 	long double res = 0.0;
 
-	for (int dir1 = 0; dir1 < p.dim; dir1++) {
+	for (int dir1 = 0; dir1 < p->dim; dir1++) {
 		for (int dir2 = 0; dir2 < dir1; dir2++ ) {
 			res += (1.0 - 0.5 * su2ptrace(f, p, i, dir2, dir1) );
 		}
 	}
 
-	res = p.betasu2 * res;
+	res = p->betasu2 * res;
 
 	return res;
 
@@ -319,17 +319,17 @@ long double local_su2wilson(fields f, params p, long i) {
 *
 * The constant term in beta \sum (1 - 0.5 ptrace) is also included for convenience.
 */
-double localact_su2link(fields f, params p, long i, int dir) {
+double localact_su2link(fields const* f, params const* p, long i, int dir) {
 
 	double tot = 0.0;
 
-	for (int dir2 = 0; dir2<p.dim; dir2++) {
+	for (int dir2 = 0; dir2<p->dim; dir2++) {
 		if (dir2 != dir) {
 			tot += (1.0 - 0.5 * su2ptrace(f, p, i, dir, dir2));
-			tot += (1.0 - 0.5 * su2ptrace(f, p, p.prev[i][dir2], dir, dir2));
+			tot += (1.0 - 0.5 * su2ptrace(f, p, p->prev[i][dir2], dir, dir2));
 		}
 	}
-	tot *= p.betasu2;
+	tot *= p->betasu2;
 
 /* same using staples, for debugging. Both work.
 	double staple[4];
@@ -361,12 +361,12 @@ double localact_su2link(fields f, params p, long i, int dir) {
 * but for U(1). Note that since we take the real part,
 * the result is just a cosine.
 */
-double u1ptrace(fields f, params p, long i, int dir1, int dir2) {
+double u1ptrace(fields const* f, params const* p, long i, int dir1, int dir2) {
 
-	double u1 = f.u1link[i][dir1];
-	double u2 = f.u1link[ p.next[i][dir1] ][dir2];
-	double u3 = f.u1link[ p.next[i][dir2] ][dir1];
-	double u4 = f.u1link[i][dir2];
+	double u1 = f->u1link[i][dir1];
+	double u2 = f->u1link[ p->next[i][dir1] ][dir2];
+	double u3 = f->u1link[ p->next[i][dir2] ][dir1];
+	double u4 = f->u1link[i][dir2];
 
 	return cos(u1 + u2 - u3 - u4);
 
@@ -378,17 +378,17 @@ double u1ptrace(fields f, params p, long i, int dir1, int dir2) {
 *  Specifically, calculates:
 * beta_U1 * \Sum_{i < j} [1 - cos(a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x)]
 */
-long double local_u1wilson(fields f, params p, long i) {
+long double local_u1wilson(fields const* f, params const* p, long i) {
 
 	long double res = 0.0;
 
-	for (int dir1 = 0; dir1 < p.dim; dir1++) {
+	for (int dir1 = 0; dir1 < p->dim; dir1++) {
 		for (int dir2 = 0; dir2 < dir1; dir2++ ) {
 			res += (1.0 - u1ptrace(f, p, i, dir2, dir1) );
 		}
 	}
 
-	return p.betau1 * res;
+	return p->betau1 * res;
 }
 
 
@@ -398,17 +398,17 @@ long double local_u1wilson(fields f, params p, long i) {
 *
 * See localact_su2link() for SU(2) version.
 */
-double localact_u1link(fields f, params p, long i, int dir) {
+double localact_u1link(fields const* f, params const* p, long i, int dir) {
 
 	double tot = 0.0;
 
-	for (int dir2 = 0; dir2<p.dim; dir2++) {
+	for (int dir2 = 0; dir2<p->dim; dir2++) {
 		if (dir2 != dir) {
 			tot += (1.0 - u1ptrace(f, p, i, dir, dir2));
-			tot += (1.0 - u1ptrace(f, p, p.prev[i][dir2], dir, dir2));
+			tot += (1.0 - u1ptrace(f, p, p->prev[i][dir2], dir, dir2));
 		}
 	}
-	tot *= p.betau1;
+	tot *= p->betau1;
 
 	// hopping terms:
 	#ifdef HIGGS
@@ -474,21 +474,21 @@ double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 *		-Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3)
 * for j = dir and \alpha_j(x) = 0 if hypercharge is neglected.
 */
-double hopping_doublet_forward(fields f, params p, long i, int dir) {
-	double *phi1 = f.su2doublet[i];
+double hopping_doublet_forward(fields const* f, params const* p, long i, int dir) {
+	double *phi1 = f->su2doublet[i];
 	double *phi2 = NULL;
 	double *U = NULL;
 	double tot = 0.0;
 
-	phi2 = f.su2doublet[(p.next[i][dir])];
-	U = f.su2link[i][dir];
+	phi2 = f->su2doublet[(p->next[i][dir])];
+	U = f->su2link[i][dir];
 
 	#ifndef U1
 	// no U(1)
 	tot -= hopping_trace(phi1, U, phi2);
 	#else
 	// include U(1)
-	tot -= hopping_trace_su2u1(phi1, U, phi2, f.u1link[i][dir]);
+	tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[i][dir]);
 	#endif
 
 	return tot;
@@ -499,23 +499,23 @@ double hopping_doublet_forward(fields f, params p, long i, int dir) {
 *		- Tr \Phi(x-j)^+ U_j(x-j) \Phi(x) exp(-i \alpha_j(x-j) \sigma_3)
 * for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected.
 */
-double hopping_doublet_backward(fields f, params p, long i, int dir) {
+double hopping_doublet_backward(fields const* f, params const* p, long i, int dir) {
 	double *phi1 = NULL;
-	double *phi2 = f.su2doublet[i];
+	double *phi2 = f->su2doublet[i];
 	double *U = NULL;
 	double tot = 0.0;
 
-	long previous = p.prev[i][dir];
+	long previous = p->prev[i][dir];
 
-	phi1 = f.su2doublet[previous];
-	U = f.su2link[previous][dir];
+	phi1 = f->su2doublet[previous];
+	U = f->su2link[previous][dir];
 
 	#ifndef U1
 	// no U(1)
 	tot -= hopping_trace(phi1, U, phi2);
 	#else
 	// include U(1)
-	tot -= hopping_trace_su2u1(phi1, U, phi2, f.u1link[previous][dir]);
+	tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[previous][dir]);
 	#endif
 
 	return tot;
@@ -525,10 +525,10 @@ double hopping_doublet_backward(fields f, params p, long i, int dir) {
 * in the "forward" directions. Specifically, calculates
 *		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ]
 */
-double covariant_doublet(fields f, params p, long i) {
+double covariant_doublet(fields const* f, params const* p, long i) {
 	double tot = 0.0;
-	double mod = doubletsq(f.su2doublet[i]);
-	for (int dir=0; dir<p.dim; dir++){
+	double mod = doubletsq(f->su2doublet[i]);
+	for (int dir=0; dir<p->dim; dir++){
 		// multiply by 2 here because doubletsq gives 0.5 Tr Phi^+ Phi
 		tot += 2.0 * mod + hopping_doublet_forward(f, p, i, dir);
 	}
@@ -543,14 +543,14 @@ double covariant_doublet(fields f, params p, long i) {
 * Used in localact_doublet(), which is used in metropolis update.
 *
 */
-double higgspotential(fields f, params p, long i) {
+double higgspotential(fields const* f, params const* p, long i) {
 
-	double mod = doubletsq(f.su2doublet[i]);
-	double pot = p.msq_phi * mod + p.lambda_phi * mod*mod;
+	double mod = doubletsq(f->su2doublet[i]);
+	double pot = p->msq_phi * mod + p->lambda_phi * mod*mod;
 
 	#ifdef TRIPLET
 	// add term 0.5 Tr Phi^+ Phi Tr A^2
-		pot += p.a2 * mod * tripletsq(f.su2triplet[i]);
+		pot += p->a2 * mod * tripletsq(f->su2triplet[i]);
 	#endif
 
 	return pot;
@@ -561,14 +561,14 @@ double higgspotential(fields f, params p, long i) {
 * in "forward" and "backwards" directions.
 * Used in metropolis update.
 */
-double localact_doublet(fields f, params p, long i) {
+double localact_doublet(fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
 	// Full covariant derivative with the local Tr Phi^+ Phi included,
 	// and summed over directions:
 	tot += covariant_doublet(f, p, i);
 
-	for (int dir=0; dir<p.dim; dir++) {
+	for (int dir=0; dir<p->dim; dir++) {
 		// contribution from backwards hopping terms:
 		tot += hopping_doublet_backward(f, p, i, dir);
 	}
@@ -612,14 +612,14 @@ double hopping_trace_triplet(double* a1, double* u, double* a2) {
 *		-2 Tr A(x) U_j(x) A(x+j) U_j(x)^+
 * for j = dir.
 */
-double hopping_triplet_forward(fields f, params p, long i, int dir) {
-	double *a1 = f.su2triplet[i];
+double hopping_triplet_forward(fields const* f, params const* p, long i, int dir) {
+	double *a1 = f->su2triplet[i];
 	double *a2 = NULL;
 	double *U = NULL;
 	double tot = 0.0;
 
-	a2 = f.su2triplet[p.next[i][dir]];
-	U = f.su2link[i][dir];
+	a2 = f->su2triplet[p->next[i][dir]];
+	U = f->su2link[i][dir];
 
 	tot -= 2.0 * hopping_trace_triplet(a1, U, a2);
 
@@ -631,16 +631,16 @@ double hopping_triplet_forward(fields f, params p, long i, int dir) {
 *		-2 Tr A(x-j) U_j(x-j) A(x) U_j(x-j)^+
 * for j = dir.
 */
-double hopping_triplet_backward(fields f, params p, long i, int dir) {
+double hopping_triplet_backward(fields const* f, params const* p, long i, int dir) {
 	double *a1 = NULL;
-	double *a2 = f.su2triplet[i];
+	double *a2 = f->su2triplet[i];
 	double *U = NULL;
 	double tot = 0.0;
 
-	long previous = p.prev[i][dir];
+	long previous = p->prev[i][dir];
 
-	a1 = f.su2triplet[previous];
-	U = f.su2link[previous][dir];
+	a1 = f->su2triplet[previous];
+	U = f->su2link[previous][dir];
 
 	tot -= 2.0 * hopping_trace_triplet(a1, U, a2);
 
@@ -652,10 +652,10 @@ double hopping_triplet_backward(fields f, params p, long i, int dir) {
 *		2 \sum_j [ Tr A^2 - Tr A(x) U_j(x) A(x+j) U_j(x)^+ ]
 * using hopping_triplet_forward().
 */
-double covariant_triplet(fields f, params p, long i) {
+double covariant_triplet(fields const* f, params const* p, long i) {
 	double tot = 0.0;
-	double mod = tripletsq(f.su2triplet[i]);
-	for (int dir=0; dir<p.dim; dir++) {
+	double mod = tripletsq(f->su2triplet[i]);
+	for (int dir=0; dir<p->dim; dir++) {
 		tot += 2.0 * mod + hopping_triplet_forward(f, p, i, dir);
 	}
 
@@ -667,25 +667,25 @@ double covariant_triplet(fields f, params p, long i) {
 * in "forward" and "backwards" directions.
 * Used in metropolis update.
 */
-double localact_triplet(fields f, params p, long i) {
+double localact_triplet(fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
 	// Full covariant derivative with the local 2*Tr A^2 included,
 	// and summed over directions:
 	tot += covariant_triplet(f, p, i);
 
-	for (int dir=0; dir<p.dim; dir++) {
+	for (int dir=0; dir<p->dim; dir++) {
 		// contribution from backwards hopping terms:
 		tot += hopping_triplet_backward(f, p, i, dir);
 	}
 
 	// add potential
-	double mod = tripletsq(f.su2triplet[i]);
+	double mod = tripletsq(f->su2triplet[i]);
 
-	tot += p.msq_triplet * mod + p.b4 * mod * mod;
+	tot += p->msq_triplet * mod + p->b4 * mod * mod;
 	#ifdef HIGGS
-		// add term 0.5 Tr \Phi^+ \Phi Tr A^2
-		tot += p.a2 * doubletsq(f.su2doublet[i]) * mod;
+		// add term 0.5 Tr Phi^+ Phi Tr A^2
+		tot += p->a2 * doubletsq(f->su2doublet[i]) * mod;
 	#endif
 
 	return tot;

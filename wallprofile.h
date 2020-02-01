@@ -24,7 +24,7 @@ long wall_count; // how many times have we measured the wall
 
 
 // wallprofile.c
-void prepare_wall(fields* f, params* p, comlist_struct* comlist);
-void measure_wall(fields* f, params p);
+void prepare_wall(fields* f, params const* p, comlist_struct* comlist);
+void measure_wall(fields const* f, params const* p);
 
 #endif

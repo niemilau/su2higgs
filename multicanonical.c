@@ -215,7 +215,7 @@ double get_weight(weight w, double val) {
 * multicanonical acceptance. After updating, checks whether
 * w->increment should be decreased for the next loop.
 */
-void update_weight(params* p, weight* w) {
+void update_weight(params const* p, weight* w) {
 
 	if (w->readonly) {
 		return;
@@ -271,7 +271,7 @@ void check_tunnel(params p, weight *w) {
 * oldval is the old order parameter value before field was updated locally
 * Return 1 if update was accepted, 0 otherwise.
 */
-int multicanonical_acceptance(params* p, weight* w, double oldval, double newval) {
+int multicanonical_acceptance(params const* p, weight* w, double oldval, double newval) {
 
 	// acc/rej only in root node
 	int accept;
@@ -367,7 +367,7 @@ long whichbin(weight w, double val) {
 * Only the contribution from sites with parity = par is recalculated
 * while the other parity contribution is read from w.param_value
 */
-double calc_orderparam(params* p, fields* f, weight* w, char par) {
+double calc_orderparam(params const* p, fields* f, weight* w, char par) {
 	double tot = 0.0;
 	long offset, max;
 	if (par == EVEN) {
@@ -412,7 +412,7 @@ double calc_orderparam(params* p, fields* f, weight* w, char par) {
 * Ordering in the backup array is exactly the same as in the original field array.
 * TODO: only store sites of a given parity?
 */
-void store_muca_fields(params* p, fields* f, weight* w) {
+void store_muca_fields(params const* p, fields* f, weight* w) {
 
 	switch(w->orderparam) {
 		case SIGMASQ :
@@ -443,7 +443,7 @@ void store_muca_fields(params* p, fields* f, weight* w) {
 
 /* Undo field updates if the multicanonical step is rejected.
 */
-void reset_muca_fields(params* p, fields* f, weight* w, char par) {
+void reset_muca_fields(params const* p, fields* f, weight* w, char par) {
 
 	long offset, max;
 	if (par == EVEN) {

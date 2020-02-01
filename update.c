@@ -14,7 +14,7 @@
 * Parity of a site is assumed to be stored in params.
 *
 */
-void checkerboard_sweep_su2link(fields* f, params* p, counters* c, char parity, int dir) {
+void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
 	if (parity == EVEN) {
@@ -25,9 +25,9 @@ void checkerboard_sweep_su2link(fields* f, params* p, counters* c, char parity, 
 
 	for (long i=offset; i<max; i++) {
 		if (p->algorithm_su2link == HEATBATH) {
-			c->accepted_su2link += heatbath_su2link(*f, *p, i, dir);
+			c->accepted_su2link += heatbath_su2link(f, p, i, dir);
 		} else if (p->algorithm_su2link == METROPOLIS) {
-			c->accepted_su2link += metro_su2link(*f, *p, i, dir);
+			c->accepted_su2link += metro_su2link(f, p, i, dir);
 		}
 		c->total_su2link++;
 	}
@@ -36,7 +36,7 @@ void checkerboard_sweep_su2link(fields* f, params* p, counters* c, char parity, 
 
 /* Same as checkerboard_sweep_su2link(), but for U(1) links instead.
 */
-void checkerboard_sweep_u1link(fields* f, params* p, counters* c, char parity, int dir) {
+void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, char parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
 	if (parity == EVEN) {
@@ -49,7 +49,7 @@ void checkerboard_sweep_u1link(fields* f, params* p, counters* c, char parity, i
 		if (p->algorithm_u1link == HEATBATH) {
 			//c->accepted_u1link += heatbath_su2link(f, p, i, dir);
 		} else if (p->algorithm_u1link == METROPOLIS) {
-			c->accepted_u1link += metro_u1link(*f, *p, i, dir);
+			c->accepted_u1link += metro_u1link(f, p, i, dir);
 		}
 		c->total_u1link++;
 	}
@@ -61,7 +61,7 @@ void checkerboard_sweep_u1link(fields* f, params* p, counters* c, char parity, i
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 1 if the entire sweep was accepted by multicanonical, 0 otherwise.
 */
-int checkerboard_sweep_su2doublet(fields* f, params* p, counters* c, weight* w, char parity, char metro) {
+int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, char parity, char metro) {
 
 	int accept = 1;
 	double muca_param_old = 0;
@@ -85,11 +85,11 @@ int checkerboard_sweep_su2doublet(fields* f, params* p, counters* c, weight* w, 
 	// then the update sweep
 	for (long i=offset; i<max; i++) {
 		if (p->algorithm_su2doublet == OVERRELAX && (metro != 1)) {
-			c->acc_overrelax_doublet += overrelax_doublet(*f, *p, i);
+			c->acc_overrelax_doublet += overrelax_doublet(f, p, i);
 			c->total_overrelax_doublet++;
 
 		} else if (p->algorithm_su2doublet == METROPOLIS || (metro == 1)) {
-			c->accepted_doublet += metro_doublet(*f, *p, i);
+			c->accepted_doublet += metro_doublet(f, p, i);
 			c->total_doublet++;
 		}
 	}
@@ -118,7 +118,7 @@ int checkerboard_sweep_su2doublet(fields* f, params* p, counters* c, weight* w, 
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 1 if the entire sweep was accepted by multicanonical, 0 otherwise.
 */
-int checkerboard_sweep_su2triplet(fields* f, params* p, counters* c, weight* w, char parity, char metro) {
+int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weight* w, char parity, char metro) {
 
 	int accept = 1;
 	double muca_param_old = 0;
@@ -142,10 +142,10 @@ int checkerboard_sweep_su2triplet(fields* f, params* p, counters* c, weight* w, 
 	// then the update sweep
 	for (long i=offset; i<max; i++) {
 		if (p->algorithm_su2triplet == OVERRELAX && (metro != 1)) {
-			c->acc_overrelax_triplet += overrelax_triplet(*f, *p, i);
+			c->acc_overrelax_triplet += overrelax_triplet(f, p, i);
 			c->total_overrelax_triplet++;
 		} else if (p->algorithm_su2triplet == METROPOLIS || (metro == 1)) {
-			c->accepted_triplet += metro_triplet(*f, *p, i);
+			c->accepted_triplet += metro_triplet(f, p, i);
 			c->total_triplet++;
 		}
 	}
@@ -176,7 +176,7 @@ int checkerboard_sweep_su2triplet(fields* f, params* p, counters* c, weight* w, 
 * then dir2 etc. This is necessary because the links in "positive" directions are not independent
 * because of the Wilson staple, which for U_1(x) depends on U_2(x-i+j), for example.
 */
-void update_lattice(fields* f, params* p, comlist_struct* comlist, counters* c, weight* w, char metro) {
+void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w, char metro) {
 
 	int accept;
 
@@ -233,7 +233,7 @@ void update_lattice(fields* f, params* p, comlist_struct* comlist, counters* c, 
 * This is to be called before starting the simulation, to ensure that
 * all halo fields are in sync.
 */
-void sync_halos(fields* f, params* p, comlist_struct* comlist) {
+void sync_halos(fields* f, params const* p, comlist_struct* comlist) {
 
 	for (int parity=0; parity<=1; parity++) {
 

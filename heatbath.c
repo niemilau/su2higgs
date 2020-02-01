@@ -10,17 +10,17 @@
 /*
 * Update a single SU(2) link using KP heatbath.
 */
-int heatbath_su2link(fields f, params p, long i, int dir) {
+int heatbath_su2link(fields* f, params const* p, long i, int dir) {
 
 	// only used if accept/reject step is needed
 	double oldlink[4];
 	double oldact = 0.0;
 
 	#ifdef TRIPLET
-		oldlink[0] = f.su2link[i][dir][0];
-		oldlink[1] = f.su2link[i][dir][1];
-		oldlink[2] = f.su2link[i][dir][2];
-		oldlink[3] = f.su2link[i][dir][3];
+		oldlink[0] = f->su2link[i][dir][0];
+		oldlink[1] = f->su2link[i][dir][1];
+		oldlink[2] = f->su2link[i][dir][2];
+		oldlink[3] = f->su2link[i][dir][3];
 		oldact += hopping_triplet_forward(f, p, i, dir);
 	#endif
 
@@ -86,17 +86,17 @@ int heatbath_su2link(fields f, params p, long i, int dir) {
 	d = 1.0/d;
 
 
-	f.su2link[i][dir][0] = a0;
-	f.su2link[i][dir][1] = r1*rad*d;
-	f.su2link[i][dir][2] = r2*rad*d;
-	f.su2link[i][dir][3] = r3*rad*d;
+	f->su2link[i][dir][0] = a0;
+	f->su2link[i][dir][1] = r1*rad*d;
+	f->su2link[i][dir][2] = r2*rad*d;
+	f->su2link[i][dir][3] = r3*rad*d;
 
 	// new link value is obtained by rotating this from the right
 	// with hermitian conjugate of the normalized staple.
 	V[1] = -V[1];
 	V[2] = -V[2];
 	V[3] = -V[3];
-	su2rot(f.su2link[i][dir], V);
+	su2rot(f->su2link[i][dir], V);
 
 	#ifdef TRIPLET
 		double newact = 0.0;
@@ -105,10 +105,10 @@ int heatbath_su2link(fields f, params p, long i, int dir) {
 		if (drand48() < exp(diff)) {
 			return 1;
 		} else {
-			f.su2link[i][dir][0] = oldlink[0];
-			f.su2link[i][dir][1] = oldlink[1];
-			f.su2link[i][dir][2] = oldlink[2];
-			f.su2link[i][dir][3] = oldlink[3];
+			f->su2link[i][dir][0] = oldlink[0];
+			f->su2link[i][dir][1] = oldlink[1];
+			f->su2link[i][dir][2] = oldlink[2];
+			f->su2link[i][dir][3] = oldlink[3];
 			return 0;
 		}
 	#endif

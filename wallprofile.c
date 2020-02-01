@@ -20,7 +20,7 @@
 * NB! need a long lattice in one direction, this routine assumes the longest
 * direction is the "last" direction (z-coordinate).
 */
-void prepare_wall(fields* f, params* p, comlist_struct* comlist) {
+void prepare_wall(fields* f, params const* p, comlist_struct* comlist) {
 
   wall_count = 0;
   long nz = p->sliceL[p->dim-1];
@@ -84,9 +84,9 @@ void prepare_wall(fields* f, params* p, comlist_struct* comlist) {
 /* Measure some quantity along the z-axis and print to a file.
 * This routine assumes that ONLY the z-direction is split into MPI nodes!!
 */
-void measure_wall(fields* f, params p) {
+void measure_wall(fields const* f, params const* p) {
 
-  long nz = p.sliceL[p.dim-1];
+  long nz = p->sliceL[p->dim-1];
   FILE* wallfile;
 
   barrier();
@@ -95,7 +95,7 @@ void measure_wall(fields* f, params p) {
   double* f1 = make_singletfield(nz);
   double* f2 = make_singletfield(nz);
 
-  if (!p.rank)
+  if (!p->rank)
     wallfile = fopen("wallprofile", "w");
 
   for (long z=0; z<nz; z++) {
@@ -121,15 +121,15 @@ void measure_wall(fields* f, params p) {
 
   #ifdef MPI
     // if not root, send
-    if (p.rank != 0) {
+    if (p->rank != 0) {
       MPI_Send(f1, nz, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
       MPI_Send(f2, nz, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
     }
   #endif
 
-  if (!p.rank) {
+  if (!p->rank) {
     // print to file from root node
-    for (int rank=0; rank<p.size; rank++) {
+    for (int rank=0; rank<p->size; rank++) {
       long offset;
       #ifdef MPI
       if (rank > 0) {
@@ -155,7 +155,7 @@ void measure_wall(fields* f, params p) {
   free_singletfield(f1);
   free_singletfield(f2);
 
-  if (!p.rank) {
+  if (!p->rank) {
     fclose(wallfile);
     wall_count++;
   }

@@ -244,11 +244,11 @@ void free_comlist(comlist_struct* comlist);
 // su2u1.c
 double su2sqr(double *u);
 void su2rot(double *u1, double *u2);
-double su2ptrace(fields f, params p, long i, int dir1, int dir2);
-long double local_su2wilson(fields f, params p, long i);
-double localact_su2link(fields f, params p, long i, int dir);
-void su2staple_wilson(fields f, params p, long i, int dir, double* V);
-void su2link_staple(fields f, params p, long i, int dir, double* V);
+double su2ptrace(fields const* f, params const* p, long i, int dir1, int dir2);
+long double local_su2wilson(fields const* f, params const* p, long i);
+double localact_su2link(fields const* f, params const* p, long i, int dir);
+void su2staple_wilson(fields const* f, params const* p, long i, int dir, double* V);
+void su2link_staple(fields const* f, params const* p, long i, int dir, double* V);
 double su2trace4(double *u1, double *u2, double *u3, double *u4);
 void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
 void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
@@ -256,46 +256,46 @@ double hopping_trace(double* phi1, double* u, double* phi2);
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a);
 double hopping_trace_triplet(double* a1, double* u, double* a2);
 // U(1) routines
-double u1ptrace(fields f, params p, long i, int dir1, int dir2);
-long double local_u1wilson(fields f, params p, long i);
-double localact_u1link(fields f, params p, long i, int dir);
+double u1ptrace(fields const* f, params const* p, long i, int dir1, int dir2);
+long double local_u1wilson(fields const* f, params const* p, long i);
+double localact_u1link(fields const* f, params const* p, long i, int dir);
 // doublet routines
 double doubletsq(double* a);
-long double avg_doublet2(fields f, params p);
-long double avg_doublet4(fields f, params p);
-double hopping_doublet_forward(fields f, params p, long i, int dir);
-double hopping_doublet_backward(fields f, params p, long i, int dir);
-double covariant_doublet(fields f, params p, long i);
-double localact_doublet(fields f, params p, long i);
-double higgspotential(fields f, params p, long i);
+long double avg_doublet2(fields const* f, params const* p);
+long double avg_doublet4(fields const* f, params const* p);
+double hopping_doublet_forward(fields const* f, params const* p, long i, int dir);
+double hopping_doublet_backward(fields const* f, params const* p, long i, int dir);
+double covariant_doublet(fields const* f, params const* p, long i);
+double localact_doublet(fields const* f, params const* p, long i);
+double higgspotential(fields const* f, params const* p, long i);
 // triplet routines
 double tripletsq(double* a);
-double hopping_triplet_forward(fields f, params p, long i, int dir);
-double hopping_triplet_backward(fields f, params p, long i, int dir);
-double covariant_triplet(fields f, params p, long i);
-double localact_triplet(fields f, params p, long i);
+double hopping_triplet_forward(fields const* f, params const* p, long i, int dir);
+double hopping_triplet_backward(fields const* f, params const* p, long i, int dir);
+double covariant_triplet(fields const* f, params const* p, long i);
+double localact_triplet(fields const* f, params const* p, long i);
 
 // metropolis.c
-int metro_su2link(fields f, params p, long i, int dir);
-int metro_u1link(fields f, params p, long i, int dir);
-int metro_doublet(fields f, params p, long i);
-int metro_triplet(fields f, params p, long i);
+int metro_su2link(fields* f, params const* p, long i, int dir);
+int metro_u1link(fields* f, params const* p, long i, int dir);
+int metro_doublet(fields* f, params const* p, long i);
+int metro_triplet(fields* f, params const* p, long i);
 
 // heatbath.c
-int heatbath_su2link(fields f, params p, long i, int dir);
+int heatbath_su2link(fields* f, params const* p, long i, int dir);
 
 // overrelax.c
 double polysolve3(long double a, long double b, long double c, long double d);
-int overrelax_doublet(fields f, params p, long i);
-int overrelax_triplet(fields f, params p, long i);
+int overrelax_doublet(fields* f, params const* p, long i);
+int overrelax_triplet(fields* f, params const* p, long i);
 
 // update.c
-void update_lattice(fields* f, params* p, comlist_struct* comlist, counters* c, weight* w, char metro);
-void checkerboard_sweep_su2link(fields* f, params* p, counters* c, char parity, int dir);
-void checkerboard_sweep_u1link(fields* f, params* p, counters* c, char parity, int dir);
-int checkerboard_sweep_su2doublet(fields* f, params* p, counters* c, weight* w, char parity, char metro);
-int checkerboard_sweep_su2triplet(fields* f, params* p, counters* c, weight* w, char parity, char metro);
-void sync_halos(fields* f, params* p, comlist_struct* comlist);
+void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w, char metro);
+void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char parity, int dir);
+void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, char parity, int dir);
+int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, char parity, char metro);
+int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weight* w, char parity, char metro);
+void sync_halos(fields* f, params const* p, comlist_struct* comlist);
 
 // init.c
 void setsu2(fields f, params p);
@@ -321,22 +321,21 @@ void read_updated_parameters(char *filename, params *p);
 
 
 // measure.c
-void measure(fields f, params p, counters* c, weight* w);
-double action_local(fields f, params p, long i);
+void measure(fields const* f, params const* p, counters* c, weight* w);
+double action_local(fields const* f, params const* p, long i);
 void print_labels();
 
 // multicanonical.c
 void load_weight(params p, weight *w);
 void save_weight(params p, weight w);
 double get_weight(weight w, double val);
-void update_weight(params* p, weight* w);
-int multicanonical_acceptance(params* p, weight* w, double oldval, double newval);
+void update_weight(params const* p, weight* w);
+int multicanonical_acceptance(params const* p, weight* w, double oldval, double newval);
 long whichbin(weight w, double val);
-double calc_orderparam(params* p, fields* f, weight* w, char par);
-void measure_muca(params p, fields f, weight* w);
+double calc_orderparam(params const* p, fields* f, weight* w, char par);
 void check_tunnel(params p, weight *w);
-void store_muca_fields(params* p, fields* f, weight* w);
-void reset_muca_fields(params* p, fields* f, weight* w, char par);
+void store_muca_fields(params const* p, fields* f, weight* w);
+void reset_muca_fields(params const* p, fields* f, weight* w, char par);
 void alloc_backup_arrays(params p, fields* f, weight w);
 void free_muca_arrays(fields* f, weight *w);
 
@@ -344,10 +343,10 @@ void free_muca_arrays(fields* f, weight *w);
 	// magfield.c
 	void matmat(double *in1, double *in2, int dag);
 	void projector(double *proj, double *adjoint);
-	void project_u1(params* p, fields* f, long i, int dir, double* pro);
-	double alpha_proj(params* p, fields* f, long i, int dir1, int dir2);
-	double magfield(params* p, fields* f, long i, int dir);
-	double magcharge_cube(params* p, fields* f, long i);
+	void project_u1(params const* p, fields const* f, long i, int dir, double* pro);
+	double alpha_proj(params const* p, fields const* f, long i, int dir1, int dir2);
+	double magfield(params const* p, fields const* f, long i, int dir);
+	double magcharge_cube(params const* p, fields const* f, long i);
 #endif
 
 #endif
