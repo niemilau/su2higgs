@@ -137,34 +137,22 @@ void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, c
 	}
 	#endif
 
-	// EVEN sweeps for scalars
-	#ifdef HIGGS
-	for (int k=0; k<p.update_su2doublet; k++) {
-		checkerboard_sweep_su2doublet(*f, p, c, EVEN, metro);
-		c->comms_time += update_halo(comlist, EVEN, f->su2doublet, SU2DB);
-	}
-	#endif
+	// parity loop for scalars. EVEN = 0, ODD = 1; defined in su2.h
+	for (char par=0; par<=1; par++) {
+		#ifdef HIGGS
+		for (int k=0; k<p.update_su2doublet; k++) {
+			checkerboard_sweep_su2doublet(*f, p, c, par, metro);
+			c->comms_time += update_halo(comlist, par, f->su2doublet, SU2DB);
+		}
+		#endif
 
-	#ifdef TRIPLET
-	for (int k=0; k<p.update_su2triplet; k++) {
-		checkerboard_sweep_su2triplet(*f, p, c, EVEN, metro);
-		c->comms_time += update_halo(comlist, EVEN, f->su2triplet, SU2TRIP);
+		#ifdef TRIPLET
+		for (int k=0; k<p.update_su2triplet; k++) {
+			checkerboard_sweep_su2triplet(*f, p, c, par, metro);
+			c->comms_time += update_halo(comlist, par, f->su2triplet, SU2TRIP);
+		}
+		#endif
 	}
-	#endif
-
-	// ODD sweeps for scalars
-	#ifdef HIGGS
-	for (int k=0; k<p.update_su2doublet; k++) {
-		checkerboard_sweep_su2doublet(*f, p, c, ODD, metro);
-		c->comms_time += update_halo(comlist, ODD, f->su2doublet, SU2DB);
-	}
-	#endif
-	#ifdef TRIPLET
-	for (int k=0; k<p.update_su2triplet; k++) {
-		checkerboard_sweep_su2triplet(*f, p, c, ODD, metro);
-		c->comms_time += update_halo(comlist, ODD, f->su2triplet, SU2TRIP);
-	}
-	#endif
 
 }
 

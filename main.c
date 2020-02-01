@@ -4,9 +4,6 @@
 #ifdef WALL
 	#include "wallprofile.h"
 #endif
-#ifdef NUCLEATION
-	#include "nucleation.h"
-#endif
 
 int main(int argc, char *argv[]) {
 
@@ -85,10 +82,6 @@ int main(int argc, char *argv[]) {
 		printf0(p, "\nLoading latticefile: %s\n", p.latticefile);
 		load_lattice(p, f, &c);
 	} else {
-		#ifdef NUCLEATION
-			printf0(p, "Existing lattice file is required for nucleation trajectories!! Exiting...\n");
-			die(-421);
-		#endif
 		printf0(p, "No latticefile found; starting with cold configuration.\n");
 		setfields(f, p);
 		p.reset = 1;
@@ -121,19 +114,6 @@ int main(int argc, char *argv[]) {
 			printf0(p, "Read-only run, will not modify weight. \n");
 		}
 	}
-
-	#ifdef NUCLEATION
-		if (!p.multicanonical) {
-			printf0(p, "Multicanonical order parameter required for nucleation (but use flat weight)! Exiting...\n");
-			die(-223);
-		} else {
-			current_traj = 0;
-			// create directory "trajectories" if it does not exist
-			// and clear current measure file
-			printf0(p, "Bubble nucleation study: will store Langevin trajectories to a subdirectory\n");
-			printf0(p, "CAUTION: measure file WILL be overriden!!\n");
-		}
-	#endif
 
 	// metro = 1 if we force metropolis sweep, 0 otherwise
 	char metro = 0;
@@ -216,11 +196,9 @@ int main(int argc, char *argv[]) {
 				measure_wall(&f, p);
 			#endif
 
-			#ifndef NUCLEATION // do NOT override the configuration file if studying nucleation trajectories
-				save_lattice(p, f, c);
-				// update max iterations if the config file has been changed by the user
-				read_updated_parameters(argv[1], &p);
-			#endif
+			save_lattice(p, f, c);
+			// update max iterations if the config file has been changed by the user
+			read_updated_parameters(argv[1], &p);
 		} // end checkpoint
 
 		iter++;

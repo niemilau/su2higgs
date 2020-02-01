@@ -18,6 +18,9 @@ reset 1
 # iterations
 iterations 2000000
 
+# how many thermalization sweeps before starting measurements/weighting?
+n_thermalize 100
+
 # how often to write measurements
 interval 4
 
