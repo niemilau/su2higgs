@@ -20,16 +20,16 @@
 * NB! need a long lattice in one direction, this routine assumes the longest
 * direction is the "last" direction (z-coordinate).
 */
-void prepare_wall(fields* f, params p, comlist_struct* comlist) {
+void prepare_wall(fields* f, params* p, comlist_struct* comlist) {
 
   wall_count = 0;
-  long nz = p.sliceL[p.dim-1];
+  long nz = p->sliceL[p->dim-1];
   for (long z=0; z<nz; z++) {
 
     for (long x=0; x<sites_per_z; x++) {
 
       long i = wallcoord[z][x];
-      if (z + offset_z < 0.5 * p.L[p.dim-1]) {
+      if (z + offset_z < 0.5 * p->L[p->dim-1]) {
         // for small z:
         #ifdef HIGGS
         f->su2doublet[i][0] = 0.2 + 0.01*drand48();
@@ -43,7 +43,7 @@ void prepare_wall(fields* f, params p, comlist_struct* comlist) {
         f->su2triplet[i][2] = 0.05*drand48();
         #endif
         // also set gauge links to (hopefully) help with thermalization
-        for (int dir=0; dir<p.dim; dir++) {
+        for (int dir=0; dir<p->dim; dir++) {
           double u = 1.0 - 0.03*drand48();
     			f->su2link[i][dir][0] = u;
     			f->su2link[i][dir][1] = sqrt((double)(1.0 - u*u));
@@ -64,7 +64,7 @@ void prepare_wall(fields* f, params p, comlist_struct* comlist) {
         f->su2triplet[i][2] = 0.01*drand48();
         #endif
         // gauge links:
-        for (int dir=0; dir<p.dim; dir++) {
+        for (int dir=0; dir<p->dim; dir++) {
           double u = 1.0 - 0.4*drand48();
     			f->su2link[i][dir][0] = u;
     			f->su2link[i][dir][1] = sqrt((double)(1.0 - u*u));
@@ -77,7 +77,7 @@ void prepare_wall(fields* f, params p, comlist_struct* comlist) {
   // wall initialized, now just need to sync halo fields
   sync_halos(f, p, comlist);
 
-  printf0(p, "Wall profile initialized.\n");
+  printf0(*p, "Wall profile initialized.\n");
 
 }
 

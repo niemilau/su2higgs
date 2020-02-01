@@ -215,7 +215,7 @@ double get_weight(weight w, double val) {
 * multicanonical acceptance. After updating, checks whether
 * w->increment should be decreased for the next loop.
 */
-void update_weight(params p, weight* w) {
+void update_weight(params* p, weight* w) {
 
 	if (w->readonly) {
 		return;
@@ -230,7 +230,7 @@ void update_weight(params p, weight* w) {
 		w->outsideW_min = w->W[0];
 	}
 
-	check_tunnel(p, w);
+	check_tunnel(*p, w);
 
 	for (long i=0; i<w->bins; i++) {
 		w->hits[i] = 0;
@@ -271,11 +271,11 @@ void check_tunnel(params p, weight *w) {
 * oldval is the old order parameter value before field was updated locally
 * Return 1 if update was accepted, 0 otherwise.
 */
-int multicanonical_acceptance(params p, weight* w, double oldval, double newval) {
+int multicanonical_acceptance(params* p, weight* w, double oldval, double newval) {
 
 	// acc/rej only in root node
 	int accept;
-	if (p.rank == 0) {
+	if (p->rank == 0) {
 
 		double W_new, W_old;
 
@@ -309,7 +309,7 @@ int multicanonical_acceptance(params p, weight* w, double oldval, double newval)
 		if (w->m >= w->update_interval) {
 			// update weight function, save it and start over
 			update_weight(p, w);
-			save_weight(p, *w);
+			save_weight(*p, *w);
 			w->m = 0;
 		}
 	}
@@ -367,39 +367,39 @@ long whichbin(weight w, double val) {
 * Only the contribution from sites with parity = par is recalculated
 * while the other parity contribution is read from w.param_value
 */
-double calc_orderparam(params p, fields f, weight* w, char par) {
+double calc_orderparam(params* p, fields* f, weight* w, char par) {
 	double tot = 0.0;
 	long offset, max;
 	if (par == EVEN) {
-		offset = 0; max = p.evensites;
+		offset = 0; max = p->evensites;
 	} else {
-		offset = p.evensites; max = p.sites;
+		offset = p->evensites; max = p->sites;
 	}
 
 	switch(w->orderparam) {
 		case SIGMASQ :
 			for (long i=offset; i<max; i++) {
-				tot += tripletsq(f.su2triplet[i]);
+				tot += tripletsq(f->su2triplet[i]);
 			}
 			break;
 		case PHI2SIGMA2 :
 			for (long i=offset; i<max; i++) {
-				tot += doubletsq(f.su2doublet[i]) * tripletsq(f.su2triplet[i]);
+				tot += doubletsq(f->su2doublet[i]) * tripletsq(f->su2triplet[i]);
 			}
 			break;
     case PHI2MINUSSIGMA2 :
-      for (long i=offset; i<max; i++) { // modified for testing
-				tot += doubletsq(f.su2doublet[i]) - tripletsq(f.su2triplet[i]);
+      for (long i=offset; i<max; i++) {
+				tot += doubletsq(f->su2doublet[i]) - tripletsq(f->su2triplet[i]);
       }
       break;
 		case PHISQ :
 			for (long i=offset; i<max; i++) {
-				tot += doubletsq(f.su2doublet[i]);
+				tot += doubletsq(f->su2doublet[i]);
 			}
 			break;
 	}
 
-	tot = allreduce(tot) / p.vol;
+	tot = allreduce(tot) / p->vol;
 
 	w->param_value[par] = tot;
 	// add other parity contribution
@@ -410,14 +410,13 @@ double calc_orderparam(params p, fields f, weight* w, char par) {
 /* Backup all fields contributing to the order parameter,
 * in case an update sweep is rejected later by the global acc/rej.
 * Ordering in the backup array is exactly the same as in the original field array.
-* This does not store halos, so remember to do the muca test before updating any halos.
-* Some optimization is achieved by only including halos here if it is scrictly necessary.
+* TODO: only store sites of a given parity?
 */
-void store_muca_fields(params p, fields* f, weight* w) {
+void store_muca_fields(params* p, fields* f, weight* w) {
 
 	switch(w->orderparam) {
 		case SIGMASQ :
-			for (long i=0; i<p.sites; i++) {
+			for (long i=0; i<p->sites; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
 				}
@@ -425,14 +424,14 @@ void store_muca_fields(params p, fields* f, weight* w) {
 			break;
     case PHI2MINUSSIGMA2 :
 		case PHI2SIGMA2 :
-			for (long i=0; i<p.sites; i++) {
+			for (long i=0; i<p->sites; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
 				}
 			}
 			// continue to store Higgs
 		case PHISQ :
-			for (long i=0; i<p.sites; i++) {
+			for (long i=0; i<p->sites; i++) {
 				for (int dof=0; dof<SU2DB; dof++) {
 					f->backup_doublet[i][dof] = f->su2doublet[i][dof];
 				}
@@ -444,13 +443,13 @@ void store_muca_fields(params p, fields* f, weight* w) {
 
 /* Undo field updates if the multicanonical step is rejected.
 */
-void reset_muca_fields(params p, fields* f, weight* w, char par) {
+void reset_muca_fields(params* p, fields* f, weight* w, char par) {
 
 	long offset, max;
 	if (par == EVEN) {
-		offset = 0; max = p.evensites;
+		offset = 0; max = p->evensites;
 	} else {
-		offset = p.evensites; max = p.sites;
+		offset = p->evensites; max = p->sites;
 	}
 
 	switch(w->orderparam) {

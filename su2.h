@@ -290,13 +290,12 @@ int overrelax_doublet(fields f, params p, long i);
 int overrelax_triplet(fields f, params p, long i);
 
 // update.c
-void update_lattice(fields* f, params p, comlist_struct* comlist, counters* c, char metro);
-void update_lattice_muca(fields* f, params p, comlist_struct* comlist, weight* w, counters* c, char metro);
-void checkerboard_sweep_su2link(fields f, params p, counters* c, char parity, int dir);
-void checkerboard_sweep_u1link(fields f, params p, counters* c, char parity, int dir);
-void checkerboard_sweep_su2doublet(fields f, params p, counters* c, char parity, char metro);
-void checkerboard_sweep_su2triplet(fields f, params p, counters* c, char parity, char metro);
-void sync_halos(fields* f, params p, comlist_struct* comlist);
+void update_lattice(fields* f, params* p, comlist_struct* comlist, counters* c, weight* w, char metro);
+void checkerboard_sweep_su2link(fields* f, params* p, counters* c, char parity, int dir);
+void checkerboard_sweep_u1link(fields* f, params* p, counters* c, char parity, int dir);
+int checkerboard_sweep_su2doublet(fields* f, params* p, counters* c, weight* w, char parity, char metro);
+int checkerboard_sweep_su2triplet(fields* f, params* p, counters* c, weight* w, char parity, char metro);
+void sync_halos(fields* f, params* p, comlist_struct* comlist);
 
 // init.c
 void setsu2(fields f, params p);
@@ -330,14 +329,14 @@ void print_labels();
 void load_weight(params p, weight *w);
 void save_weight(params p, weight w);
 double get_weight(weight w, double val);
-void update_weight(params p, weight* w);
-int multicanonical_acceptance(params p, weight* w, double oldval, double newval);
+void update_weight(params* p, weight* w);
+int multicanonical_acceptance(params* p, weight* w, double oldval, double newval);
 long whichbin(weight w, double val);
-double calc_orderparam(params p, fields f, weight* w, char par);
+double calc_orderparam(params* p, fields* f, weight* w, char par);
 void measure_muca(params p, fields f, weight* w);
 void check_tunnel(params p, weight *w);
-void store_muca_fields(params p, fields* f, weight* w);
-void reset_muca_fields(params p, fields* f, weight* w, char par);
+void store_muca_fields(params* p, fields* f, weight* w);
+void reset_muca_fields(params* p, fields* f, weight* w, char par);
 void alloc_backup_arrays(params p, fields* f, weight w);
 void free_muca_arrays(fields* f, weight *w);
 

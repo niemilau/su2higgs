@@ -87,12 +87,12 @@ int main(int argc, char *argv[]) {
 		p.reset = 1;
 	}
 
-	sync_halos(&f, p, &comlist);
+	sync_halos(&f, &p, &comlist);
 
 	#ifdef WALL
 		if (p.reset) {
 			// setup wall. This overrides any other field initializations!!
-			prepare_wall(&f, p, &comlist); // halos re-synced here
+			prepare_wall(&f, &p, &comlist); // halos re-synced here
 		}
 		measure_wall(&f, p);
 	#endif
@@ -106,8 +106,8 @@ int main(int argc, char *argv[]) {
 		// initialize multicanonical. Needs to come after field initializations
 		load_weight(p, &w);
 		alloc_backup_arrays(p, &f, w);
-		calc_orderparam(p, f, &w, EVEN);
-		calc_orderparam(p, f, &w, ODD);
+		calc_orderparam(&p, &f, &w, EVEN);
+		calc_orderparam(&p, &f, &w, ODD);
 		if (!w.readonly) {
 			printf0(p, "readonly not 0, so multicanonical weight WILL be modified!\n");
 		} else {
@@ -120,9 +120,17 @@ int main(int argc, char *argv[]) {
 	// how often to force metropolis
 	int metro_interval = 5;
 
-	// if no lattice file was given or if reset=1 in config, start by thermalizing
+	// if no lattice file was given or if reset=1 in config,
+	// start by thermalizing without multicanonical
 	long iter = 1;
+	int is_muca = 0;
 	if (p.reset) {
+
+		if (p.multicanonical) {
+			is_muca = 1;
+			p.multicanonical = 0;
+		}
+
 		printf0(p, "Thermalizing %ld iterations\n", p.n_thermalize);
 		start_time = clock();
 		while (iter <= p.n_thermalize) {
@@ -133,8 +141,8 @@ int main(int argc, char *argv[]) {
 				metro = 0;
 			}
 
-			barrier(); // see main loop below
-			update_lattice(&f, p, &comlist, &c, metro);
+			barrier();
+			update_lattice(&f, &p, &comlist, &c, &w, metro);
 			iter++;
 		}
 
@@ -142,7 +150,12 @@ int main(int argc, char *argv[]) {
 		timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 		printf0(p, "Thermalization done, took %lf seconds.\n", timing);
 
+		// now reset iteration counter and turn muca back on, if necessary
 		iter = 1;
+		if (is_muca) {
+			p.multicanonical = 1;
+		}
+
 		printf0(p, "\nStarting new simulation!\n");
 	} else {
 		iter = c.iter + 1;
@@ -173,11 +186,8 @@ int main(int argc, char *argv[]) {
 		// faster than others, so that it sends new fields to others before they managed
 		// to receive the earlier ones. Todo: optimize this
 		barrier();
-		if (!p.multicanonical) {
-			update_lattice(&f, p, &comlist, &c, metro);
-		} else {
-			update_lattice_muca(&f, p, &comlist, &w, &c, metro);
-		}
+		// update all fields once. multicanonical checks are contained in sweep routines
+		update_lattice(&f, &p, &comlist, &c, &w, metro);
 
 		if ((iter % p.checkpoint == 0)) {
 			// Checkpoint time; print acceptance and save fields to latticefile
