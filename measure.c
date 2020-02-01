@@ -47,7 +47,7 @@ void print_labels() {
 /* Measure observables and write them to file.
 *
 */
-void measure(fields const* f, params const* p, counters* c, weight* w) {
+void measure(fields const* f, params const* p, counters* c, weight const* w) {
 
 	double start, end, time;
 
@@ -114,7 +114,7 @@ void measure(fields const* f, params const* p, counters* c, weight* w) {
 	double weight = 0.0; // if not multicanonical, just use zero weight
 	if (p->multicanonical) {
 		double muca_param = w->param_value[EVEN] + w->param_value[ODD];
-		weight = get_weight(*w, muca_param);
+		weight = get_weight(w, muca_param);
 	}
 	// our muca action is S' = S + W, but Kari uses S = S - W.
 	// store weight with a minus sign here to ensure compability with Kari's tools

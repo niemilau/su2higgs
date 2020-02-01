@@ -67,18 +67,18 @@
 *
 * Note that w.hits is NOT stored!
 */
-void save_weight(params p, weight w) {
+void save_weight(params const* p, weight const* w) {
 
 	// for readonly run, do nothing
-	if (w.readonly)
+	if (w->readonly)
 		return;
 
-	if(!p.rank) {
-		FILE *wfile = fopen(w.weightfile, "w");
+	if(!p->rank) {
+		FILE *wfile = fopen(w->weightfile, "w");
 
-		fprintf(wfile, "%ld %lf %d %lf %lf \n", w.bins, w.increment, w.last_max, w.min, w.max);
-		for(long i=0; i<w.bins; i++) {
-			fprintf(wfile, "%lf %lf\n", w.pos[i], w.W[i]);
+		fprintf(wfile, "%ld %lf %d %lf %lf \n", w->bins, w->increment, w->last_max, w->min, w->max);
+		for(long i=0; i<w->bins; i++) {
+			fprintf(wfile, "%lf %lf\n", w->pos[i], w->W[i]);
 		}
 
 		fclose(wfile);
@@ -92,9 +92,9 @@ void save_weight(params p, weight w) {
 * DO NOT call this more than once per run.
 *
 */
-void load_weight(params p, weight *w) {
+void load_weight(params const* p, weight *w) {
 
-	printf0(p, "\nLoading weightfile: %s\n", w->weightfile);
+	printf0(*p, "\nLoading weightfile: %s\n", w->weightfile);
 
   w->pos = malloc(w->bins * sizeof(*(w->pos)));
   w->W = malloc(w->bins * sizeof(*(w->W)));
@@ -106,9 +106,9 @@ void load_weight(params p, weight *w) {
 
   if(access(w->weightfile, R_OK) != 0) {
 		// no weight found; initialize a flat weight according to config file
-    printf0(p,"Unable to access weightfile!!\n");
+    printf0(*p,"Unable to access weightfile!!\n");
 		if (w->readonly) {
-			printf0(p, "No multicanonical weight given for a read-only run! Exiting...\n");
+			printf0(*p, "No multicanonical weight given for a read-only run! Exiting...\n");
 			die(20);
 		}
 
@@ -120,7 +120,7 @@ void load_weight(params p, weight *w) {
     }
 		w->last_max = 0; // assume starting from min
 
-		printf0(p, "Initialized new weight \n");
+		printf0(*p, "Initialized new weight \n");
 
   } else {
 		// found existing weight, use it instead of the one specified in config
@@ -134,7 +134,7 @@ void load_weight(params p, weight *w) {
 		read = fscanf(wfile, "%ld %lf %d %lf %lf ", &bins_read, &w->increment, &w->last_max, &w->min, &w->max);
 
 		if (read != 5) {
-			printf0(p, "Error reading first line of weightfile! \n");
+			printf0(*p, "Error reading first line of weightfile! \n");
 			die(22);
 		}
 
@@ -144,7 +144,7 @@ void load_weight(params p, weight *w) {
     for(i=0; i<w->bins; i++) {
       read = fscanf(wfile, "%lf %lf", &(w->pos[i]), &(w->W[i]));
       if(read != 2) {
-				printf0(p, "Error reading weightfile! Got %d values at line %ld\n", read, i+2);
+				printf0(*p, "Error reading weightfile! Got %d values at line %ld\n", read, i+2);
 				die(22);
       }
     }
@@ -153,8 +153,8 @@ void load_weight(params p, weight *w) {
 
   }
 
-	printf0(p, "Using weight function with %ld bins in range %lf, %lf\n", w->bins, w->min, w->max);
-	printf0(p, "Starting weighting with increment %lf, last_max %d\n", w->increment, w->last_max);
+	printf0(*p, "Using weight function with %ld bins in range %lf, %lf\n", w->bins, w->min, w->max);
+	printf0(*p, "Starting weighting with increment %lf, last_max %d\n", w->increment, w->last_max);
 
 	// restart accumulation of muca hits even if existing weight is loaded
 	w->m = 0;
@@ -180,30 +180,30 @@ void load_weight(params p, weight *w) {
 * corresponds to the interval ending in w.max.
 * For simplicity, we use constant weight in the last bin.
 */
-double get_weight(weight w, double val) {
+double get_weight(weight const* w, double val) {
 
-	if (val > w.max) {
-		return w.outsideW_max;
-	} else if (val < w.min) {
-		return w.outsideW_min;
+	if (val > w->max) {
+		return w->outsideW_max;
+	} else if (val < w->min) {
+		return w->outsideW_min;
 	}
 
 	// which bin is val in?
 	long bin = whichbin(w, val);
 
 	// linearize the weight function in this bin
-	double val_prev = w.pos[bin];
+	double val_prev = w->pos[bin];
 	double nextW, val_next;
-	if (bin >= w.bins - 1) {
+	if (bin >= w->bins - 1) {
 		// last bin, use constant weight
-		nextW = w.W[w.bins - 1];
-		val_next = w.max;
+		nextW = w->W[w->bins - 1];
+		val_next = w->max;
 	} else {
-		nextW = w.W[bin+1];
-		val_next = w.pos[bin+1];
+		nextW = w->W[bin+1];
+		val_next = w->pos[bin+1];
 	}
 
-	return w.W[bin] + (val - val_prev) * (nextW - w.W[bin]) / (val_next - val_prev);
+	return w->W[bin] + (val - val_prev) * (nextW - w->W[bin]) / (val_next - val_prev);
 }
 
 
@@ -230,7 +230,7 @@ void update_weight(params const* p, weight* w) {
 		w->outsideW_min = w->W[0];
 	}
 
-	check_tunnel(*p, w);
+	check_tunnel(p, w);
 
 	for (long i=0; i<w->bins; i++) {
 		w->hits[i] = 0;
@@ -244,7 +244,7 @@ void update_weight(params const* p, weight* w) {
 * through the barrier and decrease w->increment.
 * Note that this count is not reset when weight is updated.
 */
-void check_tunnel(params p, weight *w) {
+void check_tunnel(params const* p, weight* w) {
 
 	// First and last how many bins count as the endpoint?
 	//long tunnel_threshold = (long) (w->bins / 100.0 * 2.0);
@@ -261,7 +261,7 @@ void check_tunnel(params p, weight *w) {
 
 	if (tunnel > 0) {
 		w->increment /= 1.5;
-		printf0(p, "\nReducing weight update factor! Now %lf \n", w->increment);
+		printf0(*p, "\nReducing weight update factor! Now %lf \n", w->increment);
 	}
 
 }
@@ -281,8 +281,8 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 
 		// TODO optimize: get bin index here?
 
-		W_new = get_weight(*w, newval);
-		W_old = get_weight(*w, oldval);
+		W_new = get_weight(w, newval);
+		W_old = get_weight(w, oldval);
 
 		double diff = W_new - W_old;
 
@@ -302,14 +302,14 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 		newval = oldval;
 
 	if (!w->readonly && newval <= w->max && newval >= w->min) {
-		long bin = whichbin(*w, newval);
+		long bin = whichbin(w, newval);
 
 		w->hits[bin]++;
 		w->m++;
 		if (w->m >= w->update_interval) {
 			// update weight function, save it and start over
 			update_weight(p, w);
-			save_weight(*p, *w);
+			save_weight(p, w);
 			w->m = 0;
 		}
 	}
@@ -322,26 +322,26 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 * If out of range, we return the closest bin index. The calling
 * functions should ensure that this does not happen, however.
 */
-long whichbin(weight w, double val) {
-	if (val < w.min) {
+long whichbin(weight const* w, double val) {
+	if (val < w->min) {
 		return 0;
-	} else if (val >= w.max) {
-		return w.bins - 1;
+	} else if (val >= w->max) {
+		return w->bins - 1;
 	} else {
 		// do a quick binary search
 		long bin;
-		long bmin = 0; long bmax = w.bins-1;
+		long bmin = 0; long bmax = w->bins-1;
 		double current, next;
 
 		while (bmin <= bmax) {
 			bin = bmin + (bmax - bmin) / 2;
-			current = w.pos[bin];
+			current = w->pos[bin];
 
-			if (bin == w.bins-1) {
+			if (bin == w->bins-1) {
 				// last bin
-				next = w.max;
+				next = w->max;
 			} else {
-				next = w.pos[bin+1];
+				next = w->pos[bin+1];
 			}
 
 			if ((val < next && val > current) || (fabs(val - current) < 1e-10) ) {
@@ -354,11 +354,10 @@ long whichbin(weight w, double val) {
 				bmax = bin - 1;
 			}
 		}
+
 		// end binary search, if we got here then something went wrong!
 		printf("Error in multicanonical.c: failed to find bin!\n");
-
-
-		return w.bins - 1;
+		return w->bins - 1;
 	}
 }
 
@@ -367,7 +366,7 @@ long whichbin(weight w, double val) {
 * Only the contribution from sites with parity = par is recalculated
 * while the other parity contribution is read from w.param_value
 */
-double calc_orderparam(params const* p, fields* f, weight* w, char par) {
+double calc_orderparam(params const* p, fields const* f, weight* w, char par) {
 	double tot = 0.0;
 	long offset, max;
 	if (par == EVEN) {
@@ -480,16 +479,16 @@ void reset_muca_fields(params const* p, fields* f, weight* w, char par) {
 
 
 // Allocate field backup arrays
-void alloc_backup_arrays(params p, fields* f, weight w) {
-	switch(w.orderparam) {
+void alloc_backup_arrays(params const* p, fields* f, weight const* w) {
+	switch(w->orderparam) {
 		case SIGMASQ :
-			f->backup_triplet = make_field(p.sites, SU2TRIP);
+			f->backup_triplet = make_field(p->sites, SU2TRIP);
 			break;
 		case PHI2SIGMA2 :
     case PHI2MINUSSIGMA2 :
-			f->backup_triplet = make_field(p.sites, SU2TRIP);
+			f->backup_triplet = make_field(p->sites, SU2TRIP);
 		case PHISQ :
-			f->backup_doublet = make_field(p.sites, SU2DB);
+			f->backup_doublet = make_field(p->sites, SU2DB);
 			break;
 	}
 }

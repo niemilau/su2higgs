@@ -104,8 +104,8 @@ int main(int argc, char *argv[]) {
 
 	if (p.multicanonical) {
 		// initialize multicanonical. Needs to come after field initializations
-		load_weight(p, &w);
-		alloc_backup_arrays(p, &f, w);
+		load_weight(&p, &w);
+		alloc_backup_arrays(&p, &f, &w);
 		calc_orderparam(&p, &f, &w, EVEN);
 		calc_orderparam(&p, &f, &w, ODD);
 		if (!w.readonly) {
@@ -238,7 +238,7 @@ int main(int argc, char *argv[]) {
 	MPI_Barrier(MPI_COMM_WORLD);
 	#endif
 	//printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
-	printf0(p, "Reached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
+	printf0(p, "\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
 	#ifdef MPI
   MPI_Finalize();
 	#endif

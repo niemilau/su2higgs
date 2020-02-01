@@ -321,22 +321,22 @@ void read_updated_parameters(char *filename, params *p);
 
 
 // measure.c
-void measure(fields const* f, params const* p, counters* c, weight* w);
+void measure(fields const* f, params const* p, counters* c, weight const* w);
 double action_local(fields const* f, params const* p, long i);
 void print_labels();
 
 // multicanonical.c
-void load_weight(params p, weight *w);
-void save_weight(params p, weight w);
-double get_weight(weight w, double val);
+void load_weight(params const* p, weight *w);
+void save_weight(params const* p, weight const* w);
+double get_weight(weight const* w, double val);
 void update_weight(params const* p, weight* w);
 int multicanonical_acceptance(params const* p, weight* w, double oldval, double newval);
-long whichbin(weight w, double val);
-double calc_orderparam(params const* p, fields* f, weight* w, char par);
-void check_tunnel(params p, weight *w);
+long whichbin(weight const* w, double val);
+double calc_orderparam(params const* p, fields const* f, weight* w, char par);
+void check_tunnel(params const* p, weight *w);
 void store_muca_fields(params const* p, fields* f, weight* w);
 void reset_muca_fields(params const* p, fields* f, weight* w, char par);
-void alloc_backup_arrays(params p, fields* f, weight w);
+void alloc_backup_arrays(params const* p, fields* f, weight const* w);
 void free_muca_arrays(fields* f, weight *w);
 
 #ifdef TRIPLET
