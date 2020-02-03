@@ -100,7 +100,7 @@ void load_weight(params const* p, weight *w) {
   w->W = malloc(w->bins * sizeof(*(w->W)));
 	w->hits = malloc(w->bins * sizeof(*(w->hits)));
 
-	w->update_interval = 500; // Kari used 500-2000 in MSSM
+	w->update_interval = 100; // Kari used 500-2000 in MSSM
 
   long i;
 
