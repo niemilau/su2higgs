@@ -32,8 +32,8 @@ a=$(echo $params | awk {'print $10'})
 # write these into the config file (assuming it exists)
 cp config config_bu
 
-# record T in config file
-sed -i -e "/### parameters/!b;n;c\## at T = $T" config
+# record T and lattice spacing in config file
+sed -i -e "/### parameters/!b;n;c\## at T = $T, a = $a" config
 
 ## this replaces the line after "gauge coupling" with betasu2 $beta 
 sed -i -e "/gauge couplings/!b;n;c\betasu2 $beta" config
