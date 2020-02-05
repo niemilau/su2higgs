@@ -120,16 +120,22 @@ int main(int argc, char *argv[]) {
 	// how often to force metropolis
 	int metro_interval = 5;
 
-	// if no lattice file was given or if reset=1 in config,
-	// start by thermalizing without multicanonical
+	/* if no lattice file was given or if reset=1 in config,
+	* start by thermalizing without multicanonical,
+	* except if the WALL flag is set, in which case do
+	* multicanonical here too to prevent initial wall from collapsing. */
 	long iter = 1;
 	int is_muca = 0;
 	if (p.reset) {
 
+
 		if (p.multicanonical) {
 			is_muca = 1;
-			p.multicanonical = 0;
+			#ifndef WALL
+				p.multicanonical = 0;
+			#endif
 		}
+
 
 		printf0(p, "Thermalizing %ld iterations\n", p.n_thermalize);
 		start_time = clock();

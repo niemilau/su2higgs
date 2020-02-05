@@ -40,7 +40,8 @@ params = genfromtxt(datafile, names=True)
 temps = params['T']
 
 
-## eventually we will linearize the lattice parameters in T; used for latent heat and reweighting. this is done below but check here already that we have enough values
+## eventually we will linearize the lattice parameters in T; used for latent heat and reweighting.
+## this is done below but check here already that we have enough values
 
 T1 = nearest(temps, T-0.5)
 T2 = nearest(temps, T+0.5)
@@ -70,17 +71,16 @@ def getParams(T):
 	else:
 		print('\nNo direct match for the temperature found; interpolating...\n')
 		index = nearest_indexOf(temps, T)
-		p1 = params[index]
+		p1 = params[index-1]
 		p2 = params[index+1]
 
 		inputs = []
 		for i in range(0, len(p1)):
-			k = (p2[i]-p1[i])/(temps[index+1]-temps[index])
-			b = p1[i] - k * temps[index]
+			k = (p2[i]-p1[i])/(temps[index+1]-temps[index-1])
+			b = p1[i] - k * temps[index-1]
 			inputs.append( lin_int(T, b, k) )
 
 		return inputs
-
 
 
 
@@ -139,52 +139,61 @@ print(' a << '+str(xi_min)+'; beta_G >> '+ str(4.0/(xi_min * gsq)) + ' and ' + '
 
 
 
-#### convert to lattice parameters in David's convention
-
+#### convert to lattice parameters
 def convert_lattice(pars):
-	[T0, gsq, gpsq, muphisq, muSigmasq, lam, a2, b4, RGscale] = pars
+    [T0, gsq, gpsq, muphisq, muSigmasq, lam, a2, b4, RGscale] = pars
 
-	a = 4.0/(gsq * beta)
+    a = 4.0/(gsq * beta)
 
-	### lattice mass counterterms. NB! U(1) parts are missing from these
+    ### lattice mass counterterms. NB! U(1) parts are missing from these
 
-	deltamuphi1 = -(1.5*gsq + 6*lam) *float(Sigma)/(4.0*a*math.pi) \
-        - 1.5*a2*float(Sigma)/(4.0*a*math.pi)
+    ## Counterterms for the fundamental Higgs
+    deltamuphi1 = -(1.5*gsq + 6.0*lam) * Sigma/(4.0*a*math.pi) \
+        - 1.5*a2*Sigma/(4.0*a*math.pi)
 
 
-	deltamuphi2 = - 1.0/(16*math.pi**2.0) * ((51.0/16.0 * gsq**2 + 9.0*lam*gsq - \
+    ## 2-loop contribution from SU(2) + fund Higgs
+    deltamuphi2 = - 1.0/(16*math.pi**2.0) * ((51.0/16.0 * gsq**2 + 9.0*lam*gsq - \
         12.0*lam**2)*(math.log(6.0/(a*RGscale)) + zeta) + 9.0*lam*gsq * (0.25 *Sigma**2 - \
         delta) + 0.75*gsq**2 * (15.0/16.0 * Sigma**2 + math.pi/3.0 * Sigma + 1.25 - \
-        7.0/2.0 *delta - 4.0*rho + 4.0*k1 - k2 - k3 - 3.0*k4) ) - 1.0/(16.0*math.pi**2) * \
-        ( (-0.75*gsq**2 + 6.0*gsq*a2 - 1.5*a2**2) * (math.log(6.0/(a*RGscale)) + zeta) \
-        + 6.0*gsq*a2 * (0.25*Sigma**2 - delta) - 3.0*gsq**2 * rho )
+        7.0/2.0 *delta - 4.0*rho + 4.0*k1 - k2 - k3 - 3.0*k4) )
+
+    ## 2-loop contribution from the adjoint field
+    deltamuphi2_adj = - 1.0/(16.0*math.pi**2) * \
+    ( (-0.75*gsq**2 + 6.0*gsq*a2 - 1.5*a2**2) * (math.log(6.0/(a*RGscale)) + zeta) \
+    + 6.0*gsq*a2 * (0.25*Sigma**2 - delta) - 3.0*gsq**2 * rho )
 
 
-	mphisqLat = a**2 * (muphisq + deltamuphi1 + deltamuphi2)
+    mphisqLat = a**2 * (muphisq + deltamuphi1 + deltamuphi2 + deltamuphi2_adj)
 
+    ## Counterterms for the adjoint Higgs
 
-	deltamuSigma1 = -(4.0*gsq + 5.0*b4 + 2.0*a2)*float(Sigma)/(4.0*math.pi*a)
+    deltamuSigma1 = -(4.0*gsq + 5.0*b4 + 2.0*a2)*Sigma/(4.0*math.pi*a)
 
-	deltamuSigma2 = -1.0/(16.0*math.pi**2) * ( (20.0*b4*gsq - 10.0*b4**2) * \
+    ## 2-loop contribution from SU(2) + adjoint Higgs
+    deltamuSigma2 = -1.0/(16.0*math.pi**2) * ( (20.0*b4*gsq - 10.0*b4**2) * \
         (math.log(6.0/(a*RGscale)) + zeta) + 20.0*b4*gsq * (0.25*Sigma**2 - delta) \
         + 2.0*gsq**2 *(1.25*Sigma**2 + math.pi/3.0 * Sigma - 6.0*delta - 6.0*rho + 4.0*k1 \
-        - k2 - k3 - 3.0*k4) ) - 1.0/(16.0*math.pi**2) * ( (-gsq**2 + 3.0*a2*gsq - 2.0*a2**2) \
-         * (math.log(6.0/(a*RGscale)) + zeta) + 3.0*a2*gsq * (0.25*Sigma**2 - delta) \
-         - 4.0*gsq**2*rho )
+        - k2 - k3 - 3.0*k4) )
+
+    ## 2-loop contribution from the fundamental Higgs
+    deltamuSigma2_fund = - 1.0/(16.0*math.pi**2) * ( (-gsq**2 + 3.0*a2*gsq - 2.0*a2**2) \
+     * (math.log(6.0/(a*RGscale)) + zeta) + 3.0*a2*gsq * (0.25*Sigma**2 - delta) \
+     - 4.0*gsq**2*rho )
 
 
-	mSigmasqLat = a**2 * (muSigmasq + deltamuSigma1 + deltamuSigma2)
+    mSigmasqLat = a**2 * (muSigmasq + deltamuSigma1 + deltamuSigma2 + deltamuSigma2_fund)
 
 
-	## couplings: these are trivial
+    ## couplings: these are trivial
 
-	gLat = math.sqrt(a * gsq)
-	gpLat = math.sqrt(a * gpsq)
-	lamLat = a * lam
-	a2Lat = a * a2
-	b4Lat = a * b4
+    gLat = math.sqrt(a * gsq)
+    gpLat = math.sqrt(a * gpsq)
+    lamLat = a * lam
+    a2Lat = a * a2
+    b4Lat = a * b4
 
-	return [gLat, gpLat, mphisqLat, mSigmasqLat, lamLat, a2Lat, b4Lat, a]
+    return [gLat, gpLat, mphisqLat, mSigmasqLat, lamLat, a2Lat, b4Lat, a]
 
 
 
