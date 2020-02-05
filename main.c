@@ -115,11 +115,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// metro = 1 if we force metropolis sweep, 0 otherwise
-	char metro = 0;
-	// how often to force metropolis
-	int metro_interval = 5;
-
 	/* if no lattice file was given or if reset=1 in config,
 	* start by thermalizing without multicanonical,
 	* except if the WALL flag is set, in which case do
@@ -127,7 +122,6 @@ int main(int argc, char *argv[]) {
 	long iter = 1;
 	int is_muca = 0;
 	if (p.reset) {
-
 
 		if (p.multicanonical) {
 			is_muca = 1;
@@ -141,14 +135,8 @@ int main(int argc, char *argv[]) {
 		start_time = clock();
 		while (iter <= p.n_thermalize) {
 
-			if (iter % metro_interval == 0) {
-				metro = 1;
-			} else {
-				metro = 0;
-			}
-
 			barrier();
-			update_lattice(&f, &p, &comlist, &c, &w, metro);
+			update_lattice(&f, &p, &comlist, &c, &w);
 			iter++;
 		}
 
@@ -156,8 +144,10 @@ int main(int argc, char *argv[]) {
 		timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 		printf0(p, "Thermalization done, took %lf seconds.\n", timing);
 
-		// now reset iteration counter and turn muca back on, if necessary
+		// now reset iteration and time counters and turn muca back on, if necessary
 		iter = 1;
+		init_counters(&c);
+		
 		if (is_muca) {
 			p.multicanonical = 1;
 		}
@@ -182,18 +172,12 @@ int main(int argc, char *argv[]) {
 			measure(&f, &p, &c, &w);
 		}
 
-		if (iter % metro_interval == 0) {
-			metro = 1;
-		} else {
-			metro = 0;
-		}
-
 		// keep nodes in sync. without this things can go wrong if some node is much
 		// faster than others, so that it sends new fields to others before they managed
 		// to receive the earlier ones. Todo: optimize this
 		barrier();
-		// update all fields once. multicanonical checks are contained in sweep routines
-		update_lattice(&f, &p, &comlist, &c, &w, metro);
+		// update all fields. multicanonical checks are contained in sweep routines
+		update_lattice(&f, &p, &comlist, &c, &w);
 
 		if ((iter % p.checkpoint == 0)) {
 			// Checkpoint time; print acceptance and save fields to latticefile

@@ -64,6 +64,7 @@ void get_parameters(char *filename, params *p) {
 	int set_sigma0 = 0;
 
   int set_update_links = 0;
+  int set_scalar_sweeps = 0;
   int set_update_doublet = 0;
 	int set_update_triplet = 0;
 
@@ -222,6 +223,10 @@ void get_parameters(char *filename, params *p) {
       p->update_links = strtol(value,NULL,10);
       set_update_links = 1;
     }
+    else if(!strcasecmp(key,"scalar_sweeps")) {
+      p->scalar_sweeps = strtol(value,NULL,10);
+      set_scalar_sweeps = 1;
+    }
 
     #ifdef U1
       else if(!strcasecmp(key,"algorithm_u1link")) {
@@ -366,6 +371,7 @@ void get_parameters(char *filename, params *p) {
   check_set(set_su2alg, "algorithm_su2link");
 	check_set(set_betasu2, "betasu2");
   check_set(set_update_links, "update_links");
+  check_set(set_scalar_sweeps, "scalar_sweeps");
   #ifdef U1
   check_set(set_betau1, "betau1");
   check_set(set_u1alg, "algorithm_u1link");
@@ -556,6 +562,8 @@ void print_parameters(params p) {
 
   printf("iterations %lu, measurement interval %lu, checkpoint interval %lu\n",
 		p.iterations, p.interval, p.checkpoint);
+  printf("Will perform %d gauge sweeps, %d scalar sweeps per iteration\n",
+    p.update_links, p.scalar_sweeps);
 
 	printf("-------------------------- Lattice parameters --------------------------\n");
 	printf("SU(2) beta %.1lf\n", p.betasu2);
@@ -564,11 +572,11 @@ void print_parameters(params p) {
   #endif
 	#ifdef HIGGS
 	printf("msq (Higgs) %lf, lambda (Higgs) %lf, ", p.msq_phi, p.lambda_phi);
-	printf("initial phi0 %.2lf\n",p.phi0);
+	printf("initial phi0 %.2lf, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 	#endif
 	#ifdef TRIPLET
 	printf("msq (triplet) %lf, b4 %lf, a2 %lf, ", p.msq_triplet, p.b4, p.a2);
-	printf("initial sigma0 %.2lf\n",p.sigma0);
+	printf("initial sigma0 %.2lf, update_su2triplet %d\n",p.sigma0, p.update_su2triplet);
 	#endif
 	printf("\n");
   //fprintf(stderr, "msq %lf, lambda %lf, g %lf, msigmasq %lf, a2 %lf, b4 %lf\n",

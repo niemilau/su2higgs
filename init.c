@@ -102,6 +102,8 @@ void init_counters(counters* c) {
 	c->total_time = 0.0;
 	c->iter = 1;
 
+	c->higgs_sweeps = 0;
+	c->triplet_sweeps = 0;
 	c->accepted_su2link = 0;
 	c->accepted_u1link = 0;
 	c->accepted_doublet = 0;

@@ -23,13 +23,19 @@ void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char pa
 		offset = p->evensites; max = p->sites;
 	}
 
-	for (long i=offset; i<max; i++) {
-		if (p->algorithm_su2link == HEATBATH) {
+	// check algorithm before looping: this should provide some optimization.
+	if (p->algorithm_su2link == HEATBATH) {
+
+		for (long i=offset; i<max; i++) {
 			c->accepted_su2link += heatbath_su2link(f, p, i, dir);
-		} else if (p->algorithm_su2link == METROPOLIS) {
-			c->accepted_su2link += metro_su2link(f, p, i, dir);
+			c->total_su2link++;
 		}
-		c->total_su2link++;
+	} else if (p->algorithm_su2link == METROPOLIS) {
+
+		for (long i=offset; i<max; i++) {
+			c->accepted_su2link += metro_su2link(f, p, i, dir);
+			c->total_su2link++;
+		}
 	}
 
 }
@@ -83,12 +89,15 @@ int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weigh
 	}
 
 	// then the update sweep
-	for (long i=offset; i<max; i++) {
-		if (p->algorithm_su2doublet == OVERRELAX && (metro != 1)) {
+	if (p->algorithm_su2doublet == OVERRELAX && (metro == 0)) {
+		for (long i=offset; i<max; i++) {
+
 			c->acc_overrelax_doublet += overrelax_doublet(f, p, i);
 			c->total_overrelax_doublet++;
+		}
 
-		} else if (p->algorithm_su2doublet == METROPOLIS || (metro == 1)) {
+	} else if (p->algorithm_su2doublet == METROPOLIS || (metro != 0)) {
+		for (long i=offset; i<max; i++) {
 			c->accepted_doublet += metro_doublet(f, p, i);
 			c->total_doublet++;
 		}
@@ -140,11 +149,13 @@ int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weigh
 	}
 
 	// then the update sweep
-	for (long i=offset; i<max; i++) {
-		if (p->algorithm_su2triplet == OVERRELAX && (metro != 1)) {
+	if (p->algorithm_su2triplet == OVERRELAX && (metro == 0)) {
+		for (long i=offset; i<max; i++) {
 			c->acc_overrelax_triplet += overrelax_triplet(f, p, i);
 			c->total_overrelax_triplet++;
-		} else if (p->algorithm_su2triplet == METROPOLIS || (metro == 1)) {
+		}
+	} else if (p->algorithm_su2triplet == METROPOLIS || (metro != 0)) {
+		for (long i=offset; i<max; i++) {
 			c->accepted_triplet += metro_triplet(f, p, i);
 			c->total_triplet++;
 		}
@@ -176,7 +187,7 @@ int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weigh
 * then dir2 etc. This is necessary because the links in "positive" directions are not independent
 * because of the Wilson staple, which for U_1(x) depends on U_2(x-i+j), for example.
 */
-void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w, char metro) {
+void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w) {
 
 	int accept;
 
@@ -203,25 +214,65 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 	}
 	#endif
 
-	// parity loop for scalars. EVEN = 0, ODD = 1; defined in su2.h
-	for (char par=0; par<=1; par++) {
+
+	/* scalar updates. We update all scalar fields p->scalar_sweeps times
+	* per iteration. Ordering is such that each field gets a full sweep before
+	* moving on to the next field. Additionally, each individual field
+	* can be sweeped over k times per "scalar sweep", where k is specified in
+	* config, e.g. p->update_su2doublet = 2 will update Higgs 2 times for each
+	* scalar sweep. The point here is that p->scalar_sweeps controls how the scalar
+	* evolve on an equal footing, while the extra sweeps for different fields are
+	* reserved for special use (such as keeping the Higgs constant).
+	* parity loop uses EVEN = 0, ODD = 1; defined in su2.h */
+
+	// how many sweeps before forcing metropolis, for ergodicity
+	int metro_interval = 5;
+	int metro; // no effect if p.algorithm is set to METROPOLIS
+
+
+	for (int s=0; s<p->scalar_sweeps; s++) {
+
 		#ifdef HIGGS
 		for (int k=0; k<p->update_su2doublet; k++) {
-			accept = checkerboard_sweep_su2doublet(f, p, c, w, par, metro);
 
-			// if the sweep was rejected, no need to sync halos
-			if (accept) {
-				c->comms_time += update_halo(comlist, par, f->su2doublet, SU2DB);
+			if (c->higgs_sweeps >= metro_interval-1) {
+				metro = 1;
+				c->higgs_sweeps = 0;
+			} else {
+				metro = 0;
+				c->higgs_sweeps++;
+			}
+
+			for (char par=0; par<=1; par++) {
+				accept = checkerboard_sweep_su2doublet(f, p, c, w, par, metro);
+
+				// if the sweep was rejected, no need to sync halos
+				if (accept) {
+					c->comms_time += update_halo(comlist, par, f->su2doublet, SU2DB);
+				}
+
 			}
 		}
 		#endif
 
 		#ifdef TRIPLET
 		for (int k=0; k<p->update_su2triplet; k++) {
-			accept = checkerboard_sweep_su2triplet(f, p, c, w, par, metro);
-			// if the sweep was rejected, no need to sync halos
-			if (accept) {
-				c->comms_time += update_halo(comlist, par, f->su2triplet, SU2TRIP);
+
+			if (c->triplet_sweeps >= metro_interval-1) {
+				metro = 1;
+				c->triplet_sweeps = 0;
+			} else {
+				metro = 0;
+				c->triplet_sweeps++;
+			}
+
+			for (char par=0; par<=1; par++) {
+				accept = checkerboard_sweep_su2triplet(f, p, c, w, par, metro);
+				// if the sweep was rejected, no need to sync halos
+				if (accept) {
+					c->comms_time += update_halo(comlist, par, f->su2triplet, SU2TRIP);
+				}
+
 			}
 		}
 		#endif

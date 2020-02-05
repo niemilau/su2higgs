@@ -107,6 +107,8 @@ typedef struct {
 
 	// How many times to update a field per sweep
 	short update_links;
+	short scalar_sweeps; // update all scalars n times per iteration
+	// additional sweeps on top of scalar_sweeps
 	short update_su2doublet;
 	short update_su2triplet;
 
@@ -134,6 +136,9 @@ typedef struct {
 	double comms_time;
 	double total_time;
 	long iter;
+
+	// keep track of when a metropolis sweep should be forced
+	int higgs_sweeps, triplet_sweeps;
 
 	// count metropolis updates
 	long total_su2link, accepted_su2link;
@@ -290,7 +295,7 @@ int overrelax_doublet(fields* f, params const* p, long i);
 int overrelax_triplet(fields* f, params const* p, long i);
 
 // update.c
-void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w, char metro);
+void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w);
 void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char parity, int dir);
 void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, char parity, int dir);
 int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, char parity, char metro);
