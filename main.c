@@ -116,18 +116,17 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* if no lattice file was given or if reset=1 in config,
-	* start by thermalizing without multicanonical,
-	* except if the WALL flag is set, in which case do
-	* multicanonical here too to prevent initial wall from collapsing. */
+	* start by thermalizing without updating multicanonical weight
+	*/
 	long iter = 1;
-	int is_muca = 0;
+	int modify_weight = 0;
 	if (p.reset) {
 
 		if (p.multicanonical) {
-			is_muca = 1;
-			#ifndef WALL
-				p.multicanonical = 0;
-			#endif
+			if (!w.readonly) {
+				modify_weight = 1;
+				w.readonly = 1;
+			}
 		}
 
 
@@ -144,12 +143,11 @@ int main(int argc, char *argv[]) {
 		timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 		printf0(p, "Thermalization done, took %lf seconds.\n", timing);
 
-		// now reset iteration and time counters and turn muca back on, if necessary
+		// now reset iteration and time counters and turn weight updating back on, if necessary
 		iter = 1;
 		init_counters(&c);
-		
-		if (is_muca) {
-			p.multicanonical = 1;
+		if (modify_weight) {
+			w.readonly = 0;
 		}
 
 		printf0(p, "\nStarting new simulation!\n");
