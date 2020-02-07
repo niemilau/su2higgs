@@ -555,10 +555,11 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 
 void print_parameters(params p) {
 	printf("Volume ");
-	for (int i = 0; i<p.dim; i++) {
-		printf("%d x ", p.L[i]);
+	for (int dir = 0; dir<p.dim; dir++) {
+    if (dir>0) printf(" x ");
+		printf("%d", p.L[dir]);
 	}
-	printf( "\b\b\b, total %lu\n",p.vol);
+	printf( ", total %lu\n",p.vol);
 
   printf("iterations %lu, measurement interval %lu, checkpoint interval %lu\n",
 		p.iterations, p.interval, p.checkpoint);

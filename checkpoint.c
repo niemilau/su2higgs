@@ -54,10 +54,10 @@ void print_acceptance(params p, counters c) {
 		}
 	#endif
 	if (p.multicanonical) {
-		printf("multicanonical %.2lf%%, ",
+		printf("multicanonical %.2lf%%",
 				100.0*c.accepted_muca/c.total_muca);
 	}
-	printf("\b\b \b\n");
+	printf("\n");
 
 }
 
