@@ -23,13 +23,19 @@ void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char pa
 		offset = p->evensites; max = p->sites;
 	}
 
-	for (long i=offset; i<max; i++) {
-		if (p->algorithm_su2link == HEATBATH) {
+	// check algorithm before looping: this should provide some optimization.
+	if (p->algorithm_su2link == HEATBATH) {
+
+		for (long i=offset; i<max; i++) {
 			c->accepted_su2link += heatbath_su2link(f, p, i, dir);
-		} else if (p->algorithm_su2link == METROPOLIS) {
-			c->accepted_su2link += metro_su2link(f, p, i, dir);
+			c->total_su2link++;
 		}
-		c->total_su2link++;
+	} else if (p->algorithm_su2link == METROPOLIS) {
+
+		for (long i=offset; i<max; i++) {
+			c->accepted_su2link += metro_su2link(f, p, i, dir);
+			c->total_su2link++;
+		}
 	}
 
 }
@@ -83,12 +89,15 @@ int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weigh
 	}
 
 	// then the update sweep
-	for (long i=offset; i<max; i++) {
-		if (p->algorithm_su2doublet == OVERRELAX && (metro == 0)) {
+	if (p->algorithm_su2doublet == OVERRELAX && (metro == 0)) {
+		for (long i=offset; i<max; i++) {
+
 			c->acc_overrelax_doublet += overrelax_doublet(f, p, i);
 			c->total_overrelax_doublet++;
+		}
 
-		} else if (p->algorithm_su2doublet == METROPOLIS || (metro != 0)) {
+	} else if (p->algorithm_su2doublet == METROPOLIS || (metro != 0)) {
+		for (long i=offset; i<max; i++) {
 			c->accepted_doublet += metro_doublet(f, p, i);
 			c->total_doublet++;
 		}
@@ -140,11 +149,13 @@ int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weigh
 	}
 
 	// then the update sweep
-	for (long i=offset; i<max; i++) {
-		if (p->algorithm_su2triplet == OVERRELAX && (metro == 0)) {
+	if (p->algorithm_su2triplet == OVERRELAX && (metro == 0)) {
+		for (long i=offset; i<max; i++) {
 			c->acc_overrelax_triplet += overrelax_triplet(f, p, i);
 			c->total_overrelax_triplet++;
-		} else if (p->algorithm_su2triplet == METROPOLIS || (metro != 0)) {
+		}
+	} else if (p->algorithm_su2triplet == METROPOLIS || (metro != 0)) {
+		for (long i=offset; i<max; i++) {
 			c->accepted_triplet += metro_triplet(f, p, i);
 			c->total_triplet++;
 		}

@@ -423,6 +423,7 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		w->max = 0;
 		w->readonly = 1;
 		w->increment = 0;
+    w->reduction_factor = 1;
 		strcpy(w->weightfile,"weight");
 	} else {
 		// multicanonical run, read from config
@@ -434,6 +435,7 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		int set_weightfile = 0;
 		int set_absolute_bounds = 0;
     int set_orderparam = 0;
+    int set_reduction_factor = 0;
 
     char key[100];
     char value[100];
@@ -487,6 +489,9 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 			} else if(!strcasecmp(key,"increment")) {
 				w->increment = strtod(value,NULL);
 				set_increment = 1;
+			} else if(!strcasecmp(key,"reduction_factor")) {
+				w->reduction_factor = strtod(value,NULL);
+				set_reduction_factor = 1;
 			} else if(!strcasecmp(key,"absolute_bounds")) {
 				w->absolute_bounds = strtol(value,NULL, 10);
 				set_absolute_bounds = 1;
@@ -542,6 +547,8 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		check_set(set_weightfile, "weightfile");
 		check_set(set_absolute_bounds, "absolute_bounds");
     check_set(set_orderparam, "orderparam");
+    check_set(set_increment, "increment");
+    check_set(set_reduction_factor, "reduction_factor");
 
 		fclose(config);
 

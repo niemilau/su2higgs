@@ -260,7 +260,7 @@ void check_tunnel(params const* p, weight* w) {
 	}
 
 	if (tunnel > 0) {
-		w->increment /= 1.5;
+		w->increment *= w->reduction_factor;
 		printf0(*p, "\nReducing weight update factor! Now %lf \n", w->increment);
 	}
 

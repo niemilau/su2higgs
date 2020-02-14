@@ -110,8 +110,9 @@ int main(int argc, char *argv[]) {
 		calc_orderparam(&p, &f, &w, ODD);
 		if (!w.readonly) {
 			printf0(p, "readonly not 0, so multicanonical weight WILL be modified!\n");
+			printf0(p, "Increment reduction factor: %lf\n", w.reduction_factor);
 		} else {
-			printf0(p, "Read-only run, will not modify weight. \n");
+			printf0(p, "Read-only run, will not modify weight. \n\n");
 		}
 	}
 

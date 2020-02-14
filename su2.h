@@ -167,6 +167,7 @@ typedef struct {
 	double* pos; // weight "position", i.e. values of the order param in the given range
 	double* W; // value of the weight function at each position
 	double increment; // how much the weight is increased after visiting a bin
+	double reduction_factor; // after probing the full order param range, w.increment is multiplied by this number
 	double outsideW_min, outsideW_max; // weight values outside binning range
 
 	int* hits; // keep track of which bins we have visited
