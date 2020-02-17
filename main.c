@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 			printf0(p, "readonly not 0, so multicanonical weight WILL be modified!\n");
 			printf0(p, "Increment reduction factor: %lf\n", w.reduction_factor);
 		} else {
-			printf0(p, "Read-only run, will not modify weight. \n\n");
+			printf0(p, "Read-only run, will not modify weight. \n");
 		}
 	}
 
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
 		}
 
 
-		printf0(p, "Thermalizing %ld iterations\n", p.n_thermalize);
+		printf0(p, "\nThermalizing %ld iterations\n", p.n_thermalize);
 		start_time = clock();
 		while (iter <= p.n_thermalize) {
 
