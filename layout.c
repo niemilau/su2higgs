@@ -293,7 +293,7 @@ void sitemap(params *p, long** xphys, long* newindex) {
 
 	// loop over sites in my node, plus all halos.
 	// so the loop is over a hypercube of side lengths sliceL[dir]+2
-	uint* haloL = malloc( p->dim * sizeof(haloL));
+	int* haloL = malloc( p->dim * sizeof(haloL));
 	for (dir=0; dir<p->dim; dir++) {
 		haloL[dir] = p->sliceL[dir] + 2;
 	}
@@ -415,7 +415,7 @@ void calculate_neighbors(params *p, long** xphys, long* newindex) {
 	long* x = malloc(p->dim * sizeof(*x)); // (x,y,z,...) coords on the slice
 
 	// haloed node
-	uint* haloL = malloc(p->dim * sizeof(haloL));
+	int* haloL = malloc(p->dim * sizeof(haloL));
 	for (dir=0; dir<p->dim; dir++) {
 		haloL[dir] = p->sliceL[dir] + 2;
 	}
@@ -1001,7 +1001,7 @@ void remap_lattice_arrays(params* p, long** xphys, long* newindex) {
 ************************************************************************/
 
 // Calculate product L[0]*L[1]*...*L[max-1]. In practice L is the lattice or slice length.
-inline long Lprod(uint* L, int max) {
+inline long Lprod(int* L, int max) {
 	long res = 1;
 	for (int i=0; i<max; i++) {
 		res *= L[i];
@@ -1015,7 +1015,7 @@ inline long Lprod(uint* L, int max) {
 * Can be used for the full lattice, or a single slice!
 * see Mathematica notebook coordinates.nb for analytical relations
 */
-void indexToCoords(ushort dim, uint* L, long i, long* x) {
+void indexToCoords(ushort dim, int* L, long i, long* x) {
 
 	x[0] = i % L[0];
 	// we want the floor() of integer division here. This is automatic in C, but I'm being explicit here.
@@ -1028,14 +1028,14 @@ void indexToCoords(ushort dim, uint* L, long i, long* x) {
 				a += x[k] * Lprod(L, k);
   		}
 			// a is at most i here so can't get a negative x.
-		x[dir] = (uint)floor((i - a) / Lprod(L, dir));
+		x[dir] = (int)floor((i - a) / Lprod(L, dir));
 	}
 
 }
 
 
 // Same as indexToCoords(), but convert from the (x, y, z, ...) to site index.
-long coordsToIndex(ushort dim, uint* L, long* x) {
+long coordsToIndex(ushort dim, int* L, long* x) {
 
 		long res = 0;
 		for (int dir=0; dir<dim; dir++) {
