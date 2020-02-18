@@ -1015,7 +1015,7 @@ inline long Lprod(int* L, int max) {
 * Can be used for the full lattice, or a single slice!
 * see Mathematica notebook coordinates.nb for analytical relations
 */
-void indexToCoords(ushort dim, int* L, long i, long* x) {
+void indexToCoords(short dim, int* L, long i, long* x) {
 
 	x[0] = i % L[0];
 	// we want the floor() of integer division here. This is automatic in C, but I'm being explicit here.
@@ -1035,7 +1035,7 @@ void indexToCoords(ushort dim, int* L, long i, long* x) {
 
 
 // Same as indexToCoords(), but convert from the (x, y, z, ...) to site index.
-long coordsToIndex(ushort dim, int* L, long* x) {
+long coordsToIndex(short dim, int* L, long* x) {
 
 		long res = 0;
 		for (int dir=0; dir<dim; dir++) {
