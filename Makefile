@@ -10,7 +10,7 @@ CC := mpicc -g -O3 -march=native
  
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET #-D U1
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET -D WALL
-CFLAGS := -D MPI -D HIGGS -D TRIPLET
+CFLAGS := -D MPI -D HIGGS -D TRIPLET -D WALL
 
 LIBS := -lm
 

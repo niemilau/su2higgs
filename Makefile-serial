@@ -2,16 +2,18 @@
 
 #CC := gcc -g -O3 -D HIGGS -D TRIPLET
 
-CC := gcc -g -O3 -D HIGGS -D U1 -D TRIPLET
+CC := gcc -g -O3 -D HIGGS -D TRIPLET
 
 CFLAGS := 
 
 LIBS := -lm
 
-OBJECTS := main.o layout.o comms.o alloc.o init.o parameters.o su2.o measure.o \
-	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o
+OBJECTS := main.o layout.o comms.o alloc.o init.o parameters.o su2u1.o measure.o \
+	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o magfield.o
 
-BINARY := build/su2
+OBJECTS_WALL := wallprofile.o
+
+BINARY := build/su2_serial
 
 FILES := $(OBJECTS) $(BINARY)
 
@@ -20,5 +22,9 @@ all: su2
 su2: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $(BINARY)
 
+su2wall: $(OBJECTS) $(OBJECTS_WALL)
+	$(CC) $(CFLAGS) $(OBJECTS) $(OBJECTS_WALL) $(LIBS) -o build/su2wall_serial
+
 clean:
-	rm -f $(FILES) *\~ *\#
+	rm *.o
+	#rm -f $(FILES) *\~ *\#
