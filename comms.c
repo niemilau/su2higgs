@@ -800,7 +800,12 @@ void bcast_double(double *res) {
   MPI_Bcast(res, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 }
 
-// Barrier MPI_COMM_WORLD
+// Broadcast an array of integers
+void bcast_int_array(int *arr, int size) {
+  MPI_Bcast(arr, size, MPI_INTEGER, 0, MPI_COMM_WORLD);
+}
+
+// MPI Barrier
 void barrier() {
 	MPI_Barrier(MPI_COMM_WORLD);
 }
@@ -831,6 +836,10 @@ void bcast_int(int *res) {
 
 void bcast_long(long *res) {
 	return;
+}
+
+void bcast_int_array(int *arr, int size) {
+  return;
 }
 
 #endif

@@ -44,6 +44,8 @@ int main(int argc, char *argv[]) {
 	// set RNG seed: different for each node!
 	long seed = (long) (time(NULL) * (p.rank + 1.0));
 	srand48(seed);
+	srand(seed+1); // seed also rand(), used when shuffling arrays
+
 
 	if (!p.rank) {
 		printf("Seed in root node: %ld\n", seed);
@@ -115,6 +117,12 @@ int main(int argc, char *argv[]) {
 			printf0(p, "Read-only run, will not modify weight. \n");
 		}
 	}
+	#ifdef HB_TRAJECTORY
+	else {
+		 printf0(p, "\nTurn multicanonical on for realtime trajectories! Exiting...\n");
+		 die(-44);
+	}
+	#endif
 
 	/* if no lattice file was given or if reset=1 in config,
 	* start by thermalizing without updating multicanonical weight

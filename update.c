@@ -14,7 +14,7 @@
 * Parity of a site is assumed to be stored in params.
 *
 */
-void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char parity, int dir) {
+void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, int parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
 	if (parity == EVEN) {
@@ -36,7 +36,7 @@ void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char pa
 
 /* Same as checkerboard_sweep_su2link(), but for U(1) links instead.
 */
-void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, char parity, int dir) {
+void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, int parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
 	if (parity == EVEN) {
@@ -61,7 +61,7 @@ void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, char par
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 1 if the entire sweep was accepted by multicanonical, 0 otherwise.
 */
-int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, char parity, char metro) {
+int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, int parity, int metro) {
 
 	int accept = 1;
 	double muca_param_old = 0;
@@ -74,7 +74,7 @@ int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weigh
 
 	// multicanonical preparations if the order parameter depends on the doublet
 	int do_muca = 0;
-	if (p->multicanonical) {
+	if (w->do_acceptance) {
 		if (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
 			muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
 			store_muca_fields(p, f, w);
@@ -118,7 +118,7 @@ int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weigh
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 1 if the entire sweep was accepted by multicanonical, 0 otherwise.
 */
-int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weight* w, char parity, char metro) {
+int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weight* w, int parity, int metro) {
 
 	int accept = 1;
 	double muca_param_old = 0;
@@ -131,7 +131,7 @@ int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weigh
 
 	// multicanonical preparations if the order parameter depends on the triplet
 	int do_muca = 0;
-	if (p->multicanonical) {
+	if (w->do_acceptance) {
 		if (w->orderparam == SIGMASQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
 			muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
 			store_muca_fields(p, f, w);
@@ -179,6 +179,28 @@ int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weigh
 void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w) {
 
 	int accept;
+
+	#ifdef HB_REALTIME
+
+		const int NV = 2*p->dim;
+		int par_a[NV], dir_a[NV];
+
+		// randomize in root node and broadcast to others
+		if (!p->rank) {
+			for (int j=0; j<NV; j++) {
+				par_a[j] = (j % 2) ? EVEN : ODD; /* 0 1 (0=EVEN, 1=ODD) */
+				dir_a[j] = j % p->dim; /* 0 1 2 ... dim-1 */
+			}
+
+			shuffle(par_a, NV);
+			shuffle(dir_a, NV);
+		}
+		bcast_int_array(par_a, NV);
+		bcast_int_array(dir_a, NV);
+
+	#endif
+
+
 
 	// EVEN and ODD sweeps for gauge links
 	for (int k=0; k<p->update_links; k++) {
@@ -270,8 +292,7 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 
 
 /* Routine sync_halos()
-* This is to be called before starting the simulation, to ensure that
-* all halo fields are in sync.
+* This syncs all halo fields. Should be called before starting the simulation.
 */
 void sync_halos(fields* f, params const* p, comlist_struct* comlist) {
 
@@ -293,4 +314,15 @@ void sync_halos(fields* f, params const* p, comlist_struct* comlist) {
 		#endif
 
 	}
+}
+
+// Shuffle an array
+void shuffle(int *arr, int len) {
+    int i, temp;
+    for(i = len-1; i > 0; i--) {
+        int j = rand() % (i+1);
+				temp = arr[i];
+				arr[i] = arr[j];
+				arr[j] = temp;
+    }
 }

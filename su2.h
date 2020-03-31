@@ -151,11 +151,18 @@ typedef struct {
 
 // multicanonical weight
 typedef struct {
-	int orderparam;
+	int orderparam; // specify which order parameter to use
+
 	/* current value of the order parameter, separated by parity.
 	* e.g. param_value[0] is the full contribution from EVEN sites
 	* and param_value[1] is the contribution from ODD sites */
 	double param_value[2];
+
+	/* 1 if muca accept/reject is to be performed after update sweeps, 0 otherwise.
+	* This is used by e.g. realtime trajectory routines to temporarily disable weighting.
+	* Will not update weight either if set to 0. Read in update sweep routines.
+	*/
+	int do_acceptance;
 
 	long bins;
 	double min, max;
@@ -172,7 +179,6 @@ typedef struct {
 
  	int last_max; // 1 if system was recently in one of the last bins (keep track of tunneling)
 	char readonly;
-	char absolute_bounds; // if 1, uses infinite weight outside binning range
 	char weightfile[100];
 } weight;
 
@@ -194,6 +200,7 @@ double allreduce(double res);
 void bcast_int(int *res);
 void bcast_long (long *res);
 void bcast_double(double *res);
+void bcast_int_array(int *arr, int size);
 void barrier();
 // gauge links:
 double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
@@ -293,11 +300,12 @@ int overrelax_triplet(fields* f, params const* p, long i);
 
 // update.c
 void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w);
-void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, char parity, int dir);
-void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, char parity, int dir);
-int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, char parity, char metro);
-int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weight* w, char parity, char metro);
+void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, int parity, int dir);
+void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, int parity, int dir);
+int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, int parity, int metro);
+int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weight* w, int parity, int metro);
 void sync_halos(fields* f, params const* p, comlist_struct* comlist);
+void shuffle(int *arr, int len);
 
 // init.c
 void setsu2(fields f, params p);

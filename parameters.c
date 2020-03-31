@@ -433,7 +433,6 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		int set_increment = 0;
 		int set_readonly = 0;
 		int set_weightfile = 0;
-		int set_absolute_bounds = 0;
     int set_orderparam = 0;
     int set_reduction_factor = 0;
 
@@ -492,9 +491,6 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 			} else if(!strcasecmp(key,"reduction_factor")) {
 				w->reduction_factor = strtod(value,NULL);
 				set_reduction_factor = 1;
-			} else if(!strcasecmp(key,"absolute_bounds")) {
-				w->absolute_bounds = strtol(value,NULL, 10);
-				set_absolute_bounds = 1;
 			} else if(!strcasecmp(key,"readonly")) {
 				w->readonly = strtol(value,NULL,10);
 				set_readonly = 1;
@@ -545,7 +541,6 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		check_set(set_max, "max");
 		check_set(set_readonly, "readonly");
 		check_set(set_weightfile, "weightfile");
-		check_set(set_absolute_bounds, "absolute_bounds");
     check_set(set_orderparam, "orderparam");
     check_set(set_increment, "increment");
     check_set(set_reduction_factor, "reduction_factor");

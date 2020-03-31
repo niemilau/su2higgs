@@ -102,6 +102,8 @@ void load_weight(params const* p, weight *w) {
 
 	w->update_interval = 1000; // Kari used 500-2000 in MSSM
 
+	w->do_acceptance = 1;
+
   long i;
 
   if(access(w->weightfile, R_OK) != 0) {
@@ -163,13 +165,8 @@ void load_weight(params const* p, weight *w) {
 	}
 
 	// weight outside the binning range?
-	if (w->absolute_bounds) {
-		w->outsideW_max = 100;
-		w->outsideW_min = 100;
-	} else {
-		w->outsideW_max = w->W[w->bins-1];
-		w->outsideW_min = w->W[0];
-	}
+	w->outsideW_max = w->W[w->bins-1];
+	w->outsideW_min = w->W[0];
 
 }
 
@@ -225,10 +222,8 @@ void update_weight(params const* p, weight* w) {
 		w->W[i] += w->hits[i] * w->increment / w->bins;
 	}
 
-	if (!w->absolute_bounds) {
-		w->outsideW_max = w->W[w->bins - 1];
-		w->outsideW_min = w->W[0];
-	}
+	w->outsideW_max = w->W[w->bins - 1];
+	w->outsideW_min = w->W[0];
 
 	check_tunnel(p, w);
 
@@ -272,6 +267,12 @@ void check_tunnel(params const* p, weight* w) {
 * Return 1 if update was accepted, 0 otherwise.
 */
 int multicanonical_acceptance(params const* p, weight* w, double oldval, double newval) {
+
+	// if we call this function while w->do_acceptance is 0 then something went wrong
+	if (!w->do_acceptance) {
+		printf0(*p, "Should not get here!! in multicanonical.c\n");
+		die(-1000);
+	}
 
 	// acc/rej only in root node
 	int accept;
