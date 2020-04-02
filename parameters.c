@@ -9,7 +9,7 @@
 
 /** Helper routine, checks a parameter is set and if not prints error.
  */
-inline void check_set(int set, char *name) {
+void check_set(int set, char *name) {
   if(!set) {
     fprintf(stderr,
 	    "Not set parameter \"%s\"! Exiting...\n", name);
@@ -67,12 +67,6 @@ void get_parameters(char *filename, params *p) {
   int set_scalar_sweeps = 0;
   int set_update_doublet = 0;
 	int set_update_triplet = 0;
-
-  #ifdef NUCLEATION
-  int set_traj_min = 0;
-  int set_traj_max = 0;
-  int set_n_traj = 0;
-  #endif
 
   char key[100];
   char value[100];
@@ -281,19 +275,6 @@ void get_parameters(char *filename, params *p) {
     #endif
     // end reading update algorithms
 
-    #ifdef NUCLEATION
-      else if(!strcasecmp(key,"traj_min")) {
-        traj_min = strtod(value,NULL);
-        set_traj_min = 1;
-      } else if(!strcasecmp(key,"traj_max")) {
-        traj_max = strtod(value,NULL);
-        set_traj_max = 1;
-      } else if(!strcasecmp(key,"n_traj")) {
-        n_traj = strtol(value,NULL);
-        set_n_traj = 1;
-      }
-    #endif
-
   }
 
 	check_set(set_dim, "dim");
@@ -394,13 +375,6 @@ void get_parameters(char *filename, params *p) {
 	#endif
   #if defined (TRIPLET) && defined (HIGGS)
   check_set(set_a2, "a2");
-  #endif
-
-  // bubble nucleation:
-  #ifdef NUCLEATION
-    check_set(set_traj_min, "traj_min");
-    check_set(set_traj_max, "traj_max");
-    check_set(set_n_traj, "n_traj");
   #endif
 
   check_set(set_resultsfile, "resultsfile");

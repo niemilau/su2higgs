@@ -8,24 +8,24 @@
 
 dim 3
 
-L1 24
-L2 24
-L3 92
+L1 8
+L2 8
+L3 8
 
 # start new simulation (initial configuration still read from latticefile)?
 reset 1
 
 # iterations
-iterations 2000000
+iterations 1000
 
 # how many thermalization sweeps before starting measurements/weighting?
-n_thermalize 100
+n_thermalize 10
 
 # how often to write measurements
-interval 4
+interval 5
 
 # how often to write lattice configuration to file 
-checkpoint 50000
+checkpoint 500
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -37,19 +37,20 @@ resultsfile measure
 latticefile lattice
 
 ### parameters
+## at T = 110.0, a = 0.0045741436361243486
 
 # gauge couplings
-betasu2 12.0
+betasu2 20.0
 #betau1 8.0
 
 # doublet
-msq -0.60720864104826422
-lambda 0.11910401024225445
+msq -0.62519006985602554
+lambda 0.088005476600819268
 
 # triplet
-msq_triplet -0.9996431046956139
-b4 0.16687071616247076
-a2 0.98768170630443963
+msq_triplet -0.75578051102079002
+b4 0.19242128567450575
+a2 1.1324043529506072
 
 # initial values for fields (overwritten by existing lattice file)
 phi0 0.2
@@ -61,6 +62,7 @@ sigma0 0.2
 # gauge links: metropolis or heatbath
 algorithm_su2link heatbath
 algorithm_u1link metropolis
+
 # SU(2) doublets: metropolis or overrelax
 algorithm_su2doublet overrelax
 # SU(2) triplet: metropolis or overrelax
@@ -68,26 +70,29 @@ algorithm_su2triplet overrelax
 
 
 # how many times per sweep to update the fields
+scalar_sweeps 5
 update_doublet 1
 update_triplet 1
 update_links 1
 
 ### multicanonical
-multicanonical 0
+multicanonical 1
 bins 80
 min 0.45
 max 0.62
 # where to store the weight?
 weightfile weight
-# set infinite weight outside the binning range? 
-absolute_bounds 0
 
 ## order parameter for multicanonical
 # phisq, Sigmasq, phi2minusSigma2
-orderparam Sigmasq
+orderparam phisq
 
 # update weight on the go?
-readonly 1
+readonly 0
 
 # initial weight update factor (if weight exists, uses the value there instead)
 increment 0.3
+# how much should increment be reduced after probing the weighting range?
+reduction_factor 0.75
+
+absolute_bounds 0

@@ -175,55 +175,57 @@ int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weigh
 * Each link direction is updated separately, I.E. first dir1 with even and odd,
 * then dir2 etc. This is necessary because the links in "positive" directions are not independent
 * because of the Wilson staple, which for U_1(x) depends on U_2(x-i+j), for example.
+* However for realtime heatbath, we also allow for a random ordering of sweeps.
 */
 void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w) {
 
 	int accept;
 
-	#ifdef HB_REALTIME
+	/* Sweeps for gauge links. Arrays par_a (parity) and dir_a (directions)
+	* specify the order of updates. These have length 2*dim. Defaults are (with dim=3)
+	* par_a = [0,1,0,1,0,1], dirs_a = [0,0,1,1,2,2], i.e.
+	* first EVEN and ODD links in direction 0, then EVEN/ODD in dir 1 etc.
+	*/
+	for (int k=0; k<p->update_links; k++) { // repeat the whole process p->update_links times
 
 		const int NV = 2*p->dim;
-		int par_a[NV], dir_a[NV];
+		int par_a[NV], dir_a[NV]; // parities, directions
+		int dir = 0;
+		// default ordering, non-random
+		for (int j=0; j<NV; j+=2) {
+			par_a[j] = EVEN;
+			par_a[j+1] = ODD;
+			dir_a[j] = dir;
+			dir_a[j+1] = dir;
+			dir++;
+		}
 
-		// randomize in root node and broadcast to others
-		if (!p->rank) {
-			for (int j=0; j<NV; j++) {
-				par_a[j] = (j % 2) ? EVEN : ODD; /* 0 1 (0=EVEN, 1=ODD) */
-				dir_a[j] = j % p->dim; /* 0 1 2 ... dim-1 */
+		if (p->random_sweeps) {
+			// randomize order in root node and broadcast to others
+			if (!p->rank) {
+				shuffle(par_a, NV);
+				shuffle(dir_a, NV);
 			}
-
-			shuffle(par_a, NV);
-			shuffle(dir_a, NV);
+			bcast_int_array(par_a, NV);
+			bcast_int_array(dir_a, NV);
 		}
-		bcast_int_array(par_a, NV);
-		bcast_int_array(dir_a, NV);
 
-	#endif
+		// now update in the specified order
+		for (int j=0; j<NV; j++) {
+			int dir = dir_a[j];
+			int par = par_a[j];
+			checkerboard_sweep_su2link(f, p, c, par, dir);
+			c->comms_time += update_gaugehalo(comlist, par, f->su2link, SU2LINK, dir);
 
-
-
-	// EVEN and ODD sweeps for gauge links
-	for (int k=0; k<p->update_links; k++) {
-		for (int dir=0; dir<p->dim; dir++) {
-			checkerboard_sweep_su2link(f, p, c, EVEN, dir);
-			c->comms_time += update_gaugehalo(comlist, EVEN, f->su2link, SU2LINK, dir);
-			checkerboard_sweep_su2link(f, p, c, ODD, dir);
-			c->comms_time += update_gaugehalo(comlist, ODD, f->su2link, SU2LINK, dir);
+			#ifdef U1
+				checkerboard_sweep_u1link(f, p, c, par, dir);
+				// here I use update_halo() instead of update_gaugehalo(), so halo is
+				// actually updated for all directions after updating just one direction.
+				// Could be optimized. (is it OK to update U1 together with SU2 like here?)
+				c->comms_time += update_halo(comlist, par, f->u1link, p->dim);
+			#endif
 		}
-	}
-	#ifdef U1
-	// here I use update_halo() instead of update_gaugehalo(), so halo is
-	// actually updated for all directions after updating just one direction.
-	// this is of course OK, but could be optimized.
-	for (int k=0; k<p->update_links; k++) {
-		for (int dir=0; dir<p->dim; dir++) {
-			checkerboard_sweep_u1link(f, p, c, EVEN, dir);
-			c->comms_time += update_halo(comlist, EVEN, f->u1link, p->dim);
-			checkerboard_sweep_u1link(f, p, c, ODD, dir);
-			c->comms_time += update_halo(comlist, ODD, f->u1link, p->dim);
-		}
-	}
-	#endif
+	} // gauge links done
 
 
 	/* scalar updates. We update all scalar fields p->scalar_sweeps times
@@ -243,6 +245,16 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 
 	for (int s=0; s<p->scalar_sweeps; s++) {
 
+		// Parity ordering, default par_a[EVEN, ODD].
+		int par_a[2];
+		if (p->random_sweeps) {
+			par_a[0] = (drand48() < 0.5) ? EVEN : ODD;
+			par_a[1] = otherparity(par_a[0]);
+			bcast_int_array(par_a, 2);
+		} else {
+			par_a[0] = EVEN; par_a[1] = ODD;
+		}
+
 		#ifdef HIGGS
 		for (int k=0; k<p->update_su2doublet; k++) {
 
@@ -254,7 +266,8 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 				c->higgs_sweeps++;
 			}
 
-			for (char par=0; par<=1; par++) {
+			for (int j=0; j<=1; j++) {
+				int par = par_a[j];
 				accept = checkerboard_sweep_su2doublet(f, p, c, w, par, metro);
 
 				// if the sweep was rejected, no need to sync halos
@@ -277,7 +290,8 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 				c->triplet_sweeps++;
 			}
 
-			for (char par=0; par<=1; par++) {
+			for (int j=0; j<=1; j++) {
+				int par = par_a[j];
 				accept = checkerboard_sweep_su2triplet(f, p, c, w, par, metro);
 				// if the sweep was rejected, no need to sync halos
 				if (accept) {

@@ -77,6 +77,10 @@ typedef struct {
 	int run_checks;
 
 	int multicanonical;
+	/* randomize the ordering of updates in update_lattice() or not.
+	* Typically 0 (non-random), but for heatbath trajectories this is set to 1.
+	*/
+	int random_sweeps;
 
 	// Parameters in the action
 	// possible generalization: make separate structures
@@ -321,9 +325,10 @@ void print_acceptance(params p, counters c);
 void read_field(params p, FILE *file, double *field, int size);
 void write_field(params p, FILE *file, double *field, int size);
 void save_lattice(params p, fields f, counters c);
-void load_lattice(params p, fields f, counters* c);
+void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comlist);
 
 // parameters.c
+void check_set(int set, char *name); // helper routine
 void get_parameters(char *filename, params *p);
 void get_weight_parameters(char *filename, params *p, weight* w);
 void print_parameters(params p);
@@ -331,7 +336,8 @@ void read_updated_parameters(char *filename, params *p);
 
 
 // measure.c
-void measure(fields const* f, params const* p, counters* c, weight const* w);
+void measure(FILE* file, fields const* f, params const* p, counters* c, weight* w);
+// weight not necessarily constant because measure() can recalculate the order parameter
 double action_local(fields const* f, params const* p, long i);
 void print_labels();
 
