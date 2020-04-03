@@ -169,21 +169,22 @@ typedef struct {
 	int do_acceptance;
 
 	long bins;
-	double min, max;
-	double dbin; // size (width) of one bin
+	double min, max; // range of orderparam values where weight is to be updated
+	double min_abs, max_abs; // weighting range. can be larger than the range where weight is actually updated
+	long min_bin, max_bin; // indices of the bins containing w.min and w.max
 	double* pos; // weight "position", i.e. values of the order param in the given range
 	double* W; // value of the weight function at each position
 	double increment; // how much the weight is increased after visiting a bin
 	double reduction_factor; // after probing the full order param range, w.increment is multiplied by this number
-	double outsideW_min, outsideW_max; // weight values outside binning range
+	int restrict_max, restrict_min; // if 1, rejects any updates that would bring order param below/above min_abs/max_abs
 
 	int* hits; // keep track of which bins we have visited
 	int update_interval; // how many measurements until weight is updated
 	int m; // current number of measurements (resets after weight update)
 
- 	int last_max; // 1 if system was recently in one of the last bins (keep track of tunneling)
-	char readonly;
-	char weightfile[100];
+ 	int last_max; // 1 if system recently visited the bin containing w.max (keep track of tunneling)
+	char readonly; // 1 if weight is to be updated, 0 otherwise
+	char weightfile[100]; // file name
 } weight;
 
 
