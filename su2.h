@@ -176,8 +176,7 @@ typedef struct {
 	double* W; // value of the weight function at each position
 	double increment; // how much the weight is increased after visiting a bin
 	double reduction_factor; // after probing the full order param range, w.increment is multiplied by this number
-	int restrict_max, restrict_min; // if 1, rejects any updates that would bring order param below/above min_abs/max_abs
-
+	
 	int* hits; // keep track of which bins we have visited
 	int update_interval; // how many measurements until weight is updated
 	int m; // current number of measurements (resets after weight update)

@@ -409,7 +409,6 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		int set_weightfile = 0;
     int set_orderparam = 0;
     int set_reduction_factor = 0;
-    int set_restrict_min = 0, set_restrict_max = 0;
 
     char key[100];
     char value[100];
@@ -472,12 +471,6 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 			} else if(!strcasecmp(key,"weightfile")) {
 				strcpy(w->weightfile,value);
 				set_weightfile = 1;
-			} else if(!strcasecmp(key,"restrict_min")) {
-				w->restrict_min = strtol(value,NULL,10);
-				set_restrict_min = 1;
-			} else if(!strcasecmp(key,"restrict_max")) {
-				w->restrict_max = strtol(value,NULL,10);
-				set_restrict_max = 1;
 			}
       // read multicanonical order parameter
       else if(!strcasecmp(key,"orderparam")) {
@@ -525,8 +518,6 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
     check_set(set_orderparam, "orderparam");
     check_set(set_increment, "increment");
     check_set(set_reduction_factor, "reduction_factor");
-    check_set(set_restrict_min, "restrict_min");
-    check_set(set_restrict_max, "restrict_max");
 
 		fclose(config);
 

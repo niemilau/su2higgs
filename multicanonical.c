@@ -58,7 +58,9 @@
 
 /* --- Weight logic ---
 *	1. w.min and w.max determine the order parameter range where the weight is to be
-		 updated (if readonly=0). the weight update factor is reduced each time the system tunnels from w.min to w.max
+*		 updated (if readonly=0). Any hits in the bins containing min and max are counted, so
+*		 in practice the update range can be larger. the weight update factor is reduced each
+*		 time the system tunnels from w.min to w.max
 * 2. w.min_abs and w.max_abs determine the absolute range of weighting.
 *		 Last bin should end in w.max_abs.
 *		 Outside this range the weight is set to the same value as in the first or last bin.
@@ -72,7 +74,7 @@
 
 /* Save the current weight into file.
 * There will be w.bins + 1 lines, the first one being:
-* 	w.bins w.increment w.last_max w.min w.min_abs w.max w.max_abs
+* 	w.bins w.increment w.last_max w.min w.max w.min_abs w.max_abs
 * the lines after that read:
 * 	w.pos[i] w.W[i]
 *
@@ -197,6 +199,7 @@ void load_weight(params const* p, weight *w) {
 	}
 
 	// find bin indices for the bins containing min and max values of the update range
+	// these bins still get updated.
 	w->min_bin = whichbin(w, w->min);
 	w->max_bin = whichbin(w, w->max);
 
@@ -299,14 +302,6 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 		die(-1000);
 	}
 
-	// if the new value is outside the weight range and the restrict flags are on,
-	// automatically reject the update. No comms needed for this
-	if (w->restrict_min && oldval < w->min_abs) {
-		return 0;
-	} else if (w->restrict_max && oldval > w->max_abs) {
-		return 0;
-	}
-
 	// acc/rej only in root node
 	int accept;
 	if (p->rank == 0) {
@@ -331,23 +326,25 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 	bcast_int(&accept);
 
 	// update hits and call update_weight() if necessary.
-	// do this even if the update was rejected
+	// do this only if the update was accepted.
 	if (!accept)
 		newval = oldval;
 
-	// if outside the actual weight update range, move on.
-	// this also ensures that hits is never increased in bins outside the update range
-	// (so hits in the extra bin should always stay at 0)
-	if (!w->readonly && newval <= w->max && newval >= w->min) {
+	if (!w->readonly && accept) {
 		long bin = whichbin(w, newval);
 
-		w->hits[bin]++;
-		w->m++;
-		if (w->m >= w->update_interval) {
-			// update weight function, save it and start over
-			update_weight(p, w);
-			save_weight(p, w);
-			w->m = 0;
+		// hits is still updated if the value is outside the weight range but still
+		// in the bin containing min or max. Otherwise, do not update
+		if (bin >= w->min_bin && bin <=w->max_bin) {
+
+			w->hits[bin]++;
+			w->m++;
+			if (w->m >= w->update_interval) {
+				// update weight function, save it and start over
+				update_weight(p, w);
+				save_weight(p, w);
+				w->m = 0;
+			}
 		}
 	}
 
