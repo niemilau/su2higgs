@@ -35,18 +35,15 @@
 double waittime;
 
 // general multipurpose struct params.
-// Multicanonical can modify the lattice parameters (redefine to include weight),
-// so this should be passed by reference. TODO make a separate lattice structure
-// that contains the layouting
 typedef struct {
 	// layout parameters for MPI
 	int rank, size;
 
-	// lattice dimensions
+	// lattice dimensions, set in get_parameters()
 	int dim;
 	int *L;
 	long vol;
-	// slicing the lattice for MPI
+	// slicing the lattice for MPI, set in layout.c
 	int *nslices; // how many slices in each direction
 	long *sliceL; // how many sites per slice in each direction
 	long sites; // how many sites in total in one hypercubic slice
@@ -54,10 +51,12 @@ typedef struct {
 	// how many actual sites we have. This can be less than sites + halos,
 	// because we remove halos that correspond to real sites in my the same node.
 	long sites_total;
-	// neighboring sites
-	//next[i][dir] gives the index of the next site after i in direction dir
+	// neighboring sites: next[i][dir] gives the index of the next site after i in direction dir
 	long **next;
 	long **prev;
+	/* coords[i][dir] = x_dir coordinate on the full lattice of site i.
+	* Typically not used after layout(), so could free to save memory... */
+	long **coords;
 
 	// parity of a site is EVEN if the physical index x+y+z+... is even, ODD otherwise
 	char *parity;
@@ -65,6 +64,15 @@ typedef struct {
 	long evenhalos, oddhalos;
 	// in layout.c we reorder lattice sites so that EVEN sites come first.
 	int reorder_parity; // for debugging purposes
+
+	#ifdef MEASURE_Z
+		/* Single out a particular direction ("z coordinate") to study e.g. wall profile, correlation lengths.
+		* These are initialized in layout() after sitemap() */
+		int z_dir; // specify the z direction, default = longest direction
+		long sites_per_z, offset_z; // offset = physical value of z at the "first" site in my node
+		// list of all real sites at fixed z coord in no particular order
+		long** site_at_z; // sites_at_z[z][j], 0<=j<sites_per_z
+	#endif
 
 	// max iterations etc
 	int reset;
@@ -176,7 +184,7 @@ typedef struct {
 	double* W; // value of the weight function at each position
 	double increment; // how much the weight is increased after visiting a bin
 	double reduction_factor; // after probing the full order param range, w.increment is multiplied by this number
-	
+
 	int* hits; // keep track of which bins we have visited
 	int update_interval; // how many measurements until weight is updated
 	int m; // current number of measurements (resets after weight update)
@@ -196,7 +204,7 @@ inline char otherparity(char parity) {
 }
 
 // comms.c (move elsewhere later?)
-void make_comlists(params *p, comlist_struct *comlist, long** xphys);
+void make_comlists(params *p, comlist_struct *comlist);
 void reorder_sitelist(params* p, sendrecv_struct* sr);
 void reorder_comlist(params* p, comlist_struct* comlist);
 double reduce_sum(double res);
@@ -219,25 +227,26 @@ void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs);
 void send_field(sendrecv_struct* send, MPI_Request* req, char parity, double** field, int dofs);
 #endif
 void test_comms(params p, comlist_struct comlist);
-void test_comms_individual(params p, comlist_struct comlist, long** xphys);
+void test_comms_individual(params p, comlist_struct comlist);
 
 // layout.c
 void layout(params *p, comlist_struct *comlist);
 void make_slices(params *p);
-void sitemap(params *p, long** xphys, long* newindex);
-void calculate_neighbors(params *p, long** xphys, long* newindex);
-void set_parity(params *p, long** xphys);
+void sitemap(params *p);
+void set_parity(params *p);
 void paritymap(params* p, long* newindex);
-void remap_lattice_arrays(params* p, long** xphys, long* newindex);
-long findsite(params p, long* x, long** xphys, int include_halos);
-void test_xphys(params p, long** xphys);
-void test_neighbors(params p, long** xphys);
+void remap_latticetable(params* p, long** arr, long* newindex, long maxindex);
+void remap_neighbor_table(params* p, long** arr, long* newindex, long maxindex);
+void remap_lattice_arrays(params* p, long* newindex, long maxindex);
+long findsite(params* p, long* x, int include_halos);
+void test_coords(params p);
+void test_neighbors(params p);
 void indexToCoords(short dim, int* L, long i, long* x);
 long coordsToIndex(short dim, int* L, long* x);
-int coordsToRank(params p, long* xphys);
+int coordsToRank(params p, long* x);
 void printf0(params p, char *msg, ...);
 void die(int howbad);
-void print_lattice_2D(params *p, long** xphys);
+void print_lattice_2D(params *p);
 
 // alloc.c
 double *make_singletfield(long sites);
@@ -248,8 +257,10 @@ void free_field(double **field);
 void free_gaugefield(long sites, double ***field);
 void alloc_fields(params p, fields *f);
 void free_fields(params p, fields *f);
-void alloc_lattice_arrays(params *p);
+void alloc_lattice_arrays(params *p, long sites);
 long **alloc_latticetable(int dim, long sites);
+long **realloc_latticetable(long** arr, int dim, long oldsites, long newsites);
+void realloc_lattice_arrays(params *p, long oldsites, long newsites);
 void free_latticetable(long** list);
 void free_lattice_arrays(params *p);
 void free_comlist(comlist_struct* comlist);

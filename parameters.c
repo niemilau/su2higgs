@@ -333,11 +333,11 @@ void get_parameters(char *filename, params *p) {
 
   // calculate total volume now that we know the side lengths
   p->vol = 1;
-  for (int i=0; i<p->dim; i++) {
-      p->vol *= p->L[i];
-			if (p->L[i] % 2 != 0) {
-				printf0(*p, "WARNING!! Lattice side length L%d is an odd number! Checkerboard updating is not well defined...\n", i);
-			}
+  for (int dir=0; dir<p->dim; dir++) {
+    p->vol *= p->L[dir];
+		if (p->L[dir] % 2 != 0) {
+			printf0(*p, "WARNING!! Lattice side length L%d is an odd number! Checkerboard updating is not well defined...\n", dir);
+		}
   }
 
 	check_set(set_multicanonical, "multicanonical");
@@ -398,6 +398,8 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		w->readonly = 1;
 		w->increment = 0;
     w->reduction_factor = 1;
+    w->do_acceptance = 0;
+    w->orderparam = -1;
 		strcpy(w->weightfile,"weight");
 	} else {
 		// multicanonical run, read from config

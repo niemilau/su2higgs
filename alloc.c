@@ -168,20 +168,50 @@ long **alloc_latticetable(int dim, long sites) {
   return array;
 }
 
+// "Reallocate" a lattice table
+long **realloc_latticetable(long** arr, int dim, long oldsites, long newsites) {
 
-/* Allocate all needed lookup lists (both lattice sites and MPI nodes)
-* also include halos
+  long** new_arr = alloc_latticetable(dim, newsites);
+
+  // now just copy to the new array and free the old one
+  for (long i=0; i<newsites; i++) {
+    for (int dir=0; dir<dim; dir++) {
+      if (i >= oldsites) {
+        new_arr[i][dir] = 0;
+      } else {
+        new_arr[i][dir] = arr[i][dir];
+      }
+    }
+  }
+
+  free_latticetable(arr);
+  return new_arr;
+}
+
+
+/* Allocate all needed lookup tables needed for layouting
 */
-void alloc_lattice_arrays(params *p) {
+void alloc_lattice_arrays(params *p, long sites) {
 
-	p->next = alloc_latticetable(p->dim, p->sites_total);
-	p->prev = alloc_latticetable(p->dim, p->sites_total);
+  p->coords = alloc_latticetable(p->dim, sites);
+	p->next = alloc_latticetable(p->dim, sites);
+	p->prev = alloc_latticetable(p->dim, sites);
 
 	// allocate parity arrays
-	p->parity = malloc(p->sites_total * sizeof(*(p->parity)));
+	p->parity = malloc(sites * sizeof(*(p->parity)));
 
 	if (!p->rank)
 		printf("Allocated memory for lookup tables.\n");
+}
+
+// Realloc everything originally allocated in alloc_lattice_arrays
+void realloc_lattice_arrays(params *p, long oldsites, long newsites) {
+
+  p->coords = realloc_latticetable(p->coords, p->dim, oldsites, newsites);
+  p->next = realloc_latticetable(p->next, p->dim, oldsites, newsites);
+  p->prev = realloc_latticetable(p->prev, p->dim, oldsites, newsites);
+
+	p->parity = realloc(p->parity, newsites * sizeof(*(p->parity)));
 }
 
 
@@ -192,6 +222,7 @@ void free_lattice_arrays(params *p) {
 
 	// lookup tables and parity:
 	free(p->parity);
+  free_latticetable(p->coords);
 	free_latticetable(p->next);
 	free_latticetable(p->prev);
   #ifdef WALL

@@ -3,10 +3,8 @@
 *	Routines for constructing communication lookup tables,
 * and for halo communications and reducing numbers between the nodes.
 *
-* Performance goal: communications take max ~10% of all time (Kari has ~6% - 17% in the simulations I did)
-*
-* TODO optimize make_comlists. This routine is very very slow if the lattice is large AND only a few nodes are used.
-* Slowness is probably because of the xphys lookup when constructing send_to structure...
+* TODO optimize make_comlists. This routine is quite slow if the lattice is large AND only a few nodes are used.
+* Slowness is probably because of the p->coords lookup when constructing send_to structure.
 * There is no problem when the volume/node ratio is good
 *
 */
@@ -17,52 +15,53 @@
 
 #ifdef MPI
 
-/*
-*
+/* Huge routine for preparing the comlists. p->coords is assumed to be the table of (x,y,z,...)
+* coordinates on the full lattice, calculated in layout().
 */
-void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
+void make_comlists(params *p, comlist_struct *comlist) {
 
 	long i;
 	int dir, k;
 
 	// work arrays
 	int* neighbornodes;
-	int* siterank;
-	long** xphys_nn;
+	int* whichnode;
+	long** coords_nn;
 
 	/* N-dimensional hypercube has N^3 - 1 neighboring hypercubes on a lattice (imagine a 3x3x3x... grid)
 	* However, in some directions the neighbor may be the node itself, due to periodicity (small lattice/few nodes).
-	* Here we assume that these have been dealt with already in layout.c, (references to "self halos" changed to point to real sites instead),
+	* Here we assume that these have been dealt with already in layout.c,
+	* (references to "self halos" changed to point to real sites instead),
 	* so we don't have to worry about including the these in comlists.
 	*/
-
 	int MAXNODES = p->dim * p->dim * p->dim - 1;
 	neighbornodes = malloc(MAXNODES * sizeof(*neighbornodes));
 	for (k=0; k<MAXNODES; k++) {
-		neighbornodes[k] = -1;
+		neighbornodes[k] = -1; // initialize to avoid mixups
 	}
 
 	long maxindex = p->sites_total;
 
-	siterank = malloc(maxindex * sizeof(*siterank)); // rank of the node where site i resides in
+	whichnode = malloc(maxindex * sizeof(*whichnode)); // rank of the node where site i resides in
 	for (i=0; i<maxindex; i++) {
-		siterank[i] = coordsToRank(*p, xphys[i]);
+		whichnode[i] = coordsToRank(*p, p->coords[i]);
 	}
 
 	// allocate enough memory to host all needed receive structs, realloc later
 	// note that comlist->recv_from itself is a pointer to sendrecv_struct
 	comlist->recv_from = malloc(MAXNODES * sizeof(*(comlist->recv_from)));
 
-	// message size and tag for sending xphys
+	// message size and tag for sending p->coords
 	long size = maxindex * p->dim;
 	int tag = 0;
 
-	// Where to receive from?
+	/* Where to receive from? Loop over all halos here and figure out the node
+	* where the halo site lives in, and store it in comlist->recv_from[node].sitelist*/
 	int nn = 0; // how many distinct neighbors have we found (nn = neighboring node)
 	int newnode;
 	for (i=p->sites; i<maxindex; i++) {
 
-		if (siterank[i] == p->rank) {
+		if (whichnode[i] == p->rank) {
 			// shouldn't get here!
 			printf("Node %d: Self halos not removed! in comms.c\n", p->rank);
 			continue;
@@ -71,7 +70,7 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 		newnode = 1;
 		// new neighbor node?
 		for (k=0; k<MAXNODES; k++) {
-			if (siterank[i] == neighbornodes[k]) {
+			if (whichnode[i] == neighbornodes[k]) {
 				// node already in neighbors, so add the site in its comlists
 				newnode = 0;
 				if (p->parity[i] == EVEN) {
@@ -84,9 +83,9 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 			}
 		}
 		if (newnode == 1) {
-			// found new neighbor node, so initialize sendrecv_struct!
-			comlist->recv_from[nn].node = siterank[i];
-			neighbornodes[nn] = siterank[i];
+			// found new neighbor node, so initialize sendrecv_struct
+			comlist->recv_from[nn].node = whichnode[i];
+			neighbornodes[nn] = whichnode[i];
 			comlist->recv_from[nn].sites = 1;
 			if (p->parity[i] == EVEN) {
 				comlist->recv_from[nn].even = 1;
@@ -107,7 +106,7 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 		die(11);
 	}
 
-	// realloc receive structs (TODO: add error handling here)
+	// realloc receive structs (TODO: error handling)
 	comlist->neighbors = nn;
 	comlist->recv_from = realloc(comlist->recv_from, nn * sizeof(*(comlist->recv_from)));
 	for (k=0; k<nn; k++) {
@@ -117,11 +116,11 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 
 
 	// Where to send? These should be the same nodes where we receive from.
-	// To fill in sitelist in sendrecv_structs, we need xphys on their node, so send this with MPI.
+	// To fill in sitelist in sendrecv_structs, we need p->coords on their node, so send this with MPI.
 	comlist->send_to = malloc(nn * sizeof(*(comlist->send_to)) );
 
 	// receive buffer:
-	xphys_nn = alloc_latticetable(p->dim, maxindex);
+	coords_nn = alloc_latticetable(p->dim, maxindex);
 
 	// send buffer (can send same buffer to only one node at a time, so need an array):
 	long** buf[nn];
@@ -139,19 +138,19 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 		comlist->send_to[k].sitelist = malloc(p->halos * sizeof(*(comlist->send_to[k].sitelist)));
 
 		buf[k] = alloc_latticetable(p->dim, maxindex);
-		// now buf[k] points to a contiguous memory address that can hold xphys
+		// now buf[k] points to a contiguous memory address that can hold p->coords
 
-		memcpy(&buf[k][0][0], &xphys[0][0], maxindex * p->dim * sizeof(xphys[0][0]));
+		memcpy(&buf[k][0][0], &p->coords[0][0], maxindex * p->dim * sizeof(p->coords[0][0]));
 
 		if (recv->node != p->rank) {
-			//printf("Node %d: Sending xphys to node %d\n", p->rank, recv->node);
+			//printf("Node %d: Sending p->coords to node %d\n", p->rank, recv->node);
 			MPI_Isend(&buf[k][0][0], size, MPI_LONG, recv->node, tag, MPI_COMM_WORLD, &req[k]);
 			}
 
 	}
 	// MPI_Isend is non-blocking, so we move on.
 
-	// Now receive their xphys_nn and use that to construct sendrecv_struct
+	// Now receive their coords_nn and use that to construct sendrecv_struct
 	for (k=0; k<nn; k++) {
 
 		recv = &(comlist->recv_from[k]);
@@ -162,10 +161,10 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 		send->even = 0;
 		send->odd = 0;
 
-		// request xphys from the receiving node
+		// request p->coords from the receiving node
 
 		// blocking receive here
-		MPI_Recv(&(xphys_nn[0][0]), size, MPI_LONG, recv->node, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(&(coords_nn[0][0]), size, MPI_LONG, recv->node, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 		int match;
 		// find matching site in both nodes, and their indices.
@@ -175,7 +174,7 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 				// i = my index
 				match = 1;
 				for (dir=0; dir<p->dim; dir++) {
-					if (xphys[i][dir] != xphys_nn[j][dir]) {
+					if (p->coords[i][dir] != coords_nn[j][dir]) {
 						match = 0;
 						break;
 					}
@@ -189,7 +188,7 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 						send->odd++;
 					}
 					/* store site index i in my node to my send_to.
-					* Note that since we loop over their xphys (j loop) in the SAME order as
+					* Note that since we loop over their p->coords (j loop) in the SAME order as
 					* when we constructed sitelist for THEIR recv_from, we automatically get the
 					* sends in the same order as their receives!
 					* (apart from parity ordering, which does not reorder even/odd sites among themselves).
@@ -223,9 +222,9 @@ void make_comlists(params *p, comlist_struct *comlist, long** xphys) {
 	reorder_comlist(p, comlist); // arranges send_to/recv_from by node ranks
 
 
-	free_latticetable(xphys_nn);
+	free_latticetable(coords_nn);
 	free(neighbornodes);
-	free(siterank);
+	free(whichnode);
 
 }
 
@@ -497,7 +496,7 @@ void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs) {
 * so that sites with parity = 0 come before parity = 1.
 * NB! This routine fails if some lattice side L is an odd number,
 * in which case parity is not even meaningful really.
-* Can result in memory errors in such cases!!
+* Might result in memory errors in such cases??
 */
 void reorder_sitelist(params* p, sendrecv_struct* sr) {
 
@@ -698,16 +697,17 @@ void test_comms(params p, comlist_struct comlist) {
 * or
 *		2) A way to assign an unique value to the field at each site, based on the physical coordinates of the site.
 *
-* We perform 2), using a recursive generalization of the Cantor pairing function p(x,y) = 0.5*(x+y)*(x+y+1) + y.
+* I perform 2), using a recursive generalization of the Cantor pairing function p(x,y) = 0.5*(x+y)*(x+y+1) + y.
 * Speficially, if a site has coords (x1, x2, x3, ...), we calculate y1 = p(x1,x2),
 * then y2 = p(x3, y) etc. This gives an unique number for each site that we assign to the field,
-* plus a decimal number for each component. It is then easy to use xphys to predict what the received value should be.
+* plus a decimal number for each component. It is then easy to use p->coords to predict what the received value should be.
 *
 * Uses update_field() instead of update_gaugefield() for simplicity.
 */
-void test_comms_individual(params p, comlist_struct comlist, long** xphys) {
+void test_comms_individual(params p, comlist_struct comlist) {
 	long i, x, y;
 	int dir, dof;
+	long n_err = 0;
 
 	// field for testing purposes
 	int maxdof = 4;
@@ -715,9 +715,9 @@ void test_comms_individual(params p, comlist_struct comlist, long** xphys) {
 	// give values according to the Cantor pairing function, but set halos to 0
 	for (i=0; i<p.sites_total; i++) {
 
-		y = xphys[i][0];
+		y = p.coords[i][0];
 		for (dir=1; dir<p.dim; dir++) {
-			x = xphys[i][dir];
+			x = p.coords[i][dir];
 			y = y + 0.5 * (x + y + 1) * (x + y);
 		}
 
@@ -735,16 +735,16 @@ void test_comms_individual(params p, comlist_struct comlist, long** xphys) {
 	update_halo(&comlist, EVEN, field, maxdof);
 	update_halo(&comlist, ODD, field, maxdof);
 
-	/* use xphys to calculate what the field value should be in my halos,
+	/* use p->coords to calculate what the field value should be in my halos,
 	* according to the Cantor pairing. This is a strong check on sitelist in sendrecv_structs,
 	* because the (x,y,z,...) coords of my halo site should match those of the real site
 	* in the node where we received the field value from.
 	*/
 	for (i=p.sites; i<p.sites_total; i++) {
 
-		y = xphys[i][0];
+		y = p.coords[i][0];
 		for (dir=1; dir<p.dim; dir++) {
-			x = xphys[i][dir];
+			x = p.coords[i][dir];
 			y = y + 0.5 * (x + y + 1) * (x + y);
 		}
 
@@ -753,17 +753,19 @@ void test_comms_individual(params p, comlist_struct comlist, long** xphys) {
 			if (abs(val - field[i][dof]) > 0.001) {
 				// predicted value does not match what was sent...
 				// print error, but don't die
+				n_err++;
 				printf("Node %d: Error in test_comms! Halo site %ld did not receive correct value from update_halo() \n", p.rank, i);
 			}
 		}
 
 	}
 
-	//printf("p.sites_total = %ld \n", p.sites_total);
-	//printf("Node %d: site i = 1171, x = %ld, y = %ld, z = %ld \n", p.rank, xphys[1171][0], xphys[1171][1], xphys[1171][2] );
-
 	// done, free test field
 	free_field(field);
+	if (n_err > 0) {
+		printf("Node %d: test_comms_individual() failed with %ld errors!!\n", p.rank, n_err);
+		die(-4222);
+	}
 }
 
 
