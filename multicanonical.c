@@ -203,6 +203,14 @@ void load_weight(params const* p, weight *w) {
 	w->min_bin = whichbin(w, w->min);
 	w->max_bin = whichbin(w, w->max);
 
+	/*
+	// print for debugging
+	printf0(*p, "My weight: \n");
+	for (int j=0; j<w->bins; j++) {
+		printf0(*p, "%lf 	%lf\n", w->pos[j], w->W[j]);
+	}
+	printf0(*p, "min_bin=%d, max_bin=%d\n", w->min_bin, w->max_bin);
+	*/
 }
 
 
@@ -357,6 +365,7 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 * functions should ensure that this does not happen, however.
 */
 long whichbin(weight const* w, double val) {
+
 	if (val < w->min_abs) {
 		return 0;
 	} else if (val >= w->max_abs) {
@@ -373,7 +382,7 @@ long whichbin(weight const* w, double val) {
 			current = w->pos[bin];
 
 			if (bin == w->bins-1) {
-				// last proper bin
+				// last bins
 				next = w->max_abs;
 			} else {
 				next = w->pos[bin+1];
@@ -391,7 +400,7 @@ long whichbin(weight const* w, double val) {
 		}
 
 		// end binary search, if we got here then something went wrong!
-		printf("Error in multicanonical.c: failed to find bin!\n");
+		printf("\nWARNING!! Error in multicanonical.c: failed to find bin!\n\n");
 		return w->bins - 1;
 	}
 }
