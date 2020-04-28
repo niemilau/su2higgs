@@ -9,7 +9,7 @@
 
 /** Helper routine, checks a parameter is set and if not prints error.
  */
-inline void check_set(int set, char *name) {
+void check_set(int set, char *name) {
   if(!set) {
     fprintf(stderr,
 	    "Not set parameter \"%s\"! Exiting...\n", name);
@@ -39,6 +39,8 @@ void get_parameters(char *filename, params *p) {
   int set_n_thermalize = 0;
   int set_checks = 0;
 
+  int set_interval_z = 0;
+
   int set_su2alg = 0;
   int set_u1alg = 0;
   int set_su2DBalg = 0;
@@ -67,12 +69,6 @@ void get_parameters(char *filename, params *p) {
   int set_scalar_sweeps = 0;
   int set_update_doublet = 0;
 	int set_update_triplet = 0;
-
-  #ifdef NUCLEATION
-  int set_traj_min = 0;
-  int set_traj_max = 0;
-  int set_n_traj = 0;
-  #endif
 
   char key[100];
   char value[100];
@@ -138,6 +134,12 @@ void get_parameters(char *filename, params *p) {
       p->interval = strtol(value,NULL,10);
       set_interval = 1;
     }
+    #ifdef MEASURE_Z
+      else if(!strcasecmp(key,"interval_z")) {
+        p->meas_interval_z = strtol(value,NULL,10);
+        set_interval_z = 1;
+      }
+    #endif
     else if(!strcasecmp(key,"checkpoint")) {
       p->checkpoint = strtol(value,NULL,10);
       set_checkpoint = 1;
@@ -281,19 +283,6 @@ void get_parameters(char *filename, params *p) {
     #endif
     // end reading update algorithms
 
-    #ifdef NUCLEATION
-      else if(!strcasecmp(key,"traj_min")) {
-        traj_min = strtod(value,NULL);
-        set_traj_min = 1;
-      } else if(!strcasecmp(key,"traj_max")) {
-        traj_max = strtod(value,NULL);
-        set_traj_max = 1;
-      } else if(!strcasecmp(key,"n_traj")) {
-        n_traj = strtol(value,NULL);
-        set_n_traj = 1;
-      }
-    #endif
-
   }
 
 	check_set(set_dim, "dim");
@@ -352,11 +341,11 @@ void get_parameters(char *filename, params *p) {
 
   // calculate total volume now that we know the side lengths
   p->vol = 1;
-  for (int i=0; i<p->dim; i++) {
-      p->vol *= p->L[i];
-			if (p->L[i] % 2 != 0) {
-				printf0(*p, "WARNING!! Lattice side length L%d is an odd number! Checkerboard updating is not well defined...\n", i);
-			}
+  for (int dir=0; dir<p->dim; dir++) {
+    p->vol *= p->L[dir];
+		if (p->L[dir] % 2 != 0) {
+			printf0(*p, "WARNING!! Lattice side length L%d is an odd number! Checkerboard updating is not well defined...\n", dir);
+		}
   }
 
 	check_set(set_multicanonical, "multicanonical");
@@ -396,11 +385,8 @@ void get_parameters(char *filename, params *p) {
   check_set(set_a2, "a2");
   #endif
 
-  // bubble nucleation:
-  #ifdef NUCLEATION
-    check_set(set_traj_min, "traj_min");
-    check_set(set_traj_max, "traj_max");
-    check_set(set_n_traj, "n_traj");
+  #ifdef MEASURE_Z
+    check_set(set_interval_z, "interval_z");
   #endif
 
   check_set(set_resultsfile, "resultsfile");
@@ -424,6 +410,8 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 		w->readonly = 1;
 		w->increment = 0;
     w->reduction_factor = 1;
+    w->do_acceptance = 0;
+    w->orderparam = -1;
 		strcpy(w->weightfile,"weight");
 	} else {
 		// multicanonical run, read from config

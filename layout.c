@@ -3,15 +3,10 @@
 * Routines for MPI parallelization on a hypercubic (=rectangle) lattice
 *	with periodic boundaries.
 *
-*	Future improvement: it might be simpler to perform layouting and comms
-* using MPI topologies?
 */
 
 #include "su2.h"
 #include "comms.h"
-#ifdef WALL
-		#include "wallprofile.h"
-#endif
 
 #ifdef MPI
 
@@ -30,29 +25,26 @@ void layout(params *p, comlist_struct *comlist) {
 
 	make_slices(p);
 
-	long maxindex = p->sites + p->halos;
+	// slicing done, allocate lattice tables
+	alloc_lattice_arrays(p, p->sites_total);
+	// here both p->halos and p->sites_total still contain self halos
 
-	// some work arrays:
-	long* newindex = malloc(maxindex * sizeof(newindex));
-	// (x,y,z,...) coords on the full lattice
-	long** xphys = alloc_latticetable(p->dim, p->sites + p->halos);
+	long tot_old = p->sites_total;
 
-	// calculate xphys and rearrange sites. This also sets p->sites_total
-	// and moves self halos to indices >= p->sites_total.
-	sitemap(p, xphys, newindex);
+	/* calculate p->coords and neighbor site tables.
+	* This also moves real sites to indices before halo sites and self halos to the end,
+	* and updates p->halos, p->sites_total.
+	* Realloc the tables here so that all traces of self halos are removed */
+	sitemap(p);
 
-	// slicing and haloing done, so can alloc lookup tables on the slices
-	alloc_lattice_arrays(p);
+	long tot_new = p->sites_total;
+	realloc_lattice_arrays(p, tot_old, tot_new);
+	// ordering OK and self halos gone.
 
-	// construct lookup tables for site neighbors:
-	calculate_neighbors(p, xphys, newindex);
-
-	// self halo sites have now been completely removed
-	p->halos = p->sites_total - p->sites;
 	printf0(*p, "Each node needs %lu additional halo sites.\n", p->halos);
 
 	// site parity:
-	set_parity(p, xphys);
+	set_parity(p);
 
 	/* Do one last remapping of site indices. We want sites
 	* with EVEN parity to come first,
@@ -60,24 +52,27 @@ void layout(params *p, comlist_struct *comlist) {
 	* 1. EVEN real 2. ODD real 3. EVEN halo 4. ODD halo. */
 	p->reorder_parity = 1;
 	if (p->reorder_parity) {
+		long newindex[p->sites_total];
 		paritymap(p, newindex);
-		remap_lattice_arrays(p, xphys, newindex);
+		remap_lattice_arrays(p, newindex, p->sites_total);
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	// --- Site ordering not changed beyond this point ---
+
+	barrier();
 
 	// construct communication tables
-	make_comlists(p, comlist, xphys);
+	make_comlists(p, comlist);
 
 	// Run sanity checks on lattice layout and comms?
-	MPI_Barrier(MPI_COMM_WORLD);
+	barrier();
 	if (p->run_checks) {
 
 		start = clock();
 
-		test_xphys(*p, xphys);
-		test_neighbors(*p, xphys);
-		test_comms_individual(*p, *comlist, xphys);
+		test_coords(*p);
+		test_neighbors(*p);
+		test_comms_individual(*p, *comlist);
 		test_comms(*p, *comlist);
 
 		end = clock();
@@ -86,67 +81,26 @@ void layout(params *p, comlist_struct *comlist) {
 		printf0(*p, "All tests OK! Time taken: %lf seconds.\n", time);
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	#ifdef MEASURE_Z
+		init_z_coord(p);
+	#endif
 
-	#ifdef WALL
-		printf0(*p, "Initializing wall profile structures\n");
-		// initialize stuff defined in wallprofile.h
-
-		sites_per_z = 1;
-		if (p->dim == 1) {
-			sites_per_z = p->sliceL[0];
-		}
-		else {
-			for (int d=0; d<p->dim-1; d++) {
-				sites_per_z *= p->sliceL[d];
-			}
-		}
-
-		// allocate table so that wallcoord[z][n] gives the site index i
-		// of site with z-coordinate z, and n runs over all sites with that z index.
-		wallcoord = alloc_latticetable(sites_per_z, p->sliceL[p->dim-1]);
-
-		long* xnode = malloc(p->dim * sizeof(xnode)); // coordinates of the MPI nodes
-		indexToCoords(p->dim, p->nslices, p->rank, xnode);
-
-		offset_z = xnode[p->dim-1] * p->sliceL[p->dim-1];
-
-		for (long nz=0; nz<p->sliceL[p->dim-1]; nz++) {
-			long tot = 0;
-			for (long i=0; i<p->sites; i++) {
-				if (nz + offset_z == xphys[i][p->dim-1]) {
-					wallcoord[nz][tot] = i;
-					tot++;
-				}
-			}
-			if (tot != sites_per_z) {
-				printf("Error in wall profile routines in layout.c!\n");
-				die(420);
-			}
-		}
-
-		free(xnode);
-
-	#endif // end WALL
-
-	free_latticetable(xphys);
-	free(newindex);
+	barrier();
 
 }
 
 
-/* Lay out the lattice on available nodes.
-*	Tricks for factorizing the lattice are mostly inspired by respective routines
-* in codes of Kari and David.
-* We follow Kari in the sense that the shapes of the sublattices are not fixed manually.
-* In fact we should always obtain the same factorization as what Kari has in his susy code for example.
+/* Lay out the lattice on available nodes
+* The shapes of the sublattices are not fixed manually:
+* the tricks for factorization are heavily inspired by respective routines in Kari's code.
+* In fact we should always obtain the same factorization as what Kari has in his susy code.
 * The routine checks that the sites can always be factorized evenly among the nodes, i.e, all nodes
 * get the same amount of sites. This will be assumed in all other routines in the file.
 */
 void make_slices(params *p) {
 
 	// first check that the total number of lattice sites is possible
-	// to factorize in number of nodes (MPI processes)
+	// to factorize in the given number of nodes (MPI processes)
 	int nodes = p->size;
 	if (p->vol % nodes != 0) {
 		printf0(*p, "Can\'t lay out %lu sites using %d nodes!\n", p->vol, nodes);
@@ -190,17 +144,17 @@ void make_slices(params *p) {
 		nslices[dir] = 1;
 	}
 
-	int firstdim;
+	int firstdim = 0;
+	/*
 	#ifdef WALL
-		// for wall profiling, ONLY slice the last direction!
+		// for wall profiling, ONLY slice the last direction! (OUTDATED, works with general slices now)
 		if (p->L[p->dim-1] % nodes != 0) {
 			printf0(*p, "Wall routines failed: cannot split z-direction into %d pieces! in layout.c\n", nodes);
 			die(419);
 		}
 		firstdim = p->dim-1;
-	#else
-		firstdim = 0;
 	#endif
+	*/
 
 	// start with the largest prime!
 	for (int n=n_primes-1; n>=0; n--) {
@@ -232,7 +186,7 @@ void make_slices(params *p) {
 	* This is implemented in sitemap() below.
 	*/
 
-	// output the obtained processor layout and node sizes
+	// print the obtained processor layout and node sizes
 	if (!p->rank) {
 		printf("Processor layout: ");
 		for (dir=0; dir<p->dim; dir++) {
@@ -260,106 +214,124 @@ void make_slices(params *p) {
 	printf0(*p, " = %lu.\n",sites);
 
 	p->sites = sites;
+	// these will be modified later when we remove unneeded halos:
 	p->halos = halosites;
+	p->sites_total = sites + halosites;
 }
 
 
-/* Find mapping between site indices in my node and the physical (x, y, z...)
-* coordinates on the full lattice, and arrange sites accordingly.
-* Note that on a periodic lattice some halo sites may actually live in the same node as real sites.
-*
-* Specifically, the routine arranges sites so that indices of real sites
-* come before halo site indices, and removes possible duplicates (self halos).
-* This ordering is stored in newindex, which maps unordered indices on the full node
-* to ordered indices.
-*
-* The coordinate mapping is stored in xphys, accessed as xphys[i][dir] = physical coordinate x_dir.
+/* Construct lookup tables for adjacent sites, including halos.
+* Coordinates on the full lattice are stored in p->coords.
+* This is first done using indices in the full haloed node,
+* which are then remapped so that "self halos" are mapped away
+* and real sites come before halos in indexing.
 */
-void sitemap(params *p, long** xphys, long* newindex) {
+void sitemap(params *p) {
 
-	int dir;
-	long i;
 	long maxindex = p->sites + p->halos;
-
-	// temporary working arrays
-	long* xnode = malloc(p->dim * sizeof(xnode)); // coordinates of the MPI nodes
-	long* x = malloc(p->dim * sizeof(x)); // (x,y,z,...) coords on the slice
-	int* siterank = malloc(maxindex * sizeof(siterank)); // rank of the node where site i resides in
-	int* ishalo = malloc(maxindex * sizeof(ishalo)); // is the site a halo or not?
-
+	long i;
+	int dir;
+	// work arrays
+	long xnode[p->dim]; // coordinates of the MPI nodes
+	long x[p->dim]; // (x,y,z,...) coords on the slice
+	char ishalo[maxindex]; // 1 if site is in the halo, 0 otherwise
+	int whichnode[maxindex]; // rank of the node where site i resides in
 
 	// where is the node located?
 	indexToCoords(p->dim, p->nslices, p->rank, xnode);
 
-	// loop over sites in my node, plus all halos.
-	// so the loop is over a hypercube of side lengths sliceL[dir]+2
-	int* haloL = malloc( p->dim * sizeof(haloL));
+	/* now build a halo of thickness 1 around the node. Sites in the halo actually live
+	* in other nodes and the first step is to separate these from "real" sites */
+	int haloL[p->dim];
 	for (dir=0; dir<p->dim; dir++) {
 		haloL[dir] = p->sliceL[dir] + 2;
 	}
 
+	/* Find neighbors and p->coords in terms of indices in the haloed node.
+	* For sites in the positive (negative) halo, we only need to know their neighbors
+	* in the negative (positive) directions. Other neighbor indices are set to -1.
+	* If we ever try to access these neighbors the program should crash, but this is
+	* better than getting wrong results.
+	*/
+
+	// count how many "fake" halo sites we have. these are sites
+	// in the halo that actually live in the same node because of periodicity
+	long selfhalos = 0;
+
 	for (i=0; i<maxindex; i++) {
 
-		ishalo[i] = 0; // innocent until proven otherwise
-
-		// Site coordinates (x, y, z...) in the haloed node.
 		indexToCoords(p->dim, haloL, i, x);
 
-		// Next, calculate the corresponding physical (x, y, z...) on the full lattice
-		// For this we need to know if the site is halo or not
-		for (dir=0; dir<p->dim; dir++) {
+		ishalo[i] = 0;
 
-			// is this a halo site?
+		for (dir=0; dir<p->dim; dir++) {
+			int prev_done = 0, next_done = 0;
+
+			// Assuming we did not cross the lattice boundary:
+			p->coords[i][dir] = x[dir] + xnode[dir] * p->sliceL[dir] - 1; // halos OK too
+
+			// figure out if we are in the halo, and check if we actually crossed the boundary
 			if (x[dir] == p->sliceL[dir] + 1) {
 				ishalo[i] = 1;
-				// we are in the next node in positive direction. Did we go over the lattice boundary?
+				// we are in the next node in positive direction.
+				p->next[i][dir] = -1;
+				next_done = 1;
+
+				//Did we go over the lattice boundary?
 				if (xnode[dir]+1 >= p->nslices[dir]) {
 					// went over, force periodicity
-					xphys[i][dir] = 0;
-				}	else {
-					// no periodicity.
-					xphys[i][dir] = x[dir] + xnode[dir] * p->sliceL[dir] - 1;
+					p->coords[i][dir] = 0;
 				}
 			} else if (x[dir] == 0) {
 				ishalo[i] = 1;
-				// we are in the previous node in this direction. Do we force periodicity?
+				// we are in the previous node in this direction
+				p->prev[i][dir] = -1;
+				prev_done = 1;
+
 				if (xnode[dir]-1 < 0) {
 					// went over lattice boundary
-					xphys[i][dir] = p->L[dir]-1;
-				} else {
-					// no periodicity.
-					xphys[i][dir] = x[dir] + xnode[dir] * p->sliceL[dir] - 1;
+					p->coords[i][dir] = p->L[dir]-1;
 				}
-			} else {
-				// not a halo site
-				xphys[i][dir] = x[dir] + xnode[dir] * p->sliceL[dir] - 1;
+			}
+
+			// find neighbor sites
+			if (!next_done) {
+				x[dir]++;
+				p->next[i][dir] = coordsToIndex(p->dim, haloL, x);
+				x[dir]--;
+			}
+			if (!prev_done) {
+				x[dir]--;
+				p->prev[i][dir] = coordsToIndex(p->dim, haloL, x);
+				x[dir]++;
 			}
 
 		} // end dir loop
 
 		// which node does the site live in?
-		siterank[i] = coordsToRank(*p, xphys[i]);
-	} // end i loop, physical coordinates done.
-
-
-	// how many self halo sites do we have?
-	long selfhalos = 0;
-	for (i=0; i<maxindex; i++) {
-		if (ishalo[i] && siterank[i] == p->rank) {
+		whichnode[i] = coordsToRank(*p, p->coords[i]);
+		if (ishalo[i] && whichnode[i] == p->rank) {
 			selfhalos++;
+		} else if (!ishalo[i] && whichnode[i] != p->rank) {
+			printf("Error in layout.c! mapping failed in node %d \n", p->rank);
+			die(552);
 		}
-	}
+
+	} // end i loop, physical coords and neighbors done
+
+	// get rid of the self halos
+	p->halos -= selfhalos;
 	// actual number of lattice sites that we need to care about:
-	p->sites_total = p->sites + p->halos - selfhalos;
-	// p->halos is needed in calculate_neighbors(), so don't modify it yet!!
+	p->sites_total = p->sites + p->halos;
 
 	/* Rearrange indices: non-halo sites should come before halos.
-	* In case of self halos, move those to the end. */
-
+	* In case of self halos, move those to the end so that we can forget about them. */
+	long newindex[maxindex];
 	long n=0, k=0, j=0;
+
 	for (i=0; i<maxindex; i++) {
-		if (ishalo[i] && siterank[i] == p->rank) {
-			// self halo site, so map it to something we don't care about anymore (could also just realloc away)
+		if (ishalo[i] && whichnode[i] == p->rank) {
+			// self halo site, so map it to something we don't care about anymore
 			newindex[i] = p->sites_total + n;
 			n++;
 		}
@@ -374,146 +346,34 @@ void sitemap(params *p, long** xphys, long* newindex) {
 		}
 	}
 
-	// before rearranging, copy xphys into temp array
-	long** xphys_temp = alloc_latticetable(p->dim, maxindex);
-	for (i=0; i<maxindex; i++) {
+	// remap all
+	remap_lattice_arrays(p, newindex, maxindex);
+
+	/* Almost done, but in p.next and p.prev some sites can still point to a
+	* neighboring self halo site index instead of the real site. To change these,
+	* search for matching coordinates in p->coords
+	*/
+	for (i=0; i<p->sites_total; i++) {
 		for (dir=0; dir<p->dim; dir++) {
-			xphys_temp[i][dir] = xphys[i][dir];
-		}
-	}
-
-	for (i=0; i<maxindex; i++) {
-		for (dir=0; dir<p->dim; dir++) {
-			xphys[newindex[i]][dir] = xphys_temp[i][dir];
-		}
-	}
-
-	// free temp arrays
-	free_latticetable(xphys_temp);
-	free(x);
-	free(xnode);
-	free(ishalo);
-	free(haloL);
-	free(siterank);
-}
-
-
-/* Construct lookup tables for site neighbors, including halos.
-* This is first done in the full haloed node, and the indices are
-* then mapped to new, ordered indices using the mapping given in newindex.
-* References to self halos are remapped to real sites instead,
-* so that the final p.next and p.prev only contain real sites + actual halos.
-*/
-void calculate_neighbors(params *p, long** xphys, long* newindex) {
-
-	long maxindex = p->sites + p->halos;
-	long i;
-	int dir;
-	// work arrays
-	long** nextsite = alloc_latticetable(p->dim, maxindex);
-	long** prevsite = alloc_latticetable(p->dim, maxindex);
-	long* x = malloc(p->dim * sizeof(*x)); // (x,y,z,...) coords on the slice
-
-	// haloed node
-	int* haloL = malloc(p->dim * sizeof(haloL));
-	for (dir=0; dir<p->dim; dir++) {
-		haloL[dir] = p->sliceL[dir] + 2;
-	}
-
-	// find neighbors in the "natural" index ordering
-	for (i=0; i<maxindex; i++) {
-
-		indexToCoords(p->dim, haloL, i, x);
-
-		for (dir=0; dir<p->dim; dir++) {
-
-			// positive directions
-			if (x[dir] + 1 >= haloL[dir]) {
-				// went over the boundary, so just set unrealistic value.
-				// trying to access a field at this index will give an error, so we know something went wrong!
-				nextsite[i][dir] = -1;
-			} else {
-				x[dir]++;
-				nextsite[i][dir] = coordsToIndex(p->dim, haloL, x);
-				x[dir]--;
+			// positive dirs
+			long next = p->next[i][dir];
+			if (next >= p->sites_total) {
+				// points to a self halo site, find the matching real site
+				for (int d=0; d<p->dim; d++) x[d] = p->coords[next][d];
+				// no need to search in halos here
+				p->next[i][dir] = findsite(p, x, 0);
 			}
-			// negative directions
-			if (x[dir] - 1 < 0) {
-				// went over the halo boundary
-				prevsite[i][dir] = -1;
-			} else {
-				x[dir]--;
-				prevsite[i][dir] = coordsToIndex(p->dim, haloL, x);
-				x[dir]++;
-			}
+			// negative dirs
+			long prev = p->prev[i][dir];
+			if (prev >= p->sites_total) {
+				for (int d=0; d<p->dim; d++) x[d] = p->coords[prev][d];
 
-		}
-	}
-
-	// now use newindex[] to order these similarly to xphys in sitemap(), and store in p.next/p.prev
-	long next, prev;
-	for (i=0; i<maxindex; i++) {
-		if (newindex[i] >= p->sites_total) {
-			// skip self halos
-			continue;
-		}
-		for (dir=0; dir<p->dim; dir++) {
-
-			// positive directions
-			next = nextsite[i][dir];
-			if (next == -1) {
-				p->next[newindex[i]][dir] = -1;
-			}
-			else if (newindex[next] >= p->sites_total) {
-				// the neighbor is a self halo site,
-				// so use xphys to find the real site corresponding to it.
-				// coords of the site whose neighbor we are looking for?
-				for (int d=0; d<p->dim; d++) {
-					x[d] = xphys[newindex[i]][d];
-				}
-				// coords of the neighbor?
-				if (x[dir] + 1 >= p->L[dir]) {
-					x[dir] = 0;
-				} else {
-					x[dir]++;
-				}
-
-				// no need to look in halos here
-				p->next[newindex[i]][dir] = findsite(*p, x, xphys, 0);
-
-			} else {
-				p->next[newindex[i]][dir] = newindex[next];
-			}
-
-			// negative directions
-			prev = prevsite[i][dir];
-			if (prev == -1) {
-				p->prev[newindex[i]][dir] = -1;
-			} else if (newindex[prev] >= p->sites_total) {
-				// neighbor is a self halo site
-				for (int d=0; d<p->dim; d++) {
-					x[d] = xphys[newindex[i]][d];
-				}
-				// coords of the neighbor?
-				if (x[dir] - 1 < 0) {
-					x[dir] = p->L[dir] - 1;
-				} else {
-					x[dir]--;
-				}
-
-				// no need to look in halos here
-				p->prev[newindex[i]][dir] = findsite(*p, x, xphys, 0);
-
-			}	else {
-				p->prev[newindex[i]][dir] = newindex[prev];
+				p->prev[i][dir] = findsite(p, x, 0);
 			}
 		}
 	}
 
-	free_latticetable(prevsite);
-	free_latticetable(nextsite);
-	free(x);
-	free(haloL);
+	// tables done and self halos moved to indices > p->sites_total. realloc in layout()
 }
 
 
@@ -523,7 +383,7 @@ void calculate_neighbors(params *p, long** xphys, long* newindex) {
 * its physical coordinates x + y + z + ... is an even number,
 * ODD otherwise. These are chars defined in a header file (where?)
 */
-void set_parity(params *p, long** xphys) {
+void set_parity(params *p) {
 
 	long tot;
 	p->evensites = 0; p->oddsites = 0;
@@ -533,7 +393,7 @@ void set_parity(params *p, long** xphys) {
 	for (long i=0; i<p->sites; i++) {
 		tot = 0;
 		for (int dir=0; dir<p->dim; dir++) {
-			tot += xphys[i][dir];
+			tot += p->coords[i][dir];
 		}
 		if (tot % 2 == 0) {
 			p->parity[i] = EVEN;
@@ -547,7 +407,7 @@ void set_parity(params *p, long** xphys) {
 	for (long i=p->sites; i<p->sites_total; i++) {
 		tot = 0;
 		for (int dir=0; dir<p->dim; dir++) {
-			tot += xphys[i][dir];
+			tot += p->coords[i][dir];
 		}
 		if (tot % 2 == 0) {
 			p->parity[i] = EVEN;
@@ -562,21 +422,21 @@ void set_parity(params *p, long** xphys) {
 
 
 /* Quick routine for finding site index from given
-* physical coordinates. Assumes ordered xphys.
+* physical coordinates. Assumes ordered p->coords.
 */
-long findsite(params p, long* x, long** xphys, int include_halos) {
+long findsite(params* p, long* x, int include_halos) {
 
 	long max;
 	if (include_halos) {
-		max = p.sites_total;
+		max = p->sites_total;
 	} else {
-		max = p.sites;
+		max = p->sites;
 	}
 
 	for (long i=0; i<max; i++) {
 		int match = 1;
-		for (int dir=0; dir<p.dim; dir++) {
-			if (x[dir] != xphys[i][dir]) {
+		for (int dir=0; dir<p->dim; dir++) {
+			if (x[dir] != p->coords[i][dir]) {
 				match = 0;
 				break;
 			}
@@ -588,7 +448,7 @@ long findsite(params p, long* x, long** xphys, int include_halos) {
 	}
 
 	// no match after searching through all sites?
-	printf("Node %d: Failed to find matching site in xphys!\n", p.rank);
+	printf("Node %d: Failed to find matching site in p->coords!\n", p->rank);
 	return -1;
 }
 
@@ -597,7 +457,7 @@ long findsite(params p, long* x, long** xphys, int include_halos) {
 * This checks that basic indexing is OK, but does not check that neighboring sites
 * have adjacent indices (which they should, apart from sites at hypercube sides).
 */
-void test_xphys(params p, long** xphys) {
+void test_coords(params p) {
 
 	long* xnode = malloc(p.dim * sizeof(*xnode));
 
@@ -610,15 +470,15 @@ void test_xphys(params p, long** xphys) {
 	// first site on the node?
 	// we remapped sites by parity, so first site is either i=0 or i=p.evensites
 	for (dir=0; dir<p.dim; dir++) {
-		if (xphys[0][dir] != xnode[dir] * p.sliceL[dir] && xphys[p.evensites][dir] != xnode[dir] * p.sliceL[dir]) {
-			printf("Node %d: Error in test_xphys! First site not where it should be \n", p.rank);
+		if (p.coords[0][dir] != xnode[dir] * p.sliceL[dir] && p.coords[p.evensites][dir] != xnode[dir] * p.sliceL[dir]) {
+			printf("Node %d: Error in test_coords! First site not where it should be \n", p.rank);
 			die(-111);
 		}
 	}
 	// last real site on the node?
 	for (dir=0; dir<p.dim; dir++) {
-		if (xphys[p.sites-1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1 && xphys[p.evensites-1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1) {
-			printf("Node %d: Error in test_xphys! Last site not where it should be \n", p.rank);
+		if (p.coords[p.sites-1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1 && p.coords[p.evensites-1][dir] != (xnode[dir] + 1)* p.sliceL[dir] - 1) {
+			printf("Node %d: Error in test_coords! Last site not where it should be \n", p.rank);
 			die(-112);
 		}
 	}
@@ -628,8 +488,8 @@ void test_xphys(params p, long** xphys) {
 	// xnode[j] * p.sliceL[j] <= x[j] <= xnode[j] * p.sliceL[j] + p.sliceL[j] - 1
 	for (i=0; i<p.sites; i++) {
 		for (dir=0; dir<p.dim; dir++) {
-			if (xphys[i][dir] > (xnode[dir] + 1) * p.sliceL[dir] - 1 || xnode[dir] * p.sliceL[dir] > xphys[i][dir]) {
-				printf("Node %d: Error in test_xphys! Real site %ld not indexed properly \n", p.rank, i);
+			if (p.coords[i][dir] > (xnode[dir] + 1) * p.sliceL[dir] - 1 || xnode[dir] * p.sliceL[dir] > p.coords[i][dir]) {
+				printf("Node %d: Error in test_coords! Real site %ld not indexed properly \n", p.rank, i);
 				die(-113);
 			}
 		}
@@ -640,12 +500,12 @@ void test_xphys(params p, long** xphys) {
 	for (i=p.sites; i<p.sites_total; i++) {
 		int ok = 0;
 		for (dir=0; dir<p.dim; dir++) {
-			if (xphys[i][dir] > (xnode[dir] + 1) * p.sliceL[dir] - 1 || xnode[dir] * p.sliceL[dir] > xphys[i][dir]) {
+			if (p.coords[i][dir] > (xnode[dir] + 1) * p.sliceL[dir] - 1 || xnode[dir] * p.sliceL[dir] > p.coords[i][dir]) {
 				ok = 1;
 			}
 		}
 		if (!ok) {
-			printf("Node %d: Error in test_xphys! Halo site %ld not indexed properly \n", p.rank, i);
+			printf("Node %d: Error in test_coords! Halo site %ld not indexed properly \n", p.rank, i);
 			die(-114);
 		}
 	}
@@ -653,11 +513,11 @@ void test_xphys(params p, long** xphys) {
 	free(xnode);
 }
 
-/* Test for p.next and p.prev, and p.parity.
-* Uses xphys to check that the physical coordinates of the neighbor sites
+/* Perform strong checks on p.next and p.prev, and p.parity.
+* Uses p->coords to check that the physical coordinates of the neighbor sites
 * are what they should for each site and direction, including halos.
 */
-void test_neighbors(params p, long** xphys) {
+void test_neighbors(params p) {
 
 	int skip_parity = 0;
 	for (int dir=0; dir<p.dim; dir++) {
@@ -691,7 +551,7 @@ void test_neighbors(params p, long** xphys) {
 				// check that coordinates of the next site make sense.
 				// What we think they should be:
 				for (int d=0; d<p.dim; d++) {
-					x[d] = xphys[i][d];
+					x[d] = p.coords[i][d];
 				}
 				x[dir]++;
 				// Periodicity?
@@ -699,9 +559,9 @@ void test_neighbors(params p, long** xphys) {
 					x[dir] = 0;
 				}
 
-				// what they are according to xphys
+				// what they are according to p->coords
 				for (int d=0; d<p.dim; d++) {
-					if (xphys[next][d] != x[d]) {
+					if (p.coords[next][d] != x[d]) {
 						printf("Node %d: Error in test_neighbors, site %ld! Coordinates of next site in direction %d do not match! \n", p.rank, i, dir);
 						die(-117);
 					}
@@ -729,7 +589,7 @@ void test_neighbors(params p, long** xphys) {
 				// check that coordinates of the next site make sense.
 				// What we think they should be:
 				for (int d=0; d<p.dim; d++) {
-					x[d] = xphys[i][d];
+					x[d] = p.coords[i][d];
 				}
 				x[dir]--;
 				// Periodicity?
@@ -737,9 +597,9 @@ void test_neighbors(params p, long** xphys) {
 					x[dir] = p.L[dir] - 1;
 				}
 
-				// what they are according to xphys
+				// what they are according to p->coords
 				for (int d=0; d<p.dim; d++) {
-					if (xphys[prev][d] != x[d]) {
+					if (p.coords[prev][d] != x[d]) {
 						printf("Node %d: Error in test_neighbors, site %ld! Coordinates of previous site in direction %d do not match! \n", p.rank, i, dir);
 						die(-119);
 					}
@@ -804,25 +664,18 @@ void layout(params *p, comlist_struct *comlist) {
 		p->nslices[dir] = 1;
 	}
 
-	alloc_lattice_arrays(p);
-	// not used in serial; just give some dummy values
-	long** xphys = alloc_latticetable(p->dim, p->sites_total);
-	for (long i=0; i<p->sites_total; i++) {
-		for (int dir=0; dir<p->dim; dir++) {
-			xphys[i][dir] = 0;
-		}
-	}
+	alloc_lattice_arrays(p, p->sites_total);
 
-	long* newindex = malloc(p->sites_total * sizeof(*newindex));
 	// construct lookup tables for site neighbors and parity
-	calculate_neighbors(p, xphys, newindex);
-	set_parity(p, xphys);
+	sitemap(p);
+	set_parity(p);
 
-	// reorder by parity (not used for now)
+	// reorder by parity
 	p->reorder_parity = 1;
 	if (p->reorder_parity) {
+		long newindex[p->sites_total];
 		paritymap(p, newindex);
-		remap_lattice_arrays(p, xphys, newindex);
+		remap_lattice_arrays(p, newindex, p->sites_total);
 	}
 
 
@@ -830,41 +683,34 @@ void layout(params *p, comlist_struct *comlist) {
 	comlist->send_to = malloc(sizeof(*comlist->send_to));
 	comlist->recv_from = malloc(sizeof(*comlist->recv_from));
 
-	free(newindex);
-	free_latticetable(xphys);
 }
 
-
-// arguments xphys and newindex are not actually used in serial
-void calculate_neighbors(params* p, long** xphys, long* newindex) {
+void sitemap(params* p) {
 
 	p->oddsites = 0; p->oddhalos = 0;
 	p->evensites = 0; p->evenhalos = 0;
-	long* x = malloc(p->dim * sizeof(*x));
 
 	for (long i=0; i<p->sites_total; i++) {
 
-		// get the physical coordinates of site i and store in x
-		indexToCoords(p->dim, p->L, i, x);
+		// get the physical coordinates of site i and store in p.coords[i]
+		indexToCoords(p->dim, p->L, i, p->coords[i]);
 
 		for (int dir=0; dir < p->dim; dir++) {
-			x[dir]++;
-			p->next[i][dir] = coordsToIndex(p->dim, p->L, x);
-			x[dir] -= 2;
-			p->prev[i][dir] = coordsToIndex(p->dim, p->L, x);
+			p->coords[i][dir]++;
+			p->next[i][dir] = coordsToIndex(p->dim, p->L, p->coords[i]);
+			p->coords[i][dir] -= 2;
+			p->prev[i][dir] = coordsToIndex(p->dim, p->L, p->coords[i]);
 			// return to the original value
-			x[dir]++;
+			p->coords[i][dir] ++;
 		}
 
 	}
 
-	free(x);
-
-	printf("Site lookup table constructed succesfully.\n");
+	printf("Site lookup tables constructed succesfully.\n");
 }
 
 
-void set_parity(params *p, long** xphys) {
+void set_parity(params *p) {
 
 	p->oddsites = 0; p->oddhalos = 0;
 	p->evensites = 0; p->evenhalos = 0;
@@ -913,8 +759,8 @@ void die(int howbad) {
 
 /* Order sites according to their parity.
 * Assumes that self halos have been removed and sites ordered so that
-* real sites come before halos. The routine just reuses newindex array.
-* Possible problem: contiguous memory may lose its effectiveness?
+* real sites come before halos. Does not reorder EVEN (ODD) sites among themselves.
+* Note that the routine overrides newindex table.
 */
 void paritymap(params* p, long* newindex) {
 
@@ -943,56 +789,77 @@ void paritymap(params* p, long* newindex) {
 
 }
 
-/* Remap all lattice tables using mapping given in newindex.
+/* Reorder a given lattice table using the mapping given in newindex.
+* The table should be p.dim * maxindex sized.
 */
-void remap_lattice_arrays(params* p, long** xphys, long* newindex) {
+void remap_latticetable(params* p, long** arr, long* newindex, long maxindex) {
+	long** temp = alloc_latticetable(p->dim, maxindex);
 
-	long maxindex = p->sites_total;
-	// create backups
-	long** xphys_temp = alloc_latticetable(p->dim, maxindex);
-	long** nextsite = alloc_latticetable(p->dim, maxindex);
-	long** prevsite = alloc_latticetable(p->dim, maxindex);
-	char* par = malloc(maxindex * sizeof(*(par)));
-
-	long next, prev;
-
+	int dir;
 	for (long i=0; i<maxindex; i++) {
-		par[i] = p->parity[i];
-		for (int dir=0; dir<p->dim; dir++) {
-			xphys_temp[i][dir] = xphys[i][dir];
-			nextsite[i][dir] = p->next[i][dir];
-			prevsite[i][dir] = p->prev[i][dir];
+		for (dir=0; dir<p->dim; dir++) {
+			temp[i][dir] = arr[i][dir];
 		}
 	}
 
 	// remap
 	for (long i=0; i<maxindex; i++) {
 		long new = newindex[i];
-		p->parity[new] = par[i];
-		for (int dir=0; dir<p->dim; dir++) {
-			xphys[new][dir] = xphys_temp[i][dir];
-
-			next = nextsite[i][dir];
-			if (next == -1) {
-				p->next[newindex[i]][dir] = -1;
-			} else {
-				p->next[newindex[i]][dir] = newindex[next];
-			}
-
-			prev = prevsite[i][dir];
-			if (prev == -1) {
-				p->prev[newindex[i]][dir] = -1;
-			} else {
-				p->prev[newindex[i]][dir] = newindex[prev];
-			}
-
+		for (dir=0; dir<p->dim; dir++) {
+			arr[new][dir] = temp[i][dir];
 		}
 	}
 
-	free_latticetable(xphys_temp);
-	free_latticetable(prevsite);
-	free_latticetable(nextsite);
-	free(par);
+	free_latticetable(temp);
+}
+
+// Same as remap_latticetable() but specifically for neighbor lookup tables
+void remap_neighbor_table(params* p, long** arr, long* newindex, long maxindex) {
+	long** temp = alloc_latticetable(p->dim, maxindex);
+
+	int dir;
+	for (long i=0; i<maxindex; i++) {
+		for (dir=0; dir<p->dim; dir++) {
+			temp[i][dir] = arr[i][dir];
+		}
+	}
+	// remap
+	for (long i=0; i<maxindex; i++) {
+		long new = newindex[i];
+		for (dir=0; dir<p->dim; dir++) {
+			// next[i][dir] can point to index -1 if the neighbor is outside the haloed node
+			int next = temp[i][dir];
+			if (next == -1) {
+				arr[new][dir] = -1;
+			} else {
+				arr[new][dir] = newindex[next];
+			}
+		}
+	}
+
+	free_latticetable(temp);
+}
+
+/* Remap all lattice tables using mapping given in newindex.
+*/
+void remap_lattice_arrays(params* p, long* newindex, long maxindex) {
+
+	// backup parity
+	char par[maxindex];
+	for (long i=0; i<maxindex; i++) {
+		par[i] = p->parity[i];
+	}
+
+	// remap
+	for (long i=0; i<maxindex; i++) {
+		long new = newindex[i];
+		p->parity[new] = par[i];
+	}
+
+	remap_neighbor_table(p, p->next, newindex, maxindex);
+	remap_neighbor_table(p, p->prev, newindex, maxindex);
+
+	remap_latticetable(p, p->coords, newindex, maxindex);
 }
 
 
@@ -1013,7 +880,8 @@ inline long Lprod(int* L, int max) {
 /* From the site index, get the physical coordinates (x, y, z,...) on a dim-dimensional
 * lattice with side lengths defined as in L, and store in x.
 * Can be used for the full lattice, or a single slice!
-* see Mathematica notebook coordinates.nb for analytical relations
+* see Mathematica notebook coordinates.nb for analytical relations.
+* This obviously only works in a "natural" ordering of site indices
 */
 void indexToCoords(short dim, int* L, long i, long* x) {
 
@@ -1034,7 +902,7 @@ void indexToCoords(short dim, int* L, long i, long* x) {
 }
 
 
-// Same as indexToCoords(), but convert from the (x, y, z, ...) to site index.
+// Same as indexToCoords(), but convert from the (x, y, z, ...) to the "natural" site index.
 long coordsToIndex(short dim, int* L, long* x) {
 
 		long res = 0;
@@ -1047,11 +915,11 @@ long coordsToIndex(short dim, int* L, long* x) {
 /* Convert physical (x, y, z, ...) coordinates on the full lattice
 * to MPI node index (which is the same as MPI rank in this layout).
 */
-int coordsToRank(params p, long* xphys) {
+int coordsToRank(params p, long* coords) {
 	// first find the (x, y, z, ...) coordinates of the node
 	long* x = malloc( (p.dim) * sizeof(x));
 	for (int dir=0; dir<p.dim; dir++) {
-		x[dir] = floor(xphys[dir] / p.sliceL[dir]);
+		x[dir] = floor(coords[dir] / p.sliceL[dir]);
 	}
 	// then convert the coordinates to node index
 	int i = coordsToIndex(p.dim, p.nslices, x);

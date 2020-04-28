@@ -1,9 +1,7 @@
 
 #include "su2.h"
 #include "comms.h"
-#ifdef WALL
-	#include "wallprofile.h"
-#endif
+#include "hb_trajectory.h"
 
 int main(int argc, char *argv[]) {
 
@@ -16,6 +14,9 @@ int main(int argc, char *argv[]) {
 	counters c;
 	comlist_struct comlist;
 	weight w;
+	#ifdef HB_TRAJECTORY
+		trajectory traj;
+	#endif
 
 	clock_t start_time, end_time;
 	double timing = 0.0;
@@ -82,21 +83,24 @@ int main(int argc, char *argv[]) {
 	if (access(p.latticefile,R_OK) == 0) {
 		// ok
 		printf0(p, "\nLoading latticefile: %s\n", p.latticefile);
-		load_lattice(p, f, &c);
+		load_lattice(&p, &f, &c, &comlist); // also calls sync_halos()
+		printf0(p, "Fields loaded succesfully.\n");
 	} else {
 		printf0(p, "No latticefile found; starting with cold configuration.\n");
 		setfields(f, p);
+		sync_halos(&f, &p, &comlist);
 		p.reset = 1;
 	}
 
-	sync_halos(&f, &p, &comlist);
+	// by default, update ordering is not randomized
+	p.random_sweeps = 0;
 
 	#ifdef WALL
 		if (p.reset) {
 			// setup wall. This overrides any other field initializations!!
 			prepare_wall(&f, &p, &comlist); // halos re-synced here
+			measure_along_z(&f, &p, 0); // initial measurements, identifier=0
 		}
-		measure_wall(&f, &p);
 	#endif
 
 	// labels for results file
@@ -117,11 +121,26 @@ int main(int argc, char *argv[]) {
 			printf0(p, "Read-only run, will not modify weight. \n");
 		}
 	}
+
 	#ifdef HB_TRAJECTORY
-	else {
-		 printf0(p, "\nTurn multicanonical on for realtime trajectories! Exiting...\n");
-		 die(-44);
-	}
+		if(!p.multicanonical) {
+			 printf0(p, "\nTurn multicanonical on for realtime trajectories! Exiting...\n");
+			 die(-44);
+		} else {
+			printf0(p, "\nReal time simulation: reading file \"realtime_config\"\n");
+			read_realtime_config("realtime_config", &traj);
+			printf0(p, "Heatbath trajectory mode every %ld iterations, %ld trajectories each\n", traj.mode_interval, traj.n_traj);
+			printf0(p, "--- min %lf, %max %lf, measure interval %ld ---\n", traj.min, traj.max, traj.interval);
+
+			if (p.algorithm_su2link != HEATBATH) {
+				printf0(p, "\n--- WARNING: SU(2) update not using heatbath!\n");
+			}
+			#ifdef U1
+			if (p.algorithm_u1link != HEATBATH) {
+				printf0(p, "\n--- WARNING: U(1) update not using heatbath!\n");
+			}
+			#endif
+		}
 	#endif
 
 	/* if no lattice file was given or if reset=1 in config,
@@ -176,17 +195,18 @@ int main(int argc, char *argv[]) {
 
 		// measure & update fields first, then checkpoint if needed
 		if (iter % p.interval == 0) {
-			measure(&f, &p, &c, &w);
+			measure(p.resultsfile, &f, &p, &c, &w);
 		}
+		#ifdef MEASURE_Z
+			if (iter % p.meas_interval_z == 0) {
+				measure_along_z(&f, &p, iter / p.meas_interval_z);
+			}
+		#endif
 
-		// keep nodes in sync. without this things can go wrong if some node is much
-		// faster than others, so that it sends new fields to others before they managed
-		// to receive the earlier ones. Todo: optimize this
-		barrier();
 		// update all fields. multicanonical checks are contained in sweep routines
 		update_lattice(&f, &p, &comlist, &c, &w);
 
-		if ((iter % p.checkpoint == 0)) {
+		if (iter % p.checkpoint == 0) {
 			// Checkpoint time; print acceptance and save fields to latticefile
 			end_time = clock();
 			timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
@@ -199,14 +219,16 @@ int main(int argc, char *argv[]) {
 				print_acceptance(p, c);
 			}
 
-			#ifdef WALL
-				measure_wall(&f, &p);
-			#endif
-
 			save_lattice(p, f, c);
 			// update max iterations if the config file has been changed by the user
 			read_updated_parameters(argv[1], &p);
 		} // end checkpoint
+
+		#ifdef HB_TRAJECTORY
+			if (iter % traj.mode_interval == 0) {
+				make_realtime_trajectories(&p, &f, &comlist, &c, &w, &traj);
+			}
+		#endif
 
 		iter++;
 
@@ -230,10 +252,13 @@ int main(int argc, char *argv[]) {
 	if (p.multicanonical) {
 		free_muca_arrays(&f, &w);
 	}
-
-	#ifdef MPI
-	MPI_Barrier(MPI_COMM_WORLD);
+	// miscellaneous frees for stuff not allocated in alloc.c
+	#ifdef MEASURE_Z
+		free_latticetable(p.site_at_z);
 	#endif
+
+	barrier();
+
 	//printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
 	printf0(p, "\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
 	#ifdef MPI

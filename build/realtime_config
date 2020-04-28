@@ -1,0 +1,16 @@
+### config file for realtime inputs
+
+# how often to turn on heatbath trajectory mode
+mode_interval 500
+
+# how many trajectories during trajectory mode (fixed initial configuration)
+n_traj 5
+
+# how often to perform measurements in trajectory mode
+interval 1
+
+## min and max values of multicanonical order parameter in a trajectory
+## trajectory is considered complete if the order param crosses min or max
+min 0.10
+max 0.90
+

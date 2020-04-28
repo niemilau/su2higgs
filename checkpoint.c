@@ -110,11 +110,11 @@ void save_lattice(params p, fields f, counters c) {
 * counters and iteration number can be kept in sync, while only the root node
 * reads fields and distributes them to others.
 */
-void load_lattice(params p, fields f, counters* c) {
+void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comlist) {
 
 	FILE *file;
 
-	file = fopen(p.latticefile, "rb");
+	file = fopen(p->latticefile, "rb");
 	// first line: p.size p.dim L1 L2 ... Ln
 	// note that these are int type (need to be careful with this)
 	int dim, size, read = 0;
@@ -127,34 +127,34 @@ void load_lattice(params p, fields f, counters* c) {
 
 	if (!read) {
 		// did not read anything...
-		printf0(p, "Error reading latticefile!\n");
+		printf0(*p, "Error reading latticefile!\n");
 		die(500);
 	}
 
 	int ok = 1;
 	// check that dimensions of the lattice file match those in our config
-	if (p.dim != dim || p.size != size)
+	if (p->dim != dim || p->size != size)
 		ok = 0;
 
 	if (ok) {
-		for (int d=0; d<p.dim; d++) {
-			if (L[d] != p.L[d])
+		for (int d=0; d<p->dim; d++) {
+			if (L[d] != p->L[d])
 				ok = 0;
 		}
 	}
 
 	if (!ok) {
-		printf0(p, "Dimensions in latticefile do not match! Got:\n");
-		printf0(p, " 	MPI size %d, dimension %d, volume ", size, dim);
+		printf0(*p, "Dimensions in latticefile do not match! Got:\n");
+		printf0(*p, " 	MPI size %d, dimension %d, volume ", size, dim);
 		for (int d=0; d<dim; d++) {
-			printf0(p, "%d x ", L[d]);
+			printf0(*p, "%d x ", L[d]);
 		}
-		printf0(p, "\b\b \b\n\nWas supposed to be: \n");
-		printf0(p, "	MPI size %d, dimension %d, volume ", p.size, p.dim);
-		for (int d=0; d<p.dim; d++) {
-			printf0(p, "%d x ", p.L[d]);
+		printf0(*p, "\b\b \b\n\nWas supposed to be: \n");
+		printf0(*p, "	MPI size %d, dimension %d, volume ", p->size, p->dim);
+		for (int d=0; d<p->dim; d++) {
+			printf0(*p, "%d x ", p->L[d]);
 		}
-		printf0(p, "\b\b \b\n");
+		printf0(*p, "\b\b \b\n");
 		die(501);
 	}
 
@@ -165,23 +165,25 @@ void load_lattice(params p, fields f, counters* c) {
 	read += fread(&c->comms_time, sizeof(c->comms_time), 1, file);
 
 	// if not root node, can close the file here
-	if (p.rank != 0)
+	if (p->rank != 0)
 		fclose(file);
 
 	// Read fields. Ordering HAS to be same as in save_lattice()
-	read_field(p, file, &f.su2link[0][0][0], p.dim * SU2LINK);
+	read_field(*p, file, &f->su2link[0][0][0], p->dim * SU2LINK);
 	#ifdef U1
-	read_field(p, file, &f.u1link[0][0], p.dim);
+	read_field(*p, file, &f->u1link[0][0], p->dim);
 	#endif
 	#ifdef HIGGS
-	read_field(p, file, &f.su2doublet[0][0], SU2DB);
+	read_field(*p, file, &f->su2doublet[0][0], SU2DB);
 	#endif
 	#ifdef TRIPLET
-	read_field(p, file, &f.su2triplet[0][0], SU2TRIP);
+	read_field(*p, file, &f->su2triplet[0][0], SU2TRIP);
 	#endif
 
-	if (p.rank == 0) {
-		printf("Fields loaded succesfully.\n");
+	// finally, sync all halo fields; these were not loaded from the file
+	sync_halos(f, p, comlist);
+
+	if (p->rank == 0) {
 		fclose(file);
 	}
 }
