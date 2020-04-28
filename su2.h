@@ -67,11 +67,14 @@ typedef struct {
 
 	#ifdef MEASURE_Z
 		/* Single out a particular direction ("z coordinate") to study e.g. wall profile, correlation lengths.
-		* These are initialized in layout() after sitemap() */
+		* These are initialized in init_z_coord() which is called by layout() */
 		int z_dir; // specify the z direction, default = longest direction
 		long sites_per_z, offset_z; // offset = physical value of z at the "first" site in my node
+		long area; // how many sites per z coordinate on the whole lattice; area = vol / L[z_dir]
 		// list of all real sites at fixed z coord in no particular order
 		long** site_at_z; // sites_at_z[z][j], 0<=j<sites_per_z
+		int n_meas_z; // how many quantities to measure along z
+		int meas_interval_z; // read in from config file in get_parameters()
 	#endif
 
 	// max iterations etc
@@ -366,6 +369,15 @@ void reset_muca_fields(params const* p, fields* f, weight* w, char par);
 void alloc_backup_arrays(params const* p, fields* f, weight const* w);
 void free_muca_arrays(fields* f, weight *w);
 
+#ifdef MEASURE_Z
+	// z_coord.c
+	void init_z_coord(params* p);
+	void print_z_labels(params* p);
+	void measure_along_z(fields const* f, params const* p, long id);
+	void prepare_wall(fields* f, params const* p, comlist_struct* comlist);
+#endif
+
+
 #ifdef TRIPLET
 	// magfield.c
 	void matmat(double *in1, double *in2, int dag);
@@ -375,5 +387,6 @@ void free_muca_arrays(fields* f, weight *w);
 	double magfield(params const* p, fields const* f, long i, int dir);
 	double magcharge_cube(params const* p, fields const* f, long i);
 #endif
+
 
 #endif

@@ -7,9 +7,6 @@
 
 #include "su2.h"
 #include "comms.h"
-#ifdef WALL
-		#include "wallprofile.h"
-#endif
 
 #ifdef MPI
 
@@ -62,19 +59,13 @@ void layout(params *p, comlist_struct *comlist) {
 
 	// --- Site ordering not changed beyond this point ---
 
-	#ifdef MEASURE_Z
-		//
-
-
-	#endif
-
-	MPI_Barrier(MPI_COMM_WORLD);
+	barrier();
 
 	// construct communication tables
 	make_comlists(p, comlist);
 
 	// Run sanity checks on lattice layout and comms?
-	MPI_Barrier(MPI_COMM_WORLD);
+	barrier();
 	if (p->run_checks) {
 
 		start = clock();
@@ -90,48 +81,11 @@ void layout(params *p, comlist_struct *comlist) {
 		printf0(*p, "All tests OK! Time taken: %lf seconds.\n", time);
 	}
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	#ifdef MEASURE_Z
+		init_z_coord(p);
+	#endif
 
-	#ifdef WALL
-		printf0(*p, "Initializing wall profile structures\n");
-		// initialize stuff defined in wallprofile.h
-
-		sites_per_z = 1;
-		if (p->dim == 1) {
-			sites_per_z = p->sliceL[0];
-		}
-		else {
-			for (int d=0; d<p->dim-1; d++) {
-				sites_per_z *= p->sliceL[d];
-			}
-		}
-
-		// allocate table so that wallcoord[z][n] gives the site index i
-		// of site with z-coordinate z, and n runs over all sites with that z index.
-		wallcoord = alloc_latticetable(sites_per_z, p->sliceL[p->dim-1]);
-
-		long* xnode = malloc(p->dim * sizeof(xnode)); // coordinates of the MPI nodes
-		indexToCoords(p->dim, p->nslices, p->rank, xnode);
-
-		offset_z = xnode[p->dim-1] * p->sliceL[p->dim-1];
-
-		for (long nz=0; nz<p->sliceL[p->dim-1]; nz++) {
-			long tot = 0;
-			for (long i=0; i<p->sites; i++) {
-				if (nz + offset_z == p->coords[i][p->dim-1]) {
-					wallcoord[nz][tot] = i;
-					tot++;
-				}
-			}
-			if (tot != sites_per_z) {
-				printf("Error in wall profile routines in layout.c!\n");
-				die(420);
-			}
-		}
-
-		free(xnode);
-
-	#endif // end WALL
+	barrier();
 
 }
 
@@ -190,17 +144,17 @@ void make_slices(params *p) {
 		nslices[dir] = 1;
 	}
 
-	int firstdim;
+	int firstdim = 0;
+	/*
 	#ifdef WALL
-		// for wall profiling, ONLY slice the last direction!
+		// for wall profiling, ONLY slice the last direction! (OUTDATED, works with general slices now)
 		if (p->L[p->dim-1] % nodes != 0) {
 			printf0(*p, "Wall routines failed: cannot split z-direction into %d pieces! in layout.c\n", nodes);
 			die(419);
 		}
 		firstdim = p->dim-1;
-	#else
-		firstdim = 0;
 	#endif
+	*/
 
 	// start with the largest prime!
 	for (int n=n_primes-1; n>=0; n--) {
@@ -360,6 +314,7 @@ void sitemap(params *p) {
 			selfhalos++;
 		} else if (!ishalo[i] && whichnode[i] != p->rank) {
 			printf("Error in layout.c! mapping failed in node %d \n", p->rank);
+			die(552);
 		}
 
 	} // end i loop, physical coords and neighbors done

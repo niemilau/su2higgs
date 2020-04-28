@@ -9,9 +9,6 @@
 
 #include "su2.h"
 #include "comms.h"
-#ifdef WALL
-  #include "wallprofile.h"
-#endif
 
 /* Allocates memory for a field with a single degree of freedom per site.
 *
@@ -160,7 +157,15 @@ void free_fields(params p, fields *f) {
 long **alloc_latticetable(int dim, long sites) {
 
 	long **array = malloc(sites * sizeof(*(array)));
+  if (array == NULL) {
+    printf("Failed to allocate memory for a lattice table!\n");
+    die(1001);
+  }
 	array[0] = malloc(sites * dim * sizeof(array[0]));
+  if (array[0] == NULL) {
+    printf("Failed to allocate memory for a lattice table!\n");
+    die(1002);
+  }
 	for (long i=0; i<sites; i++) {
 		array[i] = array[0] + i * dim;
 	 }
@@ -225,9 +230,7 @@ void free_lattice_arrays(params *p) {
   free_latticetable(p->coords);
 	free_latticetable(p->next);
 	free_latticetable(p->prev);
-  #ifdef WALL
-    free_latticetable(wallcoord);
-  #endif
+
 	// slicing:
 	free(p->sliceL);
 	free(p->nslices);

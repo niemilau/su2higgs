@@ -39,6 +39,8 @@ void get_parameters(char *filename, params *p) {
   int set_n_thermalize = 0;
   int set_checks = 0;
 
+  int set_interval_z = 0;
+
   int set_su2alg = 0;
   int set_u1alg = 0;
   int set_su2DBalg = 0;
@@ -132,6 +134,12 @@ void get_parameters(char *filename, params *p) {
       p->interval = strtol(value,NULL,10);
       set_interval = 1;
     }
+    #ifdef MEASURE_Z
+      else if(!strcasecmp(key,"interval_z")) {
+        p->meas_interval_z = strtol(value,NULL,10);
+        set_interval_z = 1;
+      }
+    #endif
     else if(!strcasecmp(key,"checkpoint")) {
       p->checkpoint = strtol(value,NULL,10);
       set_checkpoint = 1;
@@ -375,6 +383,10 @@ void get_parameters(char *filename, params *p) {
 	#endif
   #if defined (TRIPLET) && defined (HIGGS)
   check_set(set_a2, "a2");
+  #endif
+
+  #ifdef MEASURE_Z
+    check_set(set_interval_z, "interval_z");
   #endif
 
   check_set(set_resultsfile, "resultsfile");

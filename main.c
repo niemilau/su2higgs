@@ -1,9 +1,6 @@
 
 #include "su2.h"
 #include "comms.h"
-#ifdef WALL
-	#include "wallprofile.h"
-#endif
 #include "hb_trajectory.h"
 
 int main(int argc, char *argv[]) {
@@ -102,8 +99,8 @@ int main(int argc, char *argv[]) {
 		if (p.reset) {
 			// setup wall. This overrides any other field initializations!!
 			prepare_wall(&f, &p, &comlist); // halos re-synced here
+			measure_along_z(&f, &p, 0); // initial measurements, identifier=0
 		}
-		measure_wall(&f, &p);
 	#endif
 
 	// labels for results file
@@ -200,11 +197,12 @@ int main(int argc, char *argv[]) {
 		if (iter % p.interval == 0) {
 			measure(p.resultsfile, &f, &p, &c, &w);
 		}
+		#ifdef MEASURE_Z
+			if (iter % p.meas_interval_z == 0) {
+				measure_along_z(&f, &p, iter / p.meas_interval_z);
+			}
+		#endif
 
-		// keep nodes in sync. without this things can go wrong if some node is much
-		// faster than others, so that it sends new fields to others before they managed
-		// to receive the earlier ones. Todo: optimize this
-		barrier();
 		// update all fields. multicanonical checks are contained in sweep routines
 		update_lattice(&f, &p, &comlist, &c, &w);
 
@@ -220,10 +218,6 @@ int main(int argc, char *argv[]) {
 				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
 				print_acceptance(p, c);
 			}
-
-			#ifdef WALL
-				measure_wall(&f, &p);
-			#endif
 
 			save_lattice(p, f, c);
 			// update max iterations if the config file has been changed by the user
@@ -258,10 +252,13 @@ int main(int argc, char *argv[]) {
 	if (p.multicanonical) {
 		free_muca_arrays(&f, &w);
 	}
-
-	#ifdef MPI
-	MPI_Barrier(MPI_COMM_WORLD);
+	// miscellaneous frees for stuff not allocated in alloc.c
+	#ifdef MEASURE_Z
+		free_latticetable(p.site_at_z);
 	#endif
+
+	barrier();
+
 	//printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
 	printf0(p, "\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
 	#ifdef MPI
