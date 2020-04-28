@@ -161,7 +161,7 @@ void measure_along_z(fields const* f, params const* p, long id) {
   if (!p->rank) {
     file = fopen("measure_z", "a");
     // write header for the current set of measurements
-    fprintf(file, "\nMeasurement %ld\n", id);
+    fprintf(file, "\nMeasurement %ld:\n", id);
   }
 
   // now reduce and write to file
