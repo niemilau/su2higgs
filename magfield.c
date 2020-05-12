@@ -13,10 +13,12 @@
 *
 */
 
+// do nothing if the adjoint is not present
+#ifdef TRIPLET
+
 #include "su2.h"
 
-// these routines make sense only if an adjoint scalar is present, so failsafe if here
-#ifdef TRIPLET
+
 
 /** Matrix multiplication, possibly with transpose.
  *
@@ -97,10 +99,12 @@ void projector(double *proj, double *adjoint) {
 	proj[0] = 2.0*a1/modulus;
 	proj[1] = 2.0*a2/modulus;
 	proj[2] = 2.0*a3/modulus;
+  /* now \hat\Phi^a = 2 \Sigma^a / (\Sigma^a\Sigma^a)
+  =>  \hat\Phi^2 = (0.5*\hat\Phi^a \sigma^a)^2 = (\Sigma^a \sigma^a)^2 / \Sigma^a\Sigma^a = 1. */
 }
 
-/**
- * Creates the projected "U(1) link" at a given site and direction,
+
+ /* Create the projected "U(1) link" at a given site and direction,
  * see Eq (3.2) in hep-lat/0512006.
  * The result of the operation is stored in `pro`.
  *
@@ -116,65 +120,65 @@ void projector(double *proj, double *adjoint) {
 	 long nextsite = p->next[i][dir];
 
 	 // create the projectors
-	 double hl[3], hr[3];
+	 double hl[SU2TRIP], hr[SU2TRIP];
 	 projector(hl, f->su2triplet[i]);
 	 projector(hr, f->su2triplet[nextsite]);
 
 	 double* u = f->su2link[i][dir];
 
-	 // multiply these and store the elements in pro
+	 /* now def \Pi = (1 + \Phi\Hat) / 2, multiply these and store the elements in pro */
 
 	 // (1,1) element, real and imag parts
-	 pro[0] = (4*u[0] + 2*hl[2]*u[0] + hl[0]*hr[0]*u[0] + hl[1]*hr[1]*u[0] +
-		 				2*hr[2]*u[0] + hl[2]*hr[2]*u[0] + 2*hl[1]*u[1] - 2*hr[1]*u[1] -
-						hl[2]*hr[1]*u[1] + hl[1]*hr[2]*u[1] - 2*hl[0]*u[2] + 2*hr[0]*u[2] +
-						hl[2]*hr[0]*u[2] - hl[0]*hr[2]*u[2] - hl[1]*hr[0]*u[3] +
-						hl[0]*hr[1]*u[3])/16.0;
+	 pro[0] = (4*u[0] + 2*hl[2]*u[0] + hl[0]*hr[0]*u[0] + hl[1]*hr[1]*u[0]
+            + 2*hr[2]*u[0] + hl[2]*hr[2]*u[0] + 2*hl[1]*u[1] - 2*hr[1]*u[1]
+            - hl[2]*hr[1]*u[1] + hl[1]*hr[2]*u[1] -
+            2*hl[0]*u[2] + 2*hr[0]*u[2] + hl[2]*hr[0]*u[2] - hl[0]*hr[2]*u[2]
+            - hl[1]*hr[0]*u[3] + hl[0]*hr[1]*u[3])/16.0;
 
-   pro[1] = (4*u[0] + 2*hl[2]*u[0] + hl[0]*hr[0]*u[0] + hl[1]*hr[1]*u[0] +
-						2*hr[2]*u[0] + hl[2]*hr[2]*u[0] + 2*hl[1]*u[1] - 2*hr[1]*u[1] -
-						hl[2]*hr[1]*u[1] + hl[1]*hr[2]*u[1] - 2*hl[0]*u[2] + 2*hr[0]*u[2] +
-						hl[2]*hr[0]*u[2] - hl[0]*hr[2]*u[2] - hl[1]*hr[0]*u[3] +
-						hl[0]*hr[1]*u[3])/16.0;
+   pro[1] = (-(hl[1]*hr[0]*u[0]) + hl[0]*hr[1]*u[0] + 2*hl[0]*u[1]
+            + 2*hr[0]*u[1] + hl[2]*hr[0]*u[1] + hl[0]*hr[2]*u[1] + 2*hl[1]*u[2]
+            + 2*hr[1]*u[2] + hl[2]*hr[1]*u[2] + hl[1]*hr[2]*u[2] + 4*u[3]
+            + 2*hl[2]*u[3] - hl[0]*hr[0]*u[3] - hl[1]*hr[1]*u[3] + 2*hr[2]*u[3]
+            + hl[2]*hr[2]*u[3])/16.0;
 
 	 // (1,2) element, real and imag
-	 pro[2] = (2*hl[0]*u[0] + 2*hr[0]*u[0] + hl[2]*hr[0]*u[0] - hl[0]*hr[2]*u[0] +
-		 				hl[1]*hr[0]*u[1] + hl[0]*hr[1]*u[1] + 4*u[2] + 2*hl[2]*u[2] -
-						hl[0]*hr[0]*u[2] + hl[1]*hr[1]*u[2] - 2*hr[2]*u[2] - hl[2]*hr[2]*u[2]
-						- 2*hl[1]*u[3] + 2*hr[1]*u[3] + hl[2]*hr[1]*u[3] +
-						hl[1]*hr[2]*u[3])/16.0;
+	 pro[2] = (2*hl[0]*u[0] + 2*hr[0]*u[0] + hl[2]*hr[0]*u[0] - hl[0]*hr[2]*u[0]
+            + hl[1]*hr[0]*u[1] + hl[0]*hr[1]*u[1] + 4*u[2] + 2*hl[2]*u[2]
+            - hl[0]*hr[0]*u[2] + hl[1]*hr[1]*u[2] - 2*hr[2]*u[2]
+            - hl[2]*hr[2]*u[2] - 2*hl[1]*u[3] + 2*hr[1]*u[3] + hl[2]*hr[1]*u[3]
+            + hl[1]*hr[2]*u[3])/16.0;
 
-	 pro[3] = (2*hl[0]*u[0] + 2*hr[0]*u[0] + hl[2]*hr[0]*u[0] - hl[0]*hr[2]*u[0] +
-		 				hl[1]*hr[0]*u[1] + hl[0]*hr[1]*u[1] + 4*u[2] + 2*hl[2]*u[2] -
-						hl[0]*hr[0]*u[2] + hl[1]*hr[1]*u[2] - 2*hr[2]*u[2] - hl[2]*hr[2]*u[2]
-						- 2*hl[1]*u[3] + 2*hr[1]*u[3] + hl[2]*hr[1]*u[3] +
-						hl[1]*hr[2]*u[3])/16.0;
+	 pro[3] = (-2*hl[1]*u[0] - 2*hr[1]*u[0] - hl[2]*hr[1]*u[0] + hl[1]*hr[2]*u[0]
+            + 4*u[1] + 2*hl[2]*u[1] + hl[0]*hr[0]*u[1] - hl[1]*hr[1]*u[1]
+            - 2*hr[2]*u[1] - hl[2]*hr[2]*u[1] + hl[1]*hr[0]*u[2]
+            + hl[0]*hr[1]*u[2] - 2*hl[0]*u[3] + 2*hr[0]*u[3] + hl[2]*hr[0]*u[3]
+            + hl[0]*hr[2]*u[3])/16.0;
 
 	 // (2,1) element, real and imag
-	 pro[4] = (2*hl[0]*u[0] + 2*hr[0]*u[0] - hl[2]*hr[0]*u[0] + hl[0]*hr[2]*u[0] -
-		 				hl[1]*hr[0]*u[1] - hl[0]*hr[1]*u[1] - 4*u[2] + 2*hl[2]*u[2] +
-		 				hl[0]*hr[0]*u[2] - hl[1]*hr[1]*u[2] - 2*hr[2]*u[2] + hl[2]*hr[2]*u[2]
-						- 2*hl[1]*u[3] + 2*hr[1]*u[3] - hl[2]*hr[1]*u[3] -
-						hl[1]*hr[2]*u[3])/16.0;
+	 pro[4] = (2*hl[0]*u[0] + 2*hr[0]*u[0] - hl[2]*hr[0]*u[0] + hl[0]*hr[2]*u[0]
+            - hl[1]*hr[0]*u[1] - hl[0]*hr[1]*u[1] - 4*u[2] + 2*hl[2]*u[2]
+            + hl[0]*hr[0]*u[2] - hl[1]*hr[1]*u[2] - 2*hr[2]*u[2]
+            + hl[2]*hr[2]*u[2] - 2*hl[1]*u[3] + 2*hr[1]*u[3] - hl[2]*hr[1]*u[3]
+            - hl[1]*hr[2]*u[3])/16.0;
 
-	 pro[5] = (2*hl[0]*u[0] + 2*hr[0]*u[0] - hl[2]*hr[0]*u[0] + hl[0]*hr[2]*u[0] -
-		 				hl[1]*hr[0]*u[1] - hl[0]*hr[1]*u[1] - 4*u[2] + 2*hl[2]*u[2] +
-						hl[0]*hr[0]*u[2] - hl[1]*hr[1]*u[2] - 2*hr[2]*u[2] + hl[2]*hr[2]*u[2]
-						- 2*hl[1]*u[3] + 2*hr[1]*u[3] - hl[2]*hr[1]*u[3] -
-						hl[1]*hr[2]*u[3])/16.0;
+	 pro[5] = (2*hl[1]*u[0] + 2*hr[1]*u[0] - hl[2]*hr[1]*u[0] + hl[1]*hr[2]*u[0]
+            + 4*u[1] - 2*hl[2]*u[1] + hl[0]*hr[0]*u[1] - hl[1]*hr[1]*u[1]
+            + 2*hr[2]*u[1] - hl[2]*hr[2]*u[1] + hl[1]*hr[0]*u[2]
+            + hl[0]*hr[1]*u[2] + 2*hl[0]*u[3] - 2*hr[0]*u[3] + hl[2]*hr[0]*u[3]
+            + hl[0]*hr[2]*u[3])/16.0;
 
 	 // (2,2) element, real and imag
-	 pro[6] = (4*u[0] - 2*hl[2]*u[0] + hl[0]*hr[0]*u[0] + hl[1]*hr[1]*u[0] -
-		 				2*hr[2]*u[0] + hl[2]*hr[2]*u[0] - 2*hl[1]*u[1] + 2*hr[1]*u[1] -
-						hl[2]*hr[1]*u[1] + hl[1]*hr[2]*u[1] + 2*hl[0]*u[2] - 2*hr[0]*u[2] +
-						hl[2]*hr[0]*u[2] - hl[0]*hr[2]*u[2] - hl[1]*hr[0]*u[3] +
-						hl[0]*hr[1]*u[3])/16.0;
+	 pro[6] = (4*u[0] - 2*hl[2]*u[0] + hl[0]*hr[0]*u[0] + hl[1]*hr[1]*u[0]
+            - 2*hr[2]*u[0] + hl[2]*hr[2]*u[0] - 2*hl[1]*u[1] + 2*hr[1]*u[1]
+            - hl[2]*hr[1]*u[1] + hl[1]*hr[2]*u[1] + 2*hl[0]*u[2] - 2*hr[0]*u[2]
+            + hl[2]*hr[0]*u[2] - hl[0]*hr[2]*u[2] - hl[1]*hr[0]*u[3]
+            + hl[0]*hr[1]*u[3])/16.0;
 
-	 pro[7] = (4*u[0] - 2*hl[2]*u[0] + hl[0]*hr[0]*u[0] + hl[1]*hr[1]*u[0] -
-		 				2*hr[2]*u[0] + hl[2]*hr[2]*u[0] - 2*hl[1]*u[1] + 2*hr[1]*u[1] -
-						hl[2]*hr[1]*u[1] + hl[1]*hr[2]*u[1] + 2*hl[0]*u[2] - 2*hr[0]*u[2] +
-						hl[2]*hr[0]*u[2] - hl[0]*hr[2]*u[2] - hl[1]*hr[0]*u[3] +
-						hl[0]*hr[1]*u[3])/16.0;
+	 pro[7] = (hl[1]*hr[0]*u[0] - hl[0]*hr[1]*u[0] + 2*hl[0]*u[1] + 2*hr[0]*u[1]
+            - hl[2]*hr[0]*u[1] - hl[0]*hr[2]*u[1] + 2*hl[1]*u[2] + 2*hr[1]*u[2]
+            - hl[2]*hr[1]*u[2] - hl[1]*hr[2]*u[2] - 4*u[3] + 2*hl[2]*u[3]
+            + hl[0]*hr[0]*u[3] + hl[1]*hr[1]*u[3] + 2*hr[2]*u[3]
+            - hl[2]*hr[2]*u[3])/16.0;
 
 	 // done! these projected matrices can now be multiplied using matmat()
  }
