@@ -259,8 +259,8 @@ double magfield(params const* p, fields const* f, long i, int dir) {
 	return res;
 }
 
-/* Calculate magnetic charge density in a hypercube running in the positive directions
-* from lattice site i. Eq. (3.5) in hep-lat/0512006.
+/* Calculate magnetic charge density (dimensionless) in a hypercube running
+* in the positive directions from lattice site i. Eq. (3.5) in hep-lat/0512006.
 */
 double magcharge_cube(params const* p, fields const* f, long i) {
 
@@ -271,8 +271,13 @@ double magcharge_cube(params const* p, fields const* f, long i) {
 		res += B2 - B1;
 	}
 
+  /*
 	// this should be quantized in units of 4pi/g:
-	/* printf("Charges at site %ld: %lf\n", i, res * 2.0*M_PI*sqrt(p->betasu2)); */
+  double integer = res / (2.0*M_PI*sqrt(p->betasu2));
+  if (fabs(integer) > 1e-4) {
+	   printf("Charge density at site %ld: %lf\n", i, integer );
+  }
+  */
 
 	return res;
 }
