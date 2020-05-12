@@ -566,7 +566,10 @@ void print_parameters(params p) {
 	printf("initial phi0 %.2lf, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 	#endif
 	#ifdef TRIPLET
-	printf("msq (triplet) %lf, b4 %lf, a2 %lf, ", p.msq_triplet, p.b4, p.a2);
+	printf("msq (triplet) %lf, b4 %lf, ", p.msq_triplet, p.b4);
+    #ifdef HIGGS
+    printf("a2 %lf, ", p.a2);
+    #endif
 	printf("initial sigma0 %.2lf, update_su2triplet %d\n",p.sigma0, p.update_su2triplet);
 	#endif
 	printf("\n");
