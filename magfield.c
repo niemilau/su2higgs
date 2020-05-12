@@ -25,7 +25,7 @@
  * Multiply two arbitrary complex 2x2 matrices,
  * such as those produced by project_u1(),
  * and store the result in `in1`; if `dag` is nonzero then
- * take the transpose of `in2` first.
+ * take the hermitian conjugate of `in2` first.
  *
  * NB: Does not change `in2`.
  */
@@ -206,7 +206,7 @@ double alpha_proj(params const* p, fields const* f, long i, int dir1, int dir2) 
 	matmat(u1, u3, 1);
 	matmat(u1, u4, 1);
 
-	// is there any ambiguity in defining the complex angle?
+	// calculate trace (complex) and take its complex angle
 	double alpha = atan2(u1[1] + u1[7], u1[0] + u1[6]);
 
 	// normalize by 2/g, in lattice units
@@ -218,7 +218,7 @@ double alpha_proj(params const* p, fields const* f, long i, int dir1, int dir2) 
 
 /* Calculate magnetic field B_i(x) at a given site and direction,
 * eq. 3.4 in hep-lat/0512006 (B_i(x) = 0.5 * eps_{ijk} alpha_{jk}).
-* Works in arbitrary p.dim dimensions.
+* Should work in arbitrary p.dim dimensions.
 */
 double magfield(params const* p, fields const* f, long i, int dir) {
 
@@ -272,7 +272,7 @@ double magcharge_cube(params const* p, fields const* f, long i) {
 	}
 
 	// this should be quantized in units of 4pi/g:
-	//printf("Charges at site %ld: %lf\n", i, res * 2.0*M_PI*sqrt(p->betasu2));
+	/* printf("Charges at site %ld: %lf\n", i, res * 2.0*M_PI*sqrt(p->betasu2)); */
 
 	return res;
 }
