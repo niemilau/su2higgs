@@ -38,7 +38,7 @@ void print_labels() {
 	#endif
 	#ifdef TRIPLET
 		fprintf(f, "%d total magnetic charge density\n", k); k++;
-		fprintf(f, "%d total density of magnetic charges, abs value\n", k); k++;
+		fprintf(f, "%d number of magnetic monopoles\n", k); k++;
 	#endif
 
 	fclose(f);
@@ -149,8 +149,7 @@ void measure(FILE* file, fields const* f, params const* p, counters* c, weight* 
 	mag_charge = reduce_sum(mag_charge);
 	mag_charge_abs = reduce_sum(mag_charge_abs);
 	// magnetic charge should be quantized in units of 4pi/g
-	mag_charge /= (2.0*M_PI*sqrt(p->betasu2));
-	mag_charge_abs /= (2.0*M_PI*sqrt(p->betasu2));
+	mag_charge_abs /= (2.0*M_PI*sqrt(p->betasu2)); // this is now the total number of monopoles
 		#ifdef HIGGS
 		phi2Sigma2 = reduce_sum(phi2Sigma2);
 		#endif
@@ -186,6 +185,8 @@ void measure(FILE* file, fields const* f, params const* p, counters* c, weight* 
 			fprintf(file, "%g ", u1/((double)p->vol) );
 		#endif
 		#ifdef TRIPLET
+			// store total magnetic charge density (should be ~0)
+			// and number of monopoles + antimonopoles (should be an integer)
 			fprintf(file, "%g %g ", mag_charge, mag_charge_abs );
 		#endif
 		fprintf(file, "\n");
