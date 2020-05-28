@@ -164,16 +164,22 @@ void measure_along_z(fields const* f, params const* p, long id) {
     fprintf(file, "\nMeasurement %ld:\n", id);
   }
 
-  // now reduce and write to file
+  // now combine results from all nodes
   for (z=0; z<z_max; z++) {
     for (k=0; k<p->n_meas_z; k++) {
       meas[z][k] = reduce_sum(meas[z][k]);
     }
+  }
+
+  // write to file
+  for (z=0; z<z_max; z++) {
     k = 0;
     if (!p->rank) {
       fprintf(file, "%ld ", z);
       #ifdef HIGGS
-        fprintf(file, "%g ", meas[z][k] / ((double)p->area) ); k++;
+        meas[z][k] = meas[z][k] / ((double)p->area)
+        fprintf(file, "%g ", meas[z][k]);
+        k++;
       #endif
       #ifdef TRIPLET
         fprintf(file, "%g ", meas[z][k] / ((double)p->area) ); k++;
