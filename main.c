@@ -77,7 +77,9 @@ int main(int argc, char *argv[]) {
 	printf0(p, "Initialization done! Took %lf seconds.\n", timing);
 
 	// initialize all fields
-	alloc_fields(p, &f);
+	alloc_fields(&p, &f);
+	if (!p.rank)
+		printf("Allocated memory for fields.\n");
 
 	// check if p.latticefile exists and load it; if not, call setfields()
 	if (access(p.latticefile,R_OK) == 0) {
@@ -246,7 +248,10 @@ int main(int argc, char *argv[]) {
 	save_lattice(p, f, c);
 
 	// free memory and finish
-	free_fields(p, &f);
+	free_fields(&p, &f);
+	if (!p.rank)
+		printf("Freed memory allocated for fields.\n");
+
 	free_comlist(&comlist);
 	free_lattice_arrays(&p);
 	if (p.multicanonical) {

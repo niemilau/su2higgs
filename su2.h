@@ -258,8 +258,8 @@ double ***make_gaugefield(long sites, int dim, int dofs);
 void free_singletfield(double *field);
 void free_field(double **field);
 void free_gaugefield(long sites, double ***field);
-void alloc_fields(params p, fields *f);
-void free_fields(params p, fields *f);
+void alloc_fields(params const* p, fields *f);
+void free_fields(params const* p, fields *f);
 void alloc_lattice_arrays(params *p, long sites);
 long **alloc_latticetable(int dim, long sites);
 long **realloc_latticetable(long** arr, int dim, long oldsites, long newsites);
@@ -332,6 +332,7 @@ void setu1(fields f, params p);
 void setfields(fields f, params p);
 void setdoublets(fields f, params p);
 void settriplets(fields f, params p);
+void copy_fields(params const* p, fields const* f_old, fields* f_new);
 void init_counters(counters* c);
 
 // checkpoint.c
