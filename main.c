@@ -8,6 +8,10 @@ int main(int argc, char *argv[]) {
 	// temp
 	waittime = 0.0;
 
+	// initialize global time variables
+	Global_comms_time = 0.0;
+	Global_total_time = 0.0;
+
 	// standard data structures
 	params p;
 	fields f;
@@ -172,6 +176,7 @@ int main(int argc, char *argv[]) {
 		end_time = clock();
 		timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 		printf0(p, "Thermalization done, took %lf seconds.\n", timing);
+		Global_total_time += timing;
 
 		// now reset iteration and time counters and turn weight updating back on, if necessary
 		iter = 1;
@@ -192,12 +197,24 @@ int main(int argc, char *argv[]) {
 
 	start_time = clock();
 
+	int flow_id = 1;
 	// main iteration loop
 	while (iter <= p.iterations) {
 
 		// measure & update fields first, then checkpoint if needed
 		if (iter % p.interval == 0) {
-			measure(p.resultsfile, &f, &p, &c, &w);
+			measure(p.resultsfile, &f, &p, &w);
+
+			#ifdef GRADFLOW
+			int do_flow = 1;
+			if (do_flow) {
+				double t_max = 1.0;
+				double dt = 0.2;
+				grad_flow(&p, &f, &comlist, &w, t_max, dt, flow_id);
+				flow_id++;
+			}
+			#endif
+
 		}
 		#ifdef MEASURE_Z
 			if (iter % p.meas_interval_z == 0) {
@@ -215,9 +232,11 @@ int main(int argc, char *argv[]) {
 
 			start_time = clock(); // restart timer
 
-			c.total_time += timing; c.iter = iter; // store for I/O
+			Global_total_time += timing;
+			c.iter = iter; // store for I/O
 			if (!p.rank) {
-				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n", iter, c.total_time, 100.0*c.comms_time/c.total_time);
+				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n",
+							iter, Global_total_time, 100.0*Global_comms_time/Global_total_time);
 				print_acceptance(p, c);
 			}
 
@@ -243,7 +262,8 @@ int main(int argc, char *argv[]) {
 	end_time = clock();
 	timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
 
-	c.total_time += timing; c.iter = iter;
+	Global_total_time += timing;
+	c.iter = iter;
 	// save final configuration
 	save_lattice(p, f, c);
 
@@ -265,7 +285,8 @@ int main(int argc, char *argv[]) {
 	barrier();
 
 	//printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
-	printf0(p, "\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n", c.total_time, 100.0*c.comms_time/c.total_time, c.total_time/p.iterations);
+	printf0(p, "\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n",
+				Global_total_time, 100.0*Global_comms_time/Global_total_time, Global_total_time/p.iterations);
 	#ifdef MPI
   MPI_Finalize();
 	#endif

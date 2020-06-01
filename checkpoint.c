@@ -78,8 +78,8 @@ void save_lattice(params p, fields f, counters c) {
 
 		// second line: iteration total_time comms_time
 		fwrite(&c.iter, sizeof(c.iter), 1, file);
-		fwrite(&c.total_time, sizeof(c.total_time), 1, file);
-		fwrite(&c.comms_time, sizeof(c.comms_time), 1, file);
+		fwrite(&Global_total_time, sizeof(Global_total_time), 1, file);
+		fwrite(&Global_comms_time, sizeof(Global_comms_time), 1, file);
 	}
 
 	// fields. file is only open in root node, so others cannot use it here.
@@ -161,8 +161,8 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 	read = 0;
 	// second line: iteration total_time comms_time
 	read += fread(&c->iter, sizeof(c->iter), 1, file);
-	read += fread(&c->total_time, sizeof(c->total_time), 1, file);
-	read += fread(&c->comms_time, sizeof(c->comms_time), 1, file);
+	read += fread(&Global_total_time, sizeof(Global_total_time), 1, file);
+	read += fread(&Global_comms_time, sizeof(Global_comms_time), 1, file);
 
 	// if not root node, can close the file here
 	if (p->rank != 0)

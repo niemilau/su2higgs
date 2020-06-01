@@ -215,14 +215,14 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 			int dir = dir_a[j];
 			int par = par_a[j];
 			checkerboard_sweep_su2link(f, p, c, par, dir);
-			c->comms_time += update_gaugehalo(comlist, par, f->su2link, SU2LINK, dir);
+			update_gaugehalo(comlist, par, f->su2link, SU2LINK, dir);
 
 			#ifdef U1
 				checkerboard_sweep_u1link(f, p, c, par, dir);
 				// here I use update_halo() instead of update_gaugehalo(), so halo is
 				// actually updated for all directions after updating just one direction.
 				// Could be optimized. (is it OK to update U1 together with SU2 like here?)
-				c->comms_time += update_halo(comlist, par, f->u1link, p->dim);
+				update_halo(comlist, par, f->u1link, p->dim);
 			#endif
 		}
 	} // gauge links done
@@ -272,7 +272,7 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 
 				// if the sweep was rejected, no need to sync halos
 				if (accept) {
-					c->comms_time += update_halo(comlist, par, f->su2doublet, SU2DB);
+					update_halo(comlist, par, f->su2doublet, SU2DB);
 				}
 
 			}
@@ -295,7 +295,7 @@ void update_lattice(fields* f, params const* p, comlist_struct* comlist, counter
 				accept = checkerboard_sweep_su2triplet(f, p, c, w, par, metro);
 				// if the sweep was rejected, no need to sync halos
 				if (accept) {
-					c->comms_time += update_halo(comlist, par, f->su2triplet, SU2TRIP);
+					update_halo(comlist, par, f->su2triplet, SU2TRIP);
 				}
 
 			}

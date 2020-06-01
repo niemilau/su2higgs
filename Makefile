@@ -7,13 +7,13 @@ CC := mpicc -g -O3 -march=native
 ## CFLAGS is implicitly added after OBJECTS, so make sure to use the correct CFLAGS...
  
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET #-D U1
-#CFLAGS := -D MPI -D HIGGS -D TRIPLET -D WALL
-CFLAGS := -D MPI -D TRIPLET
+#CFLAGS := -D MPI -D HIGGS -D TRIPLET
+CFLAGS := -D MPI -D TRIPLET -D GRADFLOW
 
 LIBS := -lm
 
 OBJECTS := main.o layout.o comms.o alloc.o init.o parameters.o su2u1.o measure.o \
-	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o magfield.o
+	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o magfield.o gradflow.o
 
 BINARY := build/su2
 

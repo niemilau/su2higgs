@@ -49,7 +49,7 @@ void print_labels() {
 * Argument file is typically p->resultsfile, but is anyway specified here in case
 * we want to use the same function for writing different files (e.g. for realtime trajectories)
 */
-void measure(FILE* file, fields const* f, params const* p, counters* c, weight* w) {
+void measure(FILE* file, fields const* f, params const* p, weight* w) {
 
 	double start, end, time;
 
@@ -158,7 +158,7 @@ void measure(FILE* file, fields const* f, params const* p, counters* c, weight* 
 
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
-	c->comms_time += time;
+	Global_comms_time += time;
 
 	// write to the file from root node. This is very fast performance wise
 	// the ordering here should be the same as in print_labels()

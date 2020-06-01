@@ -31,8 +31,9 @@
 #define PHI2MINUSSIGMA2 3
 #define PHI2SIGMA2 4
 
-// nasty global...
+// nasty globals for keeping track of evaluation time
 double waittime;
+double Global_comms_time, Global_total_time;
 
 // general multipurpose struct params.
 typedef struct {
@@ -143,9 +144,6 @@ typedef struct {
 
 typedef struct {
 
-	// keep track of evaluation time
-	double comms_time;
-	double total_time;
 	long iter;
 
 	// keep track of when a metropolis sweep should be forced
@@ -218,13 +216,13 @@ void bcast_double(double *res);
 void bcast_int_array(int *arr, int size);
 void barrier();
 // gauge links:
-double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
+void update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
 #ifdef MPI
 void send_gaugefield(sendrecv_struct* send, MPI_Request* req, char parity, double*** field, int dofs, int dir);
 void recv_gaugefield(sendrecv_struct* recv, char parity, double*** field, int dofs, int dir);
 #endif
 // non-gauge fields:
-double update_halo(comlist_struct* comlist, char parity, double** field, int dofs);
+void update_halo(comlist_struct* comlist, char parity, double** field, int dofs);
 #ifdef MPI
 void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs);
 void send_field(sendrecv_struct* send, MPI_Request* req, char parity, double** field, int dofs);
@@ -351,7 +349,7 @@ void read_updated_parameters(char *filename, params *p);
 
 
 // measure.c
-void measure(FILE* file, fields const* f, params const* p, counters* c, weight* w);
+void measure(FILE* file, fields const* f, params const* p, weight* w);
 // weight not necessarily constant because measure() can recalculate the order parameter
 double action_local(fields const* f, params const* p, long i);
 void print_labels();
@@ -390,4 +388,13 @@ void free_muca_arrays(fields* f, weight *w);
 #endif
 
 
+#ifdef GRADFLOW
+	// gradflow.c
+	void grad_flow(params const* p, fields const* f, comlist_struct* comlist, weight* w, double t_max, double dt, int flow_id);
+	void grad_force_link(params const* p, fields const* f, double* force, long i, int dir);
+	void calc_gradient(params const* p, fields const* f, fields* forces);
+	void flow_gauge(params const* p, fields* flow, fields const* forces, double dt);
 #endif
+
+
+#endif // end #ifndef SU2_H
