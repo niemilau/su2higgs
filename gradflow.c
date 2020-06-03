@@ -349,15 +349,6 @@ void flow_gauge(params const* p, fields* flow, fields const* forces, double dt) 
 
       memcpy(flow->su2link[i][dir], u, SU2LINK*sizeof(u[0])); // update the flow link
 
-
-      /*
-      // test:
-      double det = su2sqr(flow->su2link[i][dir]);
-      if (det - 1.0 > 10e-6) {
-        printf("Error in flow_gauge()! Got det = %lf\n", det);
-      }
-      */
-
     } // end dir
 
   } // end i
