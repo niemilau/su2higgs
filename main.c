@@ -149,6 +149,13 @@ int main(int argc, char *argv[]) {
 		}
 	#endif
 
+	#ifdef GRADFLOW
+		if (p.do_flow) {
+			printf0(p, "\n----- Gradient flow every %d iterations -----\n", p.flow_interval);
+			printf0(p, "dt %lf	t_max %lf		meas_interval %d \n", p.flow_dt, p.flow_t_max, p.flow_meas_interval);
+		}
+	#endif
+
 	/* if no lattice file was given or if reset=1 in config,
 	* start by thermalizing without updating multicanonical weight
 	*/
@@ -197,28 +204,24 @@ int main(int argc, char *argv[]) {
 
 	start_time = clock();
 
-	int flow_id = 1;
+	int flow_id = 1; // only used for gradient flows
 	// main iteration loop
 	while (iter <= p.iterations) {
 
 		// measure & update fields first, then checkpoint if needed
 		if (iter % p.interval == 0) {
 			measure(p.resultsfile, &f, &p, &w);
-
-			#ifdef GRADFLOW
-			int do_flow = 1;
-			if (do_flow) {
-				double t_max = 1.0;
-				double dt = 0.2;
-				grad_flow(&p, &f, &comlist, &w, t_max, dt, flow_id);
-				flow_id++;
-			}
-			#endif
-
 		}
 		#ifdef MEASURE_Z
 			if (iter % p.meas_interval_z == 0) {
 				measure_along_z(&f, &p, iter / p.meas_interval_z);
+			}
+		#endif
+
+		#ifdef GRADFLOW
+			if (p.do_flow && iter % p.flow_interval == 0) {
+				grad_flow(&p, &f, &comlist, &w, p.flow_t_max, p.flow_dt, flow_id);
+				flow_id++;
 			}
 		#endif
 

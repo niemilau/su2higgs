@@ -34,6 +34,8 @@
 // nasty globals for keeping track of evaluation time
 double waittime;
 double Global_comms_time, Global_total_time;
+double Global_current_action; // for debugging gradient flows etc
+
 
 // general multipurpose struct params.
 typedef struct {
@@ -76,6 +78,15 @@ typedef struct {
 		long** site_at_z; // sites_at_z[z][j], 0<=j<sites_per_z
 		int n_meas_z; // how many quantities to measure along z
 		int meas_interval_z; // read in from config file in get_parameters()
+	#endif
+
+	#ifdef GRADFLOW
+		// these are all read from config (in parameters.c)
+		int do_flow; // if 0, will not do gradient flows
+		double flow_dt; // timestep
+		double flow_t_max; // max time for a single flow (start from t=0)
+		int flow_interval; // how many non-flow iterations between flows
+		int flow_meas_interval; // how often to measure during flowing (in units of dt)
 	#endif
 
 	// max iterations etc
@@ -392,8 +403,10 @@ void free_muca_arrays(fields* f, weight *w);
 	// gradflow.c
 	void grad_flow(params const* p, fields const* f, comlist_struct* comlist, weight* w, double t_max, double dt, int flow_id);
 	void grad_force_link(params const* p, fields const* f, double* force, long i, int dir);
+	void grad_force_triplet(params const* p, fields const* f, double* force, long i);
 	void calc_gradient(params const* p, fields const* f, fields* forces);
 	void flow_gauge(params const* p, fields* flow, fields const* forces, double dt);
+	void flow_triplet(params const* p, fields* flow, fields const* forces, double dt);
 #endif
 
 
