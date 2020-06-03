@@ -156,6 +156,11 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 	#endif
 
 
+	#ifdef GRADFLOW
+		// for debugging
+		Global_current_action = action; 
+	#endif
+
 	end = clock();
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	Global_comms_time += time;

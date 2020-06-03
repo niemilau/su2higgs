@@ -8,24 +8,24 @@
 
 dim 3
 
-L1 8
-L2 8
-L3 8
+L1 12
+L2 12
+L3 12
 
 # start new simulation (initial configuration still read from latticefile)?
-reset 1
+reset 0
 
 # iterations
-iterations 1000
+iterations 50000
 
 # how many thermalization sweeps before starting measurements/weighting?
-n_thermalize 10
+n_thermalize 100
 
 # how often to write measurements
-interval 5
+interval 4
 
 # how often to write lattice configuration to file 
-checkpoint 500
+checkpoint 10000
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -37,20 +37,20 @@ resultsfile measure
 latticefile lattice
 
 ### parameters
-## at T = 110.0, a = 0.0045741436361243486
-
+## at T = 122.3, a = 0.008240436430478594
 # gauge couplings
-betasu2 20.0
+betasu2 10.0
 #betau1 8.0
 
 # doublet
-msq -0.62519006985602554
-lambda 0.088005476600819268
+msq -1.2821488473242986
+lambda 0.20270573608868533
 
 # triplet
-msq_triplet -0.75578051102079002
-b4 0.19242128567450575
-a2 1.1324043529506072
+msq_triplet -2.0685031289328344
+b4 0.44344700535747866
+
+a2 2.6953060227675745
 
 # initial values for fields (overwritten by existing lattice file)
 phi0 0.2
@@ -76,23 +76,34 @@ update_triplet 1
 update_links 1
 
 ### multicanonical
-multicanonical 1
+multicanonical 0
 bins 80
-min 0.45
-max 0.62
+min 0.418
+max 0.57
 # where to store the weight?
 weightfile weight
+# set infinite weight outside the binning range? 
+absolute_bounds 0
 
 ## order parameter for multicanonical
 # phisq, Sigmasq, phi2minusSigma2
-orderparam phisq
+orderparam Sigmasq
 
 # update weight on the go?
-readonly 0
+readonly 1
 
 # initial weight update factor (if weight exists, uses the value there instead)
 increment 0.3
-# how much should increment be reduced after probing the weighting range?
-reduction_factor 0.75
 
-absolute_bounds 0
+
+#### Gradient flow ####
+
+do_flow 1
+flow_dt 0.02
+flow_t_max 4.0
+
+## how many iterations between gradient flows
+flow_interval 1000
+
+## how often to measure during flow (in units of dt)
+flow_meas_interval 5

@@ -94,7 +94,14 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
       if (!p->rank) {
         fprintf(file, "%.6lf ", t);
       }
+      double oldact = Global_current_action;
       measure(file, &flow, p, w);
+
+      // debug
+      if (Global_current_action > oldact) {
+        printf0(*p, "WARNING: gradient flow did not reduce action!! old act = %lf, new act = %lf\n", oldact, Global_current_action);
+      }
+
     }
 
     iter++;
