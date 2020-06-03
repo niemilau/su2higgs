@@ -31,8 +31,11 @@
 #define PHI2MINUSSIGMA2 3
 #define PHI2SIGMA2 4
 
-// nasty global...
+// nasty globals for keeping track of evaluation time
 double waittime;
+double Global_comms_time, Global_total_time;
+double Global_current_action; // for debugging gradient flows etc
+
 
 // general multipurpose struct params.
 typedef struct {
@@ -75,6 +78,15 @@ typedef struct {
 		long** site_at_z; // sites_at_z[z][j], 0<=j<sites_per_z
 		int n_meas_z; // how many quantities to measure along z
 		int meas_interval_z; // read in from config file in get_parameters()
+	#endif
+
+	#ifdef GRADFLOW
+		// these are all read from config (in parameters.c)
+		int do_flow; // if 0, will not do gradient flows
+		double flow_dt; // timestep
+		double flow_t_max; // max time for a single flow (start from t=0)
+		int flow_interval; // how many non-flow iterations between flows
+		int flow_meas_interval; // how often to measure during flowing (in units of dt)
 	#endif
 
 	// max iterations etc
@@ -143,9 +155,6 @@ typedef struct {
 
 typedef struct {
 
-	// keep track of evaluation time
-	double comms_time;
-	double total_time;
 	long iter;
 
 	// keep track of when a metropolis sweep should be forced
@@ -218,13 +227,13 @@ void bcast_double(double *res);
 void bcast_int_array(int *arr, int size);
 void barrier();
 // gauge links:
-double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
+void update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
 #ifdef MPI
 void send_gaugefield(sendrecv_struct* send, MPI_Request* req, char parity, double*** field, int dofs, int dir);
 void recv_gaugefield(sendrecv_struct* recv, char parity, double*** field, int dofs, int dir);
 #endif
 // non-gauge fields:
-double update_halo(comlist_struct* comlist, char parity, double** field, int dofs);
+void update_halo(comlist_struct* comlist, char parity, double** field, int dofs);
 #ifdef MPI
 void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs);
 void send_field(sendrecv_struct* send, MPI_Request* req, char parity, double** field, int dofs);
@@ -258,8 +267,8 @@ double ***make_gaugefield(long sites, int dim, int dofs);
 void free_singletfield(double *field);
 void free_field(double **field);
 void free_gaugefield(long sites, double ***field);
-void alloc_fields(params p, fields *f);
-void free_fields(params p, fields *f);
+void alloc_fields(params const* p, fields *f);
+void free_fields(params const* p, fields *f);
 void alloc_lattice_arrays(params *p, long sites);
 long **alloc_latticetable(int dim, long sites);
 long **realloc_latticetable(long** arr, int dim, long oldsites, long newsites);
@@ -332,6 +341,7 @@ void setu1(fields f, params p);
 void setfields(fields f, params p);
 void setdoublets(fields f, params p);
 void settriplets(fields f, params p);
+void copy_fields(params const* p, fields const* f_old, fields* f_new);
 void init_counters(counters* c);
 
 // checkpoint.c
@@ -350,7 +360,7 @@ void read_updated_parameters(char *filename, params *p);
 
 
 // measure.c
-void measure(FILE* file, fields const* f, params const* p, counters* c, weight* w);
+void measure(FILE* file, fields const* f, params const* p, weight* w);
 // weight not necessarily constant because measure() can recalculate the order parameter
 double action_local(fields const* f, params const* p, long i);
 void print_labels();
@@ -389,4 +399,15 @@ void free_muca_arrays(fields* f, weight *w);
 #endif
 
 
+#ifdef GRADFLOW
+	// gradflow.c
+	void grad_flow(params const* p, fields const* f, comlist_struct* comlist, weight* w, double t_max, double dt, int flow_id);
+	void grad_force_link(params const* p, fields const* f, double* force, long i, int dir);
+	void grad_force_triplet(params const* p, fields const* f, double* force, long i);
+	void calc_gradient(params const* p, fields const* f, fields* forces);
+	void flow_gauge(params const* p, fields* flow, fields const* forces, double dt);
+	void flow_triplet(params const* p, fields* flow, fields const* forces, double dt);
 #endif
+
+
+#endif // end #ifndef SU2_H

@@ -95,11 +95,40 @@ void setfields(fields f, params p) {
 }
 
 
+/* Copy all fields from "fields" struct f_old to f_new.
+* Used when e.g. performing Wilson flow for renormalization
+* without wanting to lose the equilibrium configuration.
+* Does not modify the old fields struct
+*/
+void copy_fields(params const* p, fields const* f_old, fields* f_new) {
+
+	for (long i=0; i<p->sites_total; i++) {
+
+		// gauge links
+		for (int dir=0; dir<p->dim; dir++) {
+			memcpy(f_new->su2link[i][dir], f_old->su2link[i][dir], SU2LINK*sizeof(f_old->su2link[i][dir][0]));
+
+			#ifdef U1
+				f_new->u1link[i][dir] = f_old->u1link[i][dir];
+			#endif
+		}
+
+		// scalars
+		#ifdef HIGGS
+			memcpy(f_new->su2doublet[i], f_old->su2doublet[i], SU2DB*sizeof(f_old->su2doublet[i][0]));
+		#endif
+		#ifdef TRIPLET
+			memcpy(f_new->su2triplet[i], f_old->su2triplet[i], SU2TRIP*sizeof(f_old->su2triplet[i][0]));
+		#endif
+
+	}
+
+}
+
+
 // Initialize accept/reject counters and time
 void init_counters(counters* c) {
 
-	c->comms_time = 0.0;
-	c->total_time = 0.0;
 	c->iter = 1;
 
 	c->higgs_sweeps = 0;

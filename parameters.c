@@ -41,6 +41,14 @@ void get_parameters(char *filename, params *p) {
 
   int set_interval_z = 0;
 
+  #ifdef GRADFLOW
+    int set_do_flow = 0;
+    int set_flow_dt = 0;
+    int set_flow_t_max = 0;
+    int set_flow_interval = 0;
+    int set_flow_meas_interval = 0;
+  #endif
+
   int set_su2alg = 0;
   int set_u1alg = 0;
   int set_su2DBalg = 0;
@@ -283,6 +291,25 @@ void get_parameters(char *filename, params *p) {
     #endif
     // end reading update algorithms
 
+    #ifdef GRADFLOW
+    else if(!strcasecmp(key,"do_flow")) {
+      p->do_flow = strtol(value,NULL,10);
+      set_do_flow = 1;
+    } else if(!strcasecmp(key,"flow_meas_interval")) {
+      p->flow_meas_interval = strtol(value,NULL,10);
+      set_flow_meas_interval = 1;
+    } else if(!strcasecmp(key,"flow_interval")) {
+      p->flow_interval = strtol(value,NULL,10);
+      set_flow_interval = 1;
+    } else if(!strcasecmp(key,"flow_dt")) {
+      p->flow_dt = strtod(value,NULL);
+      set_flow_dt = 1;
+    } else if(!strcasecmp(key,"flow_t_max")) {
+      p->flow_t_max = strtod(value,NULL);
+      set_flow_t_max = 1;
+    }
+    #endif
+
   }
 
 	check_set(set_dim, "dim");
@@ -391,6 +418,14 @@ void get_parameters(char *filename, params *p) {
 
   check_set(set_resultsfile, "resultsfile");
   check_set(set_latticefile, "latticefile");
+
+  #ifdef GRADFLOW
+    check_set(set_do_flow, "do_flow");
+    check_set(set_flow_meas_interval, "flow_meas_interval");
+    check_set(set_flow_interval, "flow_interval");
+    check_set(set_flow_dt, "flow_dt");
+    check_set(set_flow_t_max, "flow_t_max");
+  #endif
 
   fclose(config);
 

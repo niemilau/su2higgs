@@ -3,6 +3,7 @@
 *
 * Routines for storing lattice configuration in a file,
 * and printing useful information about the simulation.
+* Halos will not be stored, so need to sync those separately.
 *
 * TODO
 *
@@ -78,8 +79,8 @@ void save_lattice(params p, fields f, counters c) {
 
 		// second line: iteration total_time comms_time
 		fwrite(&c.iter, sizeof(c.iter), 1, file);
-		fwrite(&c.total_time, sizeof(c.total_time), 1, file);
-		fwrite(&c.comms_time, sizeof(c.comms_time), 1, file);
+		fwrite(&Global_total_time, sizeof(Global_total_time), 1, file);
+		fwrite(&Global_comms_time, sizeof(Global_comms_time), 1, file);
 	}
 
 	// fields. file is only open in root node, so others cannot use it here.
@@ -115,8 +116,8 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 	FILE *file;
 
 	file = fopen(p->latticefile, "rb");
+
 	// first line: p.size p.dim L1 L2 ... Ln
-	// note that these are int type (need to be careful with this)
 	int dim, size, read = 0;
 	// compiler gives warning if return value is not used, so count the reads here
 	read += fread(&size, sizeof(size), 1, file);
@@ -161,8 +162,8 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 	read = 0;
 	// second line: iteration total_time comms_time
 	read += fread(&c->iter, sizeof(c->iter), 1, file);
-	read += fread(&c->total_time, sizeof(c->total_time), 1, file);
-	read += fread(&c->comms_time, sizeof(c->comms_time), 1, file);
+	read += fread(&Global_total_time, sizeof(Global_total_time), 1, file);
+	read += fread(&Global_comms_time, sizeof(Global_comms_time), 1, file);
 
 	// if not root node, can close the file here
 	if (p->rank != 0)
@@ -192,7 +193,7 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 
 /* Write a field to file. All nodes send their entire field array
 * to the root node, which performs the writing in the order of MPI ranks.
-* Note that we also write all halo fields for each node.
+* Note that halos are not stored.
 * Routine assumes that file is open only in the root node.
 *
 * field = pointer to first element of the field array (e.g. &f.su2link[0][0][0])
@@ -201,8 +202,8 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 void write_field(params p, FILE *file, double *field, int size) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
-	// how many sites in my node, including halos?
-	long max = p.sites_total * size;
+	// how many sites in my node, excluding halos?
+	long max = p.sites * size;
 
 	if (p.rank == 0) {
 		// start by writing the field in root node
@@ -251,8 +252,8 @@ void read_field(params p, FILE *file, double *field, int size) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	int maxtag = 1, fieldtag = 2;
-	// how many sites in my node, including halos?
-	long max = p.sites_total * size;
+	// how many sites in my node
+	long max = p.sites * size;
 
 	if (p.rank == 0) {
 		// first read the field belonging to root node
@@ -310,7 +311,7 @@ void read_field(params p, FILE *file, double *field, int size) {
 */
 void write_field(params p, FILE *file, double *field, int size) {
 
-	long max = p.sites_total * size;
+	long max = p.sites * size;
 	// write the whole field at once
 	fwrite(field, sizeof(*field), max, file);
 
@@ -320,7 +321,7 @@ void write_field(params p, FILE *file, double *field, int size) {
 */
 void read_field(params p, FILE *file, double *field, int size) {
 
-	long max = p.sites_total * size;
+	long max = p.sites * size;
 	long read = fread(field, sizeof(*field), max, file);
 
 	if (read != max) {

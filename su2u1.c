@@ -8,7 +8,7 @@
 * 	U = u0 I + i ( u1 sig1 + u2 sig2 + u3 sig3 ),
 * where: i is the imaginary unit, I is the unit matrix, sig are the Pauli matrices.
 *
-*	In general such U is a U(2) matrix, and the condition for SU(2) is
+*	The condition for U to be in SU(2) is
 *		det U = u0^2 + u1^2 + u2^3 + u3^3 = 1.
 *
 * The component u_a is stored in fields.su2link[i][dir][a].
@@ -48,13 +48,12 @@
 
 
 // calculate the determinant, or norm, of a matrix in our SU(2) parametrization
-// mainly for debugging purposes
 double su2sqr(double *u) {
 	return u[0]*u[0] + u[1]*u[1] + u[2]*u[2] + u[3]*u[3];
 }
 
 
-// rotate U1 from the right by U2 and store again in U1: U1 = U1.U2.
+// rotate U1 from the right by U2 and store again in U1: U1 <- U1.U2.
 void su2rot(double *u1, double *u2) {
 
 	double new1 = u1[0]*u2[0] - u1[1]*u2[1] - u1[2]*u2[2] - u1[3]*u2[3];
@@ -208,8 +207,7 @@ void su2staple_wilson(fields const* f, params const* p, long i, int dir, double*
 			u1 = f->su2link[ p->prev[(p->next[i][dir])][j] ][j];
 			u2 = f->su2link[(p->prev[i][j])][dir];
 			u3 = f->su2link[(p->prev[i][j])][j];
-			su2staple_clockwise(V, u1, u2, u3);
-			//su2staple_counterwise(V, u1, u2, u3);
+			su2staple_clockwise(V, u1, u2, u3);;
 			for(int k=0; k<4; k++){
 				tot[k] += V[k];
 			}
@@ -236,6 +234,9 @@ void su2staple_wilson(fields const* f, params const* p, long i, int dir, double*
 *   ^     |
 *   |     |
 *    -----
+*
+* Triplet is not included here, because its' hopping term is quadratic in the link
+* and cannot be expressed as a simple staple.
 */
 void su2link_staple(fields const* f, params const* p, long i, int dir, double* V) {
 

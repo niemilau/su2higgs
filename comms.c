@@ -237,7 +237,7 @@ void make_comlists(params *p, comlist_struct *comlist) {
 *
 * Return value is the time in seconds spent in the routine call.
 */
-double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir) {
+void update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir) {
 
 	double start, end, time = 0.0;
 	start = clock();
@@ -270,7 +270,8 @@ double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, i
 	end = clock();
 
 	time += (double)(end - start) / CLOCKS_PER_SEC;
-	return time;
+	Global_comms_time += time;
+
 }
 
 
@@ -367,7 +368,7 @@ void recv_gaugefield(sendrecv_struct* recv, char parity, double*** field, int do
 /* Same as update_gaugehalo(), but for a normal field with dof components.
 * TODO: generalize this to also work for gauge fields, so that separate routines are not needed (see write_field() in checkpoint.c)
 */
-double update_halo(comlist_struct* comlist, char parity, double** field, int dofs) {
+void update_halo(comlist_struct* comlist, char parity, double** field, int dofs) {
 
 	double start, end, time = 0.0;
 	start = clock();
@@ -400,7 +401,7 @@ double update_halo(comlist_struct* comlist, char parity, double** field, int dof
 	end = clock();
 
 	time += (double)(end - start) / CLOCKS_PER_SEC;
-	return time;
+	Global_comms_time += time;
 }
 
 

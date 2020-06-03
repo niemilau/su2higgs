@@ -108,10 +108,10 @@ void free_gaugefield(long sites, double ***field) {
 
 /** Allocate all the fields needed for a simulation.
  */
-void alloc_fields(params p, fields *f) {
+void alloc_fields(params const* p, fields *f) {
 
-	long sites = p.sites_total;
-	f->su2link = make_gaugefield(sites, p.dim, SU2LINK);
+	long sites = p->sites_total;
+	f->su2link = make_gaugefield(sites, p->dim, SU2LINK);
 
 	#ifdef HIGGS
 		f->su2doublet = make_field(sites, SU2DB);
@@ -123,18 +123,16 @@ void alloc_fields(params p, fields *f) {
     /* allocate U(1) gauge field, accessed as u1link[i][dir]. Note that memory
     * wise this is essentially just a non-gauge field with p.dim components.
     */
-    f->u1link = make_field(sites, p.dim);
+    f->u1link = make_field(sites, p->dim);
   #endif
-	if (!p.rank)
-		printf("Allocated memory for fields.\n");
 }
 
 
 /** Free all the fields allocated by alloc_fields().
  */
-void free_fields(params p, fields *f) {
+void free_fields(params const* p, fields *f) {
 
-	long sites = p.sites_total;
+	long sites = p->sites_total;
 	free_gaugefield(sites, f->su2link);
 	#ifdef HIGGS
 		free_field(f->su2doublet);
@@ -145,8 +143,6 @@ void free_fields(params p, fields *f) {
   #ifdef U1
     free_field(f->u1link);
   #endif
-	if (!p.rank)
-		printf("Freed memory allocated for fields.\n");
 
 }
 
