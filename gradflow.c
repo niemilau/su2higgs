@@ -66,7 +66,7 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
     char fname[200];
     sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
 
-    measure_local(fname, p, f);
+    measure_local(fname, p, &flow);
     local_id++;
   }
 
@@ -109,7 +109,7 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
         char fname[200];
         sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
 
-        measure_local(fname, p, f);
+        measure_local(fname, p, &flow);
         local_id++;
       }
 
@@ -136,7 +136,7 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
       char fname[200];
       sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
 
-      measure_local(fname, p, f);
+      measure_local(fname, p, &flow);
       local_id++;
     }
   }
@@ -390,6 +390,7 @@ void flow_triplet(params const* p, fields* flow, fields const* forces, double dt
   }
 
 }
+
 
 
 
