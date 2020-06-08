@@ -21,12 +21,12 @@ void print_labels() {
 	fprintf(f, "%d action\n", k); k++;
 	fprintf(f, "%d SU(2) Wilson\n", k); k++;
 	#ifdef HIGGS
-		fprintf(f, "%d hopping_phi\n", k); k++;
+		fprintf(f, "%d hopping_phi (avg over directions)\n", k); k++;
 		fprintf(f, "%d phi^2\n", k); k++;
 		fprintf(f, "%d phi^4\n", k); k++;
 	#endif
 	#ifdef TRIPLET
-		fprintf(f, "%d hopping_Sigma\n", k); k++;
+		fprintf(f, "%d hopping_Sigma (avg over directions)\n", k); k++;
 		fprintf(f, "%d Sigma^2\n", k); k++;
 		fprintf(f, "%d Sigma^4\n", k); k++;
 	#endif
@@ -84,7 +84,7 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 
 		#ifdef HIGGS
 			for (int dir=0; dir<p->dim; dir++) {
-				hopping_phi += hopping_doublet_forward(f, p, i, dir);
+				hopping_phi += hopping_doublet_forward(f, p, i, dir) / p->dim;
 			}
 			mod = doubletsq(f->su2doublet[i]);
 			phi2 += mod;
@@ -99,7 +99,7 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 			Sigma2 += tripletmod;
 			Sigma4 += tripletmod * tripletmod;
 			for (int dir=0; dir<p->dim; dir++) {
-				hopping_Sigma += hopping_triplet_forward(f, p, i, dir);
+				hopping_Sigma += hopping_triplet_forward(f, p, i, dir) / p->dim;
 			}
 
 			// calculate charge density of magnetic monopoles
