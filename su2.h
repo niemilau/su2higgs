@@ -406,12 +406,13 @@ void free_muca_arrays(fields* f, weight *w);
 
 #ifdef GRADFLOW
 	// gradflow.c
-	void grad_flow(params const* p, fields const* f, comlist_struct* comlist, weight* w, double t_max, double dt, int flow_id);
+	void grad_flow(params* p, fields const* f, comlist_struct* comlist, weight* w, double t_max, double dt, int flow_id);
 	void grad_force_link(params const* p, fields const* f, double* force, long i, int dir);
 	void grad_force_triplet(params const* p, fields const* f, double* force, long i);
 	void calc_gradient(params const* p, fields const* f, fields* forces);
 	void flow_gauge(params const* p, fields* flow, fields const* forces, double dt);
 	void flow_triplet(params const* p, fields* flow, fields const* forces, double dt);
+	void remove_counterterms(params* p);
 #endif
 
 

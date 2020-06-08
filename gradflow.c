@@ -33,7 +33,7 @@
 * Requires a "weight" struct to be compatible with measure().
 * This does not modify the original field config.
 */
-void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
+void grad_flow(params* p, fields const* f, comlist_struct* comlist,
                   weight* w, double t_max, double dt, int flow_id) {
 
   fields flow; // flowing fields
@@ -45,6 +45,13 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
   // copy starting configuration to "flow"
   copy_fields(p, f, &flow);
   sync_halos(&flow, p, comlist); // initialize halos in "flow"
+
+  #ifdef TRIPLET
+    /* Backup lattice masses and remove UV counterterms */
+    double msq = p->msq_triplet;
+    remove_counterterms(p);
+
+  #endif
 
 
   FILE* file;
@@ -148,6 +155,11 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
 
   free_fields(p, &forces);
   free_fields(p, &flow);
+
+  #ifdef TRIPLET
+    // restore the UV counterterms
+    p->msq_triplet = msq;
+  #endif
 
 }
 
@@ -392,6 +404,48 @@ void flow_triplet(params const* p, fields* flow, fields const* forces, double dt
 }
 
 
+/* Routine for undoing the mass counterterms.
+* Normally the simulation uses action where the mass c.t. are included
+* as necessary to produce the correct probability distributions.
+* But for the flow, we need to use the tree-level masses instead, otherwise
+* there is a double counting of divergences.
+* Assumes input MSbar scale of g_3^2 !
+*/
+void remove_counterterms(params* p) {
 
+  // generic constants
+  double Sigma = 3.17591153625;
+  double zeta = 0.08849;
+  double delta = 1.942130;
+  double rho = -0.313964;
+  double k1 = 0.958382;
+  double k2 = 0.25*Sigma*Sigma - 0.5 * delta - 0.25;
+  double k3 = 0.751498;
+  double k4 = 1.204295;
+
+  /* parameters in units of a */
+  double gsq = 4.0 / p->betasu2;
+  double RGscale = gsq;
+
+  #ifdef TRIPLET
+    double b4 = p->b4;
+
+    /* mass counterterm for the triplet, in a^2 units */
+    // 1-loop:
+    double ct_Sigma = -(4.0*gsq + 5.0*b4)*Sigma/(4.0*M_PI);
+    // 2-loop:
+    ct_Sigma += -1.0/(16.0*M_PI*M_PI) * ( (20.0*b4*gsq - 10.0*b4*b4)
+              * (log(6.0/(RGscale)) + zeta) + 20.0*b4*gsq * (0.25*Sigma*Sigma - delta)
+              + 2.0*gsq*gsq *(1.25*Sigma*Sigma + M_PI/3.0 * Sigma - 6.0*delta - 6.0*rho
+              + 4.0*k1 - k2 - k3 - 3.0*k4) );
+
+    // calculate continuum mass in units a^2
+    p->msq_triplet = p->msq_triplet - ct_Sigma;
+
+  #endif
+
+
+
+}
 
 #endif // end #ifdef GRADFLOW
