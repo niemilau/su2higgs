@@ -43,10 +43,8 @@ void init_z_coord(params* p) {
 
   /* offset: each node normally loops over 0<= z < p.sliceL[p.z_dir].
   * Then p.offset_z + z should give the physical z coordinate */
-  long xnode[p->dim]; // coordinates of the MPI node
-  indexToCoords(p->dim, p->nslices, p->rank, xnode);
 
-  p->offset_z = xnode[p->z_dir] * p->sliceL[p->z_dir];
+  p->offset_z = p->offset[p->z_dir];
 
   // site_at_z[z] is a list of all sites with z coordinate offset_z + z
   p->site_at_z = alloc_latticetable(p->sliceL[p->z_dir], p->sites_per_z);

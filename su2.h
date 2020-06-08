@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <time.h>
 
+
 #include "comms.h"
 
 // degrees of freedom per site for different fields
@@ -36,7 +37,6 @@ double waittime;
 double Global_comms_time, Global_total_time;
 double Global_current_action; // for debugging gradient flows etc
 
-
 // general multipurpose struct params.
 typedef struct {
 	// layout parameters for MPI
@@ -60,6 +60,8 @@ typedef struct {
 	/* coords[i][dir] = x_dir coordinate on the full lattice of site i.
 	* Typically not used after layout(), so could free to save memory... */
 	long **coords;
+	long *offset; // coordinate offset in my node wrt. the full lattice
+	long firstsite; // index of (x,y,z)=(0,0,0), with (x,y,z) being coordinates on the node
 
 	// parity of a site is EVEN if the physical index x+y+z+... is even, ODD otherwise
 	char *parity;
@@ -98,6 +100,7 @@ typedef struct {
 	FILE *resultsfile;
 	char latticefile[100];
 	int run_checks;
+	int do_local_meas;
 
 	int multicanonical;
 	/* randomize the ordering of updates in update_lattice() or not.
@@ -364,6 +367,8 @@ void measure(FILE* file, fields const* f, params const* p, weight* w);
 // weight not necessarily constant because measure() can recalculate the order parameter
 double action_local(fields const* f, params const* p, long i);
 void print_labels();
+void measure_local(char* fname, params const* p, fields const* f);
+void print_labels_local(params* p, char* fname);
 
 // multicanonical.c
 void load_weight(params const* p, weight *w);

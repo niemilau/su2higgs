@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
 	// temp
 	waittime = 0.0;
 
-	// initialize global time variables
+	// initialize global variables
 	Global_comms_time = 0.0;
 	Global_total_time = 0.0;
 
@@ -112,6 +112,11 @@ int main(int argc, char *argv[]) {
 	// labels for results file
 	if (!p.rank) {
 		print_labels();
+		if (p.do_local_meas) {
+
+			print_labels_local(&p, "labels_local");
+
+		}
 	}
 
 	if (p.multicanonical) {

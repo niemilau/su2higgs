@@ -107,3 +107,6 @@ flow_interval 1000
 
 ## how often to measure during flow (in units of dt)
 flow_meas_interval 5
+
+## store local measurements? very expensive!
+measure_local 1

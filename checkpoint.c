@@ -303,6 +303,7 @@ void read_field(params p, FILE *file, double *field, int size) {
 
 }
 
+
 #else // no MPI; simplified write and read routines
 
 /* Write a field to latticefile.

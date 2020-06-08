@@ -54,12 +54,21 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
     fprintf(file, "\n =========== Flow id: %d ===========\n", flow_id);
   }
 
+  int local_id = 1;
+
   double t = 0.0;
   // initial measurements at flow time t = 0
   if (!p->rank) {
     fprintf(file, "%.6lf ", t); // first column is time, rest come from measure()
   }
   measure(file, &flow, p, w);
+  if (p->do_local_meas) {
+    char fname[200];
+    sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
+
+    measure_local(fname, p, f);
+    local_id++;
+  }
 
   /* "time" loop */
   int iter = 1;
@@ -96,6 +105,13 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
       }
       double oldact = Global_current_action;
       measure(file, &flow, p, w);
+      if (p->do_local_meas) {
+        char fname[200];
+        sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
+
+        measure_local(fname, p, f);
+        local_id++;
+      }
 
       // debug
       if (Global_current_action > oldact) {
@@ -116,6 +132,13 @@ void grad_flow(params const* p, fields const* f, comlist_struct* comlist,
       fprintf(file, "%g ", t);
     }
     measure(file, &flow, p, w);
+    if (p->do_local_meas) {
+      char fname[200];
+      sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
+
+      measure_local(fname, p, f);
+      local_id++;
+    }
   }
 
 

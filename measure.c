@@ -158,7 +158,7 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 
 	#ifdef GRADFLOW
 		// for debugging
-		Global_current_action = action; 
+		Global_current_action = action;
 	#endif
 
 	end = clock();
@@ -224,4 +224,151 @@ double action_local(fields const* f, params const* p, long i) {
 	#endif
 
 	return tot;
+}
+
+
+/* Make a label file for local measurements.
+*/
+void print_labels_local(params* p, char* fname) {
+	FILE* f = fopen(fname, "w+");
+
+	int k = 1;
+	// first columns are the site coordinates
+	for (int dir=0; dir<p->dim; dir++) {
+		fprintf(f, "%d x%d\n", k, dir); k++;
+	}
+	#ifdef TRIPLET
+		fprintf(f, "%d Sigma^2\n", k); k++;
+		fprintf(f, "%d magnetic charge (integer)\n", k); k++;
+	#endif
+
+	fclose(f);
+}
+
+/* Measures and writes quantities locally at each site. Extensive!
+* Output is not in any particular order in terms of the coordinates.
+* Assumes that sites in each node are ordered in the same fashion
+* and that all nodes have the same number of (real) sites!
+* Could also just send the coordinates, but this needs more comms and/or memory...
+*/
+void measure_local(char* fname, params const* p, fields const* f) {
+
+	FILE* file;
+
+	int n_meas = 1; // includes offset!
+	#ifdef TRIPLET
+		// Tr Sigma^2 = 0.5*Sigma^a Sigma^a
+		double Sigma2[p->sites]; n_meas++;
+		double magcharge[p->sites]; n_meas++;
+	#endif
+
+	for (long i=0; i<p->sites; i++) {
+
+		#ifdef TRIPLET
+
+			Sigma2[i] = tripletsq(f->su2triplet[i]);
+			magcharge[i] = magcharge_cube(p, f, i) / (2.0*M_PI*sqrt(p->betasu2)); // integer!
+		#endif
+	} // end i
+
+	if (!p->rank) {
+		file = fopen(fname, "wb");
+	}
+
+	int coord_offset[p->dim];
+	for (int dir=0; dir<p->dim; dir++) {
+		coord_offset[dir] = p->offset[dir];
+	}
+
+	#ifdef MPI
+	/* Send everything to root node for writing.
+	* There will be one send per measurement array, incl. offset.
+	* So need tags to avoid errors, but I use blocking sends. */
+	int tag = 0;
+	if (p->rank != 0) {
+		MPI_Send(&coord_offset, p->dim, MPI_INT, 0, tag, MPI_COMM_WORLD); tag++;
+		#ifdef TRIPLET
+			MPI_Send(&Sigma2, p->sites, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD); tag++;
+			MPI_Send(&magcharge, p->sites, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD); tag++;
+		#endif
+	}
+
+	#endif
+
+
+
+	if (!p->rank) {
+		// loop over MPI ranks
+		for (int r=0; r<p->size; r++) {
+
+			#ifdef MPI
+			// get the data and offsets from rank == r node (if r=0, just write own meas)
+			if (r != 0) {
+				tag = 0;
+				MPI_Recv(&coord_offset, p->dim, MPI_INT, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
+				#ifdef TRIPLET
+					MPI_Recv(&Sigma2, p->sites, MPI_DOUBLE, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
+					MPI_Recv(&magcharge, p->sites, MPI_DOUBLE, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
+				#endif
+			}
+			#endif
+
+			for (long i=0; i<p->sites; i++) {
+
+
+				// Binary: smaller files
+				int coords[p->dim];
+				for (int dir=0; dir<p->dim; dir++) {
+					coords[dir] = p->coords[i][dir] + coord_offset[dir];
+				}
+
+				fwrite(coords, sizeof(*coords), p->dim, file);
+
+				// merge measurements at site=i to an array for writing
+				int k = 0;
+				double meas[n_meas - 1];
+
+				#ifdef TRIPLET
+					meas[k] = Sigma2[i]; k++;
+					meas[k] = magcharge[i]; k++;
+				#endif
+				fwrite(meas, sizeof(*meas), n_meas - 1, file);
+
+				fwrite("\n", sizeof(char), 1, file);
+				// end binary
+
+				// Formatted: text files only
+				/*
+				// write coords
+				for (int dir=0; dir<p->dim; dir++) {
+					fprintf(file, "%ld ", p->coords[i][dir] + coord_offset[dir]);
+				}
+				// then the measurements
+				#ifdef TRIPLET
+					fprintf(file, "%g %g ", Sigma2[i], magcharge[i]);
+				#endif
+
+				fprintf(file, "\n");
+				*/
+
+			} // end i
+
+		} // end r
+
+	}
+
+	if (!p->rank) {
+		fclose(file);
+	}
+
+	/*
+	#ifdef MPI // wait for nonblocking sends to be received
+		for (int k=0; k<n_meas; k++) {
+			MPI_Wait(&req[k], MPI_STATUS_IGNORE);
+		}
+		barrier();
+	#endif
+	*/
+	barrier();
+
 }

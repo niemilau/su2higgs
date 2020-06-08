@@ -20,8 +20,10 @@ void layout(params *p, comlist_struct *comlist) {
 	double time;
 
 	// these are needed for make_slices():
-	p->sliceL = malloc(p->dim * sizeof(p->sliceL));
-	p->nslices = malloc(p->dim * sizeof(p->nslices));
+	p->sliceL = malloc(p->dim * sizeof(*(p->sliceL)));
+	p->nslices = malloc(p->dim * sizeof(*(p->nslices)));
+
+	p->offset = malloc(p->dim * sizeof(*(p->offset))); // needed for sitemap()
 
 	make_slices(p);
 
@@ -58,6 +60,17 @@ void layout(params *p, comlist_struct *comlist) {
 	}
 
 	// --- Site ordering not changed beyond this point ---
+
+	/* find index of the lattice site residing at node coordinates
+	* (x,y,z) = (0,0,0). First need the physical coords of this site */
+	long xnode[p->dim];
+	long x[p->dim];
+	indexToCoords(p->dim, p->nslices, p->rank, xnode);
+	for (int dir=0; dir<p->dim; dir++) {
+		x[dir] = xnode[dir] * p->sliceL[dir];
+	}
+	p->firstsite = findsite(p, x, 0);
+
 
 	barrier();
 
@@ -239,6 +252,11 @@ void sitemap(params *p) {
 
 	// where is the node located?
 	indexToCoords(p->dim, p->nslices, p->rank, xnode);
+
+	// store coordinate offset wrt. to the full lattice in each direction:
+	for (dir=0; dir<p->dim; dir++) {
+		p->offset[dir] = xnode[dir] * p->sliceL[dir];
+	}
 
 	/* now build a halo of thickness 1 around the node. Sites in the halo actually live
 	* in other nodes and the first step is to separate these from "real" sites */
@@ -659,9 +677,12 @@ void layout(params *p, comlist_struct *comlist) {
 	p->sliceL = malloc(p->dim * sizeof(*p->sliceL));
 	p->nslices = malloc(p->dim * sizeof(*p->nslices));
 
+	p->offset = malloc(p->dim * sizeof(*(p->offset)));
+
 	for (int dir=0; dir<p->dim; dir++) {
 		p->sliceL[dir] = p->L[dir];
 		p->nslices[dir] = 1;
+		p->offset[dir] = 0;
 	}
 
 	alloc_lattice_arrays(p, p->sites_total);
@@ -701,7 +722,7 @@ void sitemap(params* p) {
 			p->coords[i][dir] -= 2;
 			p->prev[i][dir] = coordsToIndex(p->dim, p->L, p->coords[i]);
 			// return to the original value
-			p->coords[i][dir] ++;
+			p->coords[i][dir]++;
 		}
 
 	}
@@ -926,4 +947,71 @@ int coordsToRank(params p, long* coords) {
 	free(x);
 
 	return i;
+}
+
+
+/* Traverse the (sub-)lattice in a "natural" order,
+* i.e. take coords (x,y,z) in my node. Then this moves as
+* (0,0,0) -> (1,0,0) -> (2,0,0) -> ... (0,1,0) -> (1,1,0) -> ... (0,0,1) -> ...
+* Not used for anything atm.
+*/
+void traverse_natural(params* p) {
+
+	long steps[p->dim];
+	for (int dir=0; dir<p->dim; dir++) {
+		steps[dir] = 0;
+	}
+
+	// start from (x,y,z) = (0,0,0) in my node
+	long start = p->firstsite;
+	long site = start;
+
+	for (long j=0; j<p->sites; j++) {
+
+		// Debug
+		/*
+		printf("( ");
+		long x[p->dim];
+		for (int dir=0; dir<p->dim; dir++) {
+			printf("%ld, ", p->coords[site][dir]);
+		}
+		printf(" )\n");
+		*/
+
+		// first attempt moving one step in the x0 direction
+		if (steps[0] < p->sliceL[0] - 1) {
+			site = p->next[site][0];
+			steps[0]++;
+
+		} else {
+			int movenext = 0;
+			// could not move, so attempt x1, x2 etc (in that order)
+			for (int dir=0; dir<p->dim; dir++) {
+
+				if (steps[dir] == p->sliceL[dir] - 1) {
+					movenext = 1; // in next iteration, move in the next dir
+
+					// backtrack the start point to x_dir = 0
+					// note that start point for x_0 is never changed
+					if (dir != 0) {
+						for (long k=0; k<steps[dir]; k++) {
+							start = p->prev[start][dir];
+						}
+					}
+
+					steps[dir] = 0;
+					continue;
+				} else if (movenext) {
+					start = p->next[start][dir]; // move once in this new direction
+					site = start;
+					steps[dir]++;
+					movenext = 0;
+					break;
+				}
+			} // end dir
+
+		} // end else
+
+	} // end j
+
 }

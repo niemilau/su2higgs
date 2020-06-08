@@ -38,6 +38,7 @@ void get_parameters(char *filename, params *p) {
 	int set_interval = 0;
   int set_n_thermalize = 0;
   int set_checks = 0;
+  int set_local_meas = 0;
 
   int set_interval_z = 0;
 
@@ -151,6 +152,9 @@ void get_parameters(char *filename, params *p) {
     else if(!strcasecmp(key,"checkpoint")) {
       p->checkpoint = strtol(value,NULL,10);
       set_checkpoint = 1;
+    } else if(!strcasecmp(key,"measure_local")) {
+      p->do_local_meas = strtol(value,NULL,10);
+      set_local_meas = 1;
     }
     else if(!strcasecmp(key,"n_thermalize")) {
       p->n_thermalize = strtol(value,NULL,10);
@@ -383,6 +387,7 @@ void get_parameters(char *filename, params *p) {
   check_set(set_n_thermalize, "n_thermalize");
   check_set(set_checkpoint, "checkpoint");
   check_set(set_checks, "run_checks");
+  check_set(set_local_meas, "measure_local");
 
   check_set(set_su2alg, "algorithm_su2link");
 	check_set(set_betasu2, "betasu2");
