@@ -17,6 +17,16 @@
 * 0907.5491. Here I use the "Euler" scheme for integrating the flow, so the derivative
 * is assumed to be a constant in the interval [t, t+dt]
 *
+* Note: the time \tau here is dimensionless, while the "physical" time is t
+* (smoothing happens in a radius of \sqrt{2*d*t} in d dimensions ). For these to be
+* related as \tau = a^{-2} t, the Wilson flow needs to be
+*
+*   dU_\mu / d\tau = -i g^2 a^{4-d} T^a dS / d\theta^a_\mu
+*
+* with U_\mu = e^{i T^a \theta^a_\mu}. For scalars, simply
+*   d\phi^a / d\tau = - dS/d\phi^a
+* gives the correct continuum limit for \tau = a^{-2} t.
+*
 * TODO: Add Higgs!!
 *
 */
@@ -176,8 +186,7 @@ void grad_flow(params* p, fields const* f, comlist_struct* comlist,
 * NOTE: the real force is an adjoint vector with 3 components, but here I take
 * "force" to have 4 components with the 0. component not being used for anything.
 * This is convenient because then I can make a "fields" struct and store the link
-* force in force->su2link[x][mu]
-*
+* force in force->su2link[x][mu].
 */
 void grad_force_link(params const* p, fields const* f, double* force, long i, int dir) {
 
@@ -243,6 +252,8 @@ void grad_force_link(params const* p, fields const* f, double* force, long i, in
   force[0] = 0.0;
   for(int a=1; a<SU2TRIP+1; a++) {
     force[a] = 2.0 * m[a];
+    // add the correct normalization for flow time
+    force[a] *= 4.0 / p->betasu2;
   }
   // link force done
 }
