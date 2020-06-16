@@ -4,7 +4,7 @@
 * and for halo communications and reducing numbers between the nodes.
 *
 * TODO optimize make_comlists. This routine is quite slow if the lattice is large AND only a few nodes are used.
-* Slowness is probably because of the p->coords lookup when constructing send_to structure.
+* Slowness is probably because of the l->coords lookup when constructing send_to structure.
 * There is no problem when the volume/node ratio is good
 *
 */
@@ -15,10 +15,10 @@
 
 #ifdef MPI
 
-/* Huge routine for preparing the comlists. p->coords is assumed to be the table of (x,y,z,...)
+/* Huge routine for preparing the comlists. l->coords is assumed to be the table of (x,y,z,...)
 * coordinates on the full lattice, calculated in layout().
 */
-void make_comlists(params *p, comlist_struct *comlist) {
+void make_comlists(lattice *l, comlist_struct *comlist) {
 
 	long i;
 	int dir, k;
@@ -34,36 +34,36 @@ void make_comlists(params *p, comlist_struct *comlist) {
 	* (references to "self halos" changed to point to real sites instead),
 	* so we don't have to worry about including the these in comlists.
 	*/
-	int MAXNODES = p->dim * p->dim * p->dim - 1;
+	int MAXNODES = l->dim * l->dim * l->dim - 1;
 	neighbornodes = malloc(MAXNODES * sizeof(*neighbornodes));
 	for (k=0; k<MAXNODES; k++) {
 		neighbornodes[k] = -1; // initialize to avoid mixups
 	}
 
-	long maxindex = p->sites_total;
+	long maxindex = l->sites_total;
 
 	whichnode = malloc(maxindex * sizeof(*whichnode)); // rank of the node where site i resides in
 	for (i=0; i<maxindex; i++) {
-		whichnode[i] = coordsToRank(*p, p->coords[i]);
+		whichnode[i] = coordsToRank(l, l->coords[i]);
 	}
 
 	// allocate enough memory to host all needed receive structs, realloc later
 	// note that comlist->recv_from itself is a pointer to sendrecv_struct
 	comlist->recv_from = malloc(MAXNODES * sizeof(*(comlist->recv_from)));
 
-	// message size and tag for sending p->coords
-	long size = maxindex * p->dim;
+	// message size and tag for sending l->coords
+	long size = maxindex * l->dim;
 	int tag = 0;
 
 	/* Where to receive from? Loop over all halos here and figure out the node
 	* where the halo site lives in, and store it in comlist->recv_from[node].sitelist*/
 	int nn = 0; // how many distinct neighbors have we found (nn = neighboring node)
 	int newnode;
-	for (i=p->sites; i<maxindex; i++) {
+	for (i=l->sites; i<maxindex; i++) {
 
-		if (whichnode[i] == p->rank) {
+		if (whichnode[i] == l->rank) {
 			// shouldn't get here!
-			printf("Node %d: Self halos not removed! in comms.c\n", p->rank);
+			printf("Node %d: Self halos not removed! in comms.c\n", l->rank);
 			continue;
 		}
 
@@ -73,7 +73,7 @@ void make_comlists(params *p, comlist_struct *comlist) {
 			if (whichnode[i] == neighbornodes[k]) {
 				// node already in neighbors, so add the site in its comlists
 				newnode = 0;
-				if (p->parity[i] == EVEN) {
+				if (l->parity[i] == EVEN) {
 					comlist->recv_from[k].even++;
 				} else {
 					comlist->recv_from[k].odd++;
@@ -87,7 +87,7 @@ void make_comlists(params *p, comlist_struct *comlist) {
 			comlist->recv_from[nn].node = whichnode[i];
 			neighbornodes[nn] = whichnode[i];
 			comlist->recv_from[nn].sites = 1;
-			if (p->parity[i] == EVEN) {
+			if (l->parity[i] == EVEN) {
 				comlist->recv_from[nn].even = 1;
 				comlist->recv_from[nn].odd = 0;
 			} else {
@@ -95,14 +95,14 @@ void make_comlists(params *p, comlist_struct *comlist) {
 				comlist->recv_from[nn].even = 0;
 			}
 			// list of sites to receive from this node. Realloc later.
-			comlist->recv_from[nn].sitelist = malloc(p->halos * sizeof(*(comlist->recv_from[nn].sitelist)));
+			comlist->recv_from[nn].sitelist = malloc(l->halos * sizeof(*(comlist->recv_from[nn].sitelist)));
 			comlist->recv_from[nn].sitelist[0] = i;
 			nn++;
 		}
 	}
 
 	if (nn > MAXNODES) {
-		printf("Node %d: Failed to count neighbor nodes in layout.c! Found %d, but theoretical max is %d.\n", p->rank, nn, MAXNODES);
+		printf("Node %d: Failed to count neighbor nodes in layout.c! Found %d, but theoretical max is %d.\n", l->rank, nn, MAXNODES);
 		die(11);
 	}
 
@@ -116,11 +116,11 @@ void make_comlists(params *p, comlist_struct *comlist) {
 
 
 	// Where to send? These should be the same nodes where we receive from.
-	// To fill in sitelist in sendrecv_structs, we need p->coords on their node, so send this with MPI.
+	// To fill in sitelist in sendrecv_structs, we need l->coords on their node, so send this with MPI.
 	comlist->send_to = malloc(nn * sizeof(*(comlist->send_to)) );
 
 	// receive buffer:
-	coords_nn = alloc_latticetable(p->dim, maxindex);
+	coords_nn = alloc_latticetable(l->dim, maxindex);
 
 	// send buffer (can send same buffer to only one node at a time, so need an array):
 	long** buf[nn];
@@ -135,15 +135,15 @@ void make_comlists(params *p, comlist_struct *comlist) {
 		recv = &(comlist->recv_from[k]);
 
 		// alloc list of sites in sendrecv_struct, realloc later
-		comlist->send_to[k].sitelist = malloc(p->halos * sizeof(*(comlist->send_to[k].sitelist)));
+		comlist->send_to[k].sitelist = malloc(l->halos * sizeof(*(comlist->send_to[k].sitelist)));
 
-		buf[k] = alloc_latticetable(p->dim, maxindex);
-		// now buf[k] points to a contiguous memory address that can hold p->coords
+		buf[k] = alloc_latticetable(l->dim, maxindex);
+		// now buf[k] points to a contiguous memory address that can hold l->coords
 
-		memcpy(&buf[k][0][0], &p->coords[0][0], maxindex * p->dim * sizeof(p->coords[0][0]));
+		memcpy(&buf[k][0][0], &l->coords[0][0], maxindex * l->dim * sizeof(l->coords[0][0]));
 
-		if (recv->node != p->rank) {
-			//printf("Node %d: Sending p->coords to node %d\n", p->rank, recv->node);
+		if (recv->node != l->rank) {
+			//printf("Node %d: Sending l->coords to node %d\n", l->rank, recv->node);
 			MPI_Isend(&buf[k][0][0], size, MPI_LONG, recv->node, tag, MPI_COMM_WORLD, &req[k]);
 			}
 
@@ -161,20 +161,20 @@ void make_comlists(params *p, comlist_struct *comlist) {
 		send->even = 0;
 		send->odd = 0;
 
-		// request p->coords from the receiving node
+		// request l->coords from the receiving node
 
 		// blocking receive here
 		MPI_Recv(&(coords_nn[0][0]), size, MPI_LONG, recv->node, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 		int match;
 		// find matching site in both nodes, and their indices.
-		for (long j=p->sites; j<maxindex; j++) {
-			// j = their index. Halos start from j = p->sites
-			for (i=0; i<p->sites; i++) {
+		for (long j=l->sites; j<maxindex; j++) {
+			// j = their index. Halos start from j = l->sites
+			for (i=0; i<l->sites; i++) {
 				// i = my index
 				match = 1;
-				for (dir=0; dir<p->dim; dir++) {
-					if (p->coords[i][dir] != coords_nn[j][dir]) {
+				for (dir=0; dir<l->dim; dir++) {
+					if (l->coords[i][dir] != coords_nn[j][dir]) {
 						match = 0;
 						break;
 					}
@@ -182,13 +182,13 @@ void make_comlists(params *p, comlist_struct *comlist) {
 
 				if (match) {
 					// Found matching site, so add to sendrecv_struct
-					if (p->parity[i] == EVEN) {
+					if (l->parity[i] == EVEN) {
 						send->even++;
 					} else {
 						send->odd++;
 					}
 					/* store site index i in my node to my send_to.
-					* Note that since we loop over their p->coords (j loop) in the SAME order as
+					* Note that since we loop over their l->coords (j loop) in the SAME order as
 					* when we constructed sitelist for THEIR recv_from, we automatically get the
 					* sends in the same order as their receives!
 					* (apart from parity ordering, which does not reorder even/odd sites among themselves).
@@ -216,10 +216,10 @@ void make_comlists(params *p, comlist_struct *comlist) {
 		// Finally, realloc and rearrange sitelist so that sites with parity = EVEN come first, then parity = ODD.
 		comlist->send_to[k].sitelist = realloc(comlist->send_to[k].sitelist,
 																	comlist->send_to[k].sites * sizeof(*(comlist->send_to[k].sitelist)));
-		reorder_sitelist(p, &comlist->recv_from[k]);
-		reorder_sitelist(p, &comlist->send_to[k]);
+		reorder_sitelist(l, &comlist->recv_from[k]);
+		reorder_sitelist(l, &comlist->send_to[k]);
 	}
-	reorder_comlist(p, comlist); // arranges send_to/recv_from by node ranks
+	reorder_comlist(l, comlist); // arranges send_to/recv_from by node ranks
 
 
 	free_latticetable(coords_nn);
@@ -499,7 +499,7 @@ void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs) {
 * in which case parity is not even meaningful really.
 * Might result in memory errors in such cases??
 */
-void reorder_sitelist(params* p, sendrecv_struct* sr) {
+void reorder_sitelist(lattice* l, sendrecv_struct* sr) {
 
 	long* temp = malloc(sr->sites * sizeof(*(sr->sitelist)));
 	memcpy(temp, sr->sitelist, sr->sites * sizeof(*(sr->sitelist)));
@@ -510,7 +510,7 @@ void reorder_sitelist(params* p, sendrecv_struct* sr) {
 
 	for (long i=0; i<sr->sites; i++) {
 		site = temp[i];
-		if (p->parity[site] == EVEN) {
+		if (l->parity[site] == EVEN) {
 			sr->sitelist[even] = site;
 			even++;
 		} else {
@@ -525,7 +525,7 @@ void reorder_sitelist(params* p, sendrecv_struct* sr) {
 /* Routine for ordering send/recv structs in comlist
 * by their MPI rank.
 */
-void reorder_comlist(params* p, comlist_struct* comlist) {
+void reorder_comlist(lattice* l, comlist_struct* comlist) {
 
 	int rank;
 
@@ -537,7 +537,7 @@ void reorder_comlist(params* p, comlist_struct* comlist) {
 	memcpy(send, comlist->send_to, comlist->neighbors * sizeof(*send));
 
 	int n = 0;
-	for (rank=0; rank<p->size; rank++) {
+	for (rank=0; rank<l->size; rank++) {
 		for (int k=0; k<comlist->neighbors; k++) {
 			if (send[k].node == rank) {
 				comlist->send_to[n].sitelist = send[k].sitelist;
@@ -558,7 +558,7 @@ void reorder_comlist(params* p, comlist_struct* comlist) {
 	memcpy(recv, comlist->recv_from, comlist->neighbors * sizeof(*recv));
 
 	n = 0;
-	for (rank=0; rank<p->size; rank++) {
+	for (rank=0; rank<l->size; rank++) {
 		for (int k=0; k<comlist->neighbors; k++) {
 			if (recv[k].node == rank) {
 				comlist->recv_from[n].sitelist = recv[k].sitelist;
@@ -584,47 +584,47 @@ void reorder_comlist(params* p, comlist_struct* comlist) {
 *
 * See test_comms_individual() for another test routine.
 */
-void test_comms(params p, comlist_struct comlist) {
+void test_comms(lattice l) {
 
 	long i;
 	int dir, dof;
 
 	// field for testing purposes
 	int maxdof = 3;
-	double*** field = make_gaugefield(p.sites_total, p.dim, maxdof);
+	double*** field = make_gaugefield(l.sites_total, l.dim, maxdof);
 	// give some values that are easily tracked (0.0 for halos)
-	for (i=0; i<p.sites_total; i++) {
-		for (dir=0; dir<p.dim; dir++) {
+	for (i=0; i<l.sites_total; i++) {
+		for (dir=0; dir<l.dim; dir++) {
 			for (dof=0; dof<maxdof; dof++) {
-				field[i][dir][dof] = p.rank * p.sites_total * p.dim + i * p.dim + dir + (double) dof / maxdof;
+				field[i][dir][dof] = l.rank * l.sites_total * l.dim + i * l.dim + dir + (double) dof / maxdof;
 			}
 		}
 	}
 
 	// update EVEN links in some direction
-	int testdir = p.dim - 1;
-	update_gaugehalo(&comlist, EVEN, field, maxdof, testdir);
+	int testdir = l.dim - 1;
+	update_gaugehalo(&(l.comlist), EVEN, field, maxdof, testdir);
 
 	// check that all EVEN halos changed in testdir, and that nothing else changed.
 	// since we work with doubles, need to be careful when comparing values.
 	// precision 10^(-4) should be sufficient for small maxdof
-	for (i=0; i<p.sites_total; i++) {
-		for (dir=0; dir<p.dim; dir++) {
-			if (i >= p.sites && p.parity[i] == EVEN && dir == testdir) {
+	for (i=0; i<l.sites_total; i++) {
+		for (dir=0; dir<l.dim; dir++) {
+			if (i >= l.sites && l.parity[i] == EVEN && dir == testdir) {
 				// should have changed
 				for (dof=0; dof<maxdof; dof++) {
-					double oldval = p.rank * p.sites_total * p.dim + i * p.dim + dir + (double) dof / maxdof;
+					double oldval = l.rank * l.sites_total * l.dim + i * l.dim + dir + (double) dof / maxdof;
 					if (fabs(field[i][dir][dof] - oldval) < 0.0001 ) {
-						printf("Node %d: Error in test_comms! Halo site %ld with EVEN parity was not updated\n", p.rank, i);
+						printf("Node %d: Error in test_comms! Halo site %ld with EVEN parity was not updated\n", l.rank, i);
 						die(-120);
 					}
 				}
 			} else {
 				// should have no change
 				for (dof=0; dof<maxdof; dof++) {
-					double oldval = p.rank * p.sites_total * p.dim + i * p.dim + dir + (double) dof / maxdof;
+					double oldval = l.rank * l.sites_total * l.dim + i * l.dim + dir + (double) dof / maxdof;
 					if (fabs(field[i][dir][dof] - oldval) > 0.0001 ) {
-						printf("Node %d: Error in test_comms! Site %ld was updated in EVEN sweep, when it should not have been\n", p.rank, i);
+						printf("Node %d: Error in test_comms! Site %ld was updated in EVEN sweep, when it should not have been\n", l.rank, i);
 						die(-121);
 					}
 				}
@@ -633,33 +633,33 @@ void test_comms(params p, comlist_struct comlist) {
 	}
 
 	// reset the field and repeat for ODD sites
-	for (i=0; i<p.sites_total; i++) {
-		for (dir=0; dir<p.dim; dir++) {
+	for (i=0; i<l.sites_total; i++) {
+		for (dir=0; dir<l.dim; dir++) {
 			for (dof=0; dof<maxdof; dof++) {
-				field[i][dir][dof] = p.rank * p.sites_total * p.dim + i * p.dim + dir + (double) dof / maxdof;
+				field[i][dir][dof] = l.rank * l.sites_total * l.dim + i * l.dim + dir + (double) dof / maxdof;
 			}
 		}
 	}
 
-	update_gaugehalo(&comlist, ODD, field, maxdof, testdir);
+	update_gaugehalo(&(l.comlist), ODD, field, maxdof, testdir);
 
-	for (i=0; i<p.sites_total; i++) {
-		for (dir=0; dir<p.dim; dir++) {
-			if (i >= p.sites && p.parity[i] == ODD && dir == testdir) {
+	for (i=0; i<l.sites_total; i++) {
+		for (dir=0; dir<l.dim; dir++) {
+			if (i >= l.sites && l.parity[i] == ODD && dir == testdir) {
 				// should have changed
 				for (dof=0; dof<maxdof; dof++) {
-					double oldval = p.rank * p.sites_total * p.dim + i * p.dim + dir + (double) dof / maxdof;
+					double oldval = l.rank * l.sites_total * l.dim + i * l.dim + dir + (double) dof / maxdof;
 					if (fabs(field[i][dir][dof] - oldval) < 0.0001 ) {
-						printf("Node %d: Error in test_comms! Halo site %ld with ODD parity was not updated \n", p.rank, i);
+						printf("Node %d: Error in test_comms! Halo site %ld with ODD parity was not updated \n", l.rank, i);
 						die(-122);
 					}
 				}
 			} else {
 				// should have no change
 				for (dof=0; dof<maxdof; dof++) {
-					double oldval = p.rank * p.sites_total * p.dim + i * p.dim + dir + (double) dof / maxdof;
+					double oldval = l.rank * l.sites_total * l.dim + i * l.dim + dir + (double) dof / maxdof;
 					if (fabs(field[i][dir][dof] - oldval) > 0.0001 ) {
-						printf("Node %d: Error in test_comms! Site %ld was updated in ODD sweep, when it should not have been \n", p.rank, i);
+						printf("Node %d: Error in test_comms! Site %ld was updated in ODD sweep, when it should not have been \n", l.rank, i);
 						die(-123);
 					}
 				}
@@ -668,15 +668,15 @@ void test_comms(params p, comlist_struct comlist) {
 	}
 
 	// update EVEN again and check that all halos have changed in testdir
-	update_gaugehalo(&comlist, EVEN, field, maxdof, testdir);
+	update_gaugehalo(&(l.comlist), EVEN, field, maxdof, testdir);
 
-	for (i=p.sites; i<p.sites_total; i++) {
-		for (dir=0; dir<p.dim; dir++) {
+	for (i=l.sites; i<l.sites_total; i++) {
+		for (dir=0; dir<l.dim; dir++) {
 			if (dir == testdir) {
 				for (dof=0; dof<maxdof; dof++) {
-					double oldval = p.rank * p.sites_total * p.dim + i * p.dim + dir + (double) dof / maxdof;
+					double oldval = l.rank * l.sites_total * l.dim + i * l.dim + dir + (double) dof / maxdof;
 					if (fabs(field[i][dir][dof] - oldval) < 0.0001 ) {
-						printf("Node %d: Error in test_comms! Halo site %ld was not updated in either EVEN nor ODD sweep \n", p.rank, i);
+						printf("Node %d: Error in test_comms! Halo site %ld was not updated in either EVEN nor ODD sweep \n", l.rank, i);
 						die(-124);
 					}
 				}
@@ -685,7 +685,7 @@ void test_comms(params p, comlist_struct comlist) {
 	}
 
 	// tests done, can free test field
-	free_gaugefield(p.sites_total, field);
+	free_gaugefield(l.sites_total, field);
 }
 
 
@@ -701,29 +701,29 @@ void test_comms(params p, comlist_struct comlist) {
 * I perform 2), using a recursive generalization of the Cantor pairing function p(x,y) = 0.5*(x+y)*(x+y+1) + y.
 * Speficially, if a site has coords (x1, x2, x3, ...), we calculate y1 = p(x1,x2),
 * then y2 = p(x3, y) etc. This gives an unique number for each site that we assign to the field,
-* plus a decimal number for each component. It is then easy to use p->coords to predict what the received value should be.
+* plus a decimal number for each component. It is then easy to use l->coords to predict what the received value should be.
 *
 * Uses update_field() instead of update_gaugefield() for simplicity.
 */
-void test_comms_individual(params p, comlist_struct comlist) {
+void test_comms_individual(lattice l) {
 	long i, x, y;
 	int dir, dof;
 	long n_err = 0;
 
 	// field for testing purposes
 	int maxdof = 4;
-	double** field = make_field(p.sites_total, maxdof);
+	double** field = make_field(l.sites_total, maxdof);
 	// give values according to the Cantor pairing function, but set halos to 0
-	for (i=0; i<p.sites_total; i++) {
+	for (i=0; i<l.sites_total; i++) {
 
-		y = p.coords[i][0];
-		for (dir=1; dir<p.dim; dir++) {
-			x = p.coords[i][dir];
+		y = l.coords[i][0];
+		for (dir=1; dir<l.dim; dir++) {
+			x = l.coords[i][dir];
 			y = y + 0.5 * (x + y + 1) * (x + y);
 		}
 
 		for (dof=0; dof<maxdof; dof++) {
-			if (i >= p.sites) {
+			if (i >= l.sites) {
 				field[i][dof] = 0;
 			} else {
 				// Obtain base number from Cantor, set different decimals for different components
@@ -733,19 +733,19 @@ void test_comms_individual(params p, comlist_struct comlist) {
 	}
 
 	// now receive my halo fields from neighbors
-	update_halo(&comlist, EVEN, field, maxdof);
-	update_halo(&comlist, ODD, field, maxdof);
+	update_halo(&(l.comlist), EVEN, field, maxdof);
+	update_halo(&(l.comlist), ODD, field, maxdof);
 
-	/* use p->coords to calculate what the field value should be in my halos,
+	/* use l->coords to calculate what the field value should be in my halos,
 	* according to the Cantor pairing. This is a strong check on sitelist in sendrecv_structs,
 	* because the (x,y,z,...) coords of my halo site should match those of the real site
 	* in the node where we received the field value from.
 	*/
-	for (i=p.sites; i<p.sites_total; i++) {
+	for (i=l.sites; i<l.sites_total; i++) {
 
-		y = p.coords[i][0];
-		for (dir=1; dir<p.dim; dir++) {
-			x = p.coords[i][dir];
+		y = l.coords[i][0];
+		for (dir=1; dir<l.dim; dir++) {
+			x = l.coords[i][dir];
 			y = y + 0.5 * (x + y + 1) * (x + y);
 		}
 
@@ -755,7 +755,7 @@ void test_comms_individual(params p, comlist_struct comlist) {
 				// predicted value does not match what was sent...
 				// print error, but don't die
 				n_err++;
-				printf("Node %d: Error in test_comms! Halo site %ld did not receive correct value from update_halo() \n", p.rank, i);
+				printf("Node %d: Error in test_comms! Halo site %ld did not receive correct value from update_halo() \n", l.rank, i);
 			}
 		}
 
@@ -764,7 +764,7 @@ void test_comms_individual(params p, comlist_struct comlist) {
 	// done, free test field
 	free_field(field);
 	if (n_err > 0) {
-		printf("Node %d: test_comms_individual() failed with %ld errors!!\n", p.rank, n_err);
+		printf("Node %d: test_comms_individual() failed with %ld errors!!\n", l.rank, n_err);
 		die(-4222);
 	}
 }
@@ -817,12 +817,12 @@ void barrier() {
 
 void barrier() {}
 
-double update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir) {
-	return 0;
+void update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir) {
+	return;
 }
 
-double update_halo(comlist_struct* comlist, char parity, double** field, int dofs) {
-	return 0;
+void update_halo(comlist_struct* comlist, char parity, double** field, int dofs) {
+	return;
 }
 
 double reduce_sum(double res) {

@@ -43,29 +43,28 @@
 * Requires a "weight" struct to be compatible with measure().
 * This does not modify the original field config.
 */
-void grad_flow(params* p, fields const* f, comlist_struct* comlist,
+void grad_flow(lattice* l, fields const* f, params* p,
                   weight* w, double t_max, double dt, int flow_id) {
 
   fields flow; // flowing fields
   fields forces; // gradient forces for each field
 
-  alloc_fields(p, &flow);
-  alloc_fields(p, &forces);
+  alloc_fields(l, &flow);
+  alloc_fields(l, &forces);
 
   // copy starting configuration to "flow"
-  copy_fields(p, f, &flow);
-  sync_halos(&flow, p, comlist); // initialize halos in "flow"
+  copy_fields(l, f, &flow);
+  sync_halos(l, &flow); // initialize halos in "flow"
 
   #ifdef TRIPLET
     /* Backup lattice masses and remove UV counterterms */
     double msq = p->msq_triplet;
     remove_counterterms(p);
-
   #endif
 
 
   FILE* file;
-  if (!p->rank) {
+  if (!l->rank) {
     file = fopen("measure_flow", "a");
     // write header for the current set of measurements
     fprintf(file, "\n =========== Flow id: %d ===========\n", flow_id);
@@ -75,15 +74,15 @@ void grad_flow(params* p, fields const* f, comlist_struct* comlist,
 
   double t = 0.0;
   // initial measurements at flow time t = 0
-  if (!p->rank) {
+  if (!l->rank) {
     fprintf(file, "%.6lf ", t); // first column is time, rest come from measure()
   }
-  measure(file, &flow, p, w);
+  measure(file, l, &flow, p, w);
   if (p->do_local_meas) {
     char fname[200];
     sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
 
-    measure_local(fname, p, &flow);
+    measure_local(fname, l, &flow, p);
     local_id++;
   }
 
@@ -96,43 +95,43 @@ void grad_flow(params* p, fields const* f, comlist_struct* comlist,
       dt = t_max - t;
     }
 
-    calc_gradient(p, &flow, &forces);
+    calc_gradient(l, &flow, p, &forces);
 
     /* update everything. Halos can be synced afterwards,
      * because the force is known already. */
-    flow_gauge(p, &flow, &forces, dt); // SU(2) gauge links
+    flow_gauge(l, &flow, &forces, dt); // SU(2) gauge links
 
     #ifdef HIGGS
 
     #endif
 
     #ifdef TRIPLET
-      flow_triplet(p, &flow, &forces, dt);
+      flow_triplet(l, &flow, &forces, dt);
     #endif
 
 
-    sync_halos(&flow, p, comlist);
+    sync_halos(l, &flow);
 
     t += dt;
 
     if (iter % p->flow_meas_interval == 0) {
       // measure
-      if (!p->rank) {
+      if (!l->rank) {
         fprintf(file, "%.6lf ", t);
       }
       double oldact = Global_current_action;
-      measure(file, &flow, p, w);
+      measure(file, l, &flow, p, w);
       if (p->do_local_meas) {
         char fname[200];
         sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
 
-        measure_local(fname, p, &flow);
+        measure_local(fname, l, &flow, p);
         local_id++;
       }
 
       // debug
       if (Global_current_action > oldact) {
-        printf0(*p, "WARNING: gradient flow did not reduce action!! old act = %lf, new act = %lf\n", oldact, Global_current_action);
+        printf0(*l, "WARNING: gradient flow did not reduce action!! old act = %lf, new act = %lf\n", oldact, Global_current_action);
       }
 
     }
@@ -145,26 +144,26 @@ void grad_flow(params* p, fields const* f, comlist_struct* comlist,
   * didn't add up), do it here */
   if ((iter-1) % p->flow_meas_interval != 0) {
     // measure
-    if (!p->rank) {
+    if (!l->rank) {
       fprintf(file, "%g ", t);
     }
-    measure(file, &flow, p, w);
+    measure(file, l, &flow, p, w);
     if (p->do_local_meas) {
       char fname[200];
       sprintf(fname, "measure_local_%d_%d", flow_id, local_id); // append id to fname
 
-      measure_local(fname, p, &flow);
+      measure_local(fname, l, &flow, p);
       local_id++;
     }
   }
 
 
-  if (!p->rank) {
+  if (!l->rank) {
     fclose(file);
   }
 
-  free_fields(p, &forces);
-  free_fields(p, &flow);
+  free_fields(l, &forces);
+  free_fields(l, &flow);
 
   #ifdef TRIPLET
     // restore the UV counterterms
@@ -188,7 +187,7 @@ void grad_flow(params* p, fields const* f, comlist_struct* comlist,
 * This is convenient because then I can make a "fields" struct and store the link
 * force in force->su2link[x][mu].
 */
-void grad_force_link(params const* p, fields const* f, double* force, long i, int dir) {
+void grad_force_link(lattice const* l, fields const* f, params const* p, double* force, long i, int dir) {
 
 
   /*  I write the force on U_mu(x) as
@@ -201,7 +200,7 @@ void grad_force_link(params const* p, fields const* f, double* force, long i, in
   */
 
   double s[SU2LINK];
-  su2staple_wilson(f, p, i, dir, s);
+  su2staple_wilson(l, f, p, i, dir, s);
   for (int a=0; a<SU2LINK; a++) {
     s[a] *= - p->betasu2 / (8.0);
   }
@@ -217,7 +216,7 @@ void grad_force_link(params const* p, fields const* f, double* force, long i, in
     */
     double* u = f->su2link[i][dir];
     double* a1 = f->su2triplet[i];
-    long next = p->next[i][dir];
+    long next = l->next[i][dir];
     double* a2 = f->su2triplet[next];
 
     s[0] -= (a1[0]*a2[0]*u[0] + a1[1]*a2[1]*u[0] + a1[2]*a2[2]*u[0]
@@ -265,17 +264,17 @@ void grad_force_link(params const* p, fields const* f, double* force, long i, in
 *
 * NOTE: derivative is wrt. the components Sigma^a (Sigma = 0.5*Sigma^a sigma^a)
 */
-void grad_force_triplet(params const* p, fields const* f, double* force, long i) {
+void grad_force_triplet(lattice const* l, fields const* f, params const* p, double* force, long i) {
 
   double res[SU2TRIP] = { 0.0 };
 
   /* Hopping terms */
-  for (int dir=0; dir<p->dim; dir++) {
+  for (int dir=0; dir<l->dim; dir++) {
 
     double* u = f->su2link[i][dir];
 
     // forward
-    double* b = f->su2triplet[ p->next[i][dir] ];
+    double* b = f->su2triplet[ l->next[i][dir] ];
 
     res[0] -= b[0]*(u[0]*u[0]) + b[0]*(u[1]*u[1]) - 2*b[2]*u[0]*u[2]
             + 2*b[1]*u[1]*u[2] - b[0]*(u[2]*u[2]) + 2*b[1]*u[0]*u[3]
@@ -290,7 +289,7 @@ void grad_force_triplet(params const* p, fields const* f, double* force, long i)
             + 2*b[1]*u[2]*u[3] + b[2]*(u[3]*u[3]);
 
     // backwards
-    long prev = p->prev[i][dir];
+    long prev = l->prev[i][dir];
     b = f->su2triplet[prev];
     u = f->su2link[prev][dir];
 
@@ -314,7 +313,7 @@ void grad_force_triplet(params const* p, fields const* f, double* force, long i)
     double* trip = f->su2triplet[i];
     double trSigsq = tripletsq(trip);
 
-    res[a] += (2.0*p->dim + p->msq_triplet + 2.0*p->b4 * trSigsq) * trip[a];
+    res[a] += (2.0*l->dim + p->msq_triplet + 2.0*p->b4 * trSigsq) * trip[a];
 
     #ifdef HIGGS
       double higgsmod = doubletsq(f->su2doublet[i]);
@@ -333,14 +332,14 @@ void grad_force_triplet(params const* p, fields const* f, double* force, long i)
 /* Calculate gradient force for each field at all sites (not halos)
 * and store in the "fields" array "forces".
 */
-void calc_gradient(params const* p, fields const* f, fields* forces) {
+void calc_gradient(lattice const* l, fields const* f, params const* p, fields* forces) {
 
-  for (long i=0; i<p->sites; i++) {
+  for (long i=0; i<l->sites; i++) {
 
-    for (int dir=0; dir<p->dim; dir++) {
+    for (int dir=0; dir<l->dim; dir++) {
       /* store force as a "link" matrix. In reality it is an adjoint vector,
       * so the 0. component is not used */
-      grad_force_link(p, f, forces->su2link[i][dir], i, dir);
+      grad_force_link(l, f, p, forces->su2link[i][dir], i, dir);
     }
 
   #ifdef HIGGS
@@ -348,7 +347,7 @@ void calc_gradient(params const* p, fields const* f, fields* forces) {
   #endif
 
   #ifdef TRIPLET
-    grad_force_triplet(p, f, forces->su2triplet[i], i);
+    grad_force_triplet(l, f, p, forces->su2triplet[i], i);
   #endif
   } // end site loop
 
@@ -359,11 +358,11 @@ void calc_gradient(params const* p, fields const* f, fields* forces) {
 * force[i][mu] should give the gradient force on the link U_mu at site i.
 * Here again force[i][mu] is assumed to have 4 components, with the 0. component not used.
 */
-void flow_gauge(params const* p, fields* flow, fields const* forces, double dt) {
+void flow_gauge(lattice const* l, fields* flow, fields const* forces, double dt) {
 
 
-  for (long i=0; i<p->sites; i++) {
-    for (int dir=0; dir<p->dim; dir++) {
+  for (long i=0; i<l->sites; i++) {
+    for (int dir=0; dir<l->dim; dir++) {
       /* d/dt V = (i z_a sigma^a) V
       * => approximate V(t+dt) = exp[i dt*z_a sigma^a ] V(t)
       * and z_a are in force[i][mu]
@@ -403,9 +402,9 @@ void flow_gauge(params const* p, fields* flow, fields const* forces, double dt) 
 
 /* Flow the triplet everywhere by one timestep.
 */
-void flow_triplet(params const* p, fields* flow, fields const* forces, double dt) {
+void flow_triplet(lattice const* l, fields* flow, fields const* forces, double dt) {
 
-  for (long i=0; i<p->sites; i++) {
+  for (long i=0; i<l->sites; i++) {
 
     for (int a=0; a<SU2TRIP; a++) {
       flow->su2triplet[i][a] += dt * forces->su2triplet[i][a];

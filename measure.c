@@ -46,10 +46,10 @@ void print_labels() {
 
 
 /* Measure observables and write them to file.
-* Argument file is typically p->resultsfile, but is anyway specified here in case
+* Argument file is typically l->resultsfile, but is anyway specified here in case
 * we want to use the same function for writing different files (e.g. for realtime trajectories)
 */
-void measure(FILE* file, fields const* f, params const* p, weight* w) {
+void measure(FILE* file, lattice const* l, fields const* f, params const* p, weight* w) {
 
 	double start, end, time;
 
@@ -75,16 +75,16 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 	double mod = 0.0;
 
 	// some overlap here. action_local() already calculates local wilson action, hopping terms etc.
-	for (long i=0; i<p->sites; i++) {
-		action += action_local(f, p, i);
-		wilson += local_su2wilson(f, p, i);
+	for (long i=0; i<l->sites; i++) {
+		action += action_local(l, f, p, i);
+		wilson += local_su2wilson(l, f, p, i);
 		#ifdef U1
-			u1wilson += local_u1wilson(f, p, i);
+			u1wilson += local_u1wilson(l, f, p, i);
 		#endif
 
 		#ifdef HIGGS
-			for (int dir=0; dir<p->dim; dir++) {
-				hopping_phi += hopping_doublet_forward(f, p, i, dir) / p->dim;
+			for (int dir=0; dir<l->dim; dir++) {
+				hopping_phi += hopping_doublet_forward(l, f, p, i, dir) / l->dim;
 			}
 			mod = doubletsq(f->su2doublet[i]);
 			phi2 += mod;
@@ -98,12 +98,12 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 			double tripletmod = tripletsq(f->su2triplet[i]);
 			Sigma2 += tripletmod;
 			Sigma4 += tripletmod * tripletmod;
-			for (int dir=0; dir<p->dim; dir++) {
-				hopping_Sigma += hopping_triplet_forward(f, p, i, dir) / p->dim;
+			for (int dir=0; dir<l->dim; dir++) {
+				hopping_Sigma += hopping_triplet_forward(l, f, p, i, dir) / l->dim;
 			}
 
 			// calculate charge density of magnetic monopoles
-			double charge = magcharge_cube(p, f, i);
+			double charge = magcharge_cube(l, f, p, i);
 			mag_charge += charge;
 			mag_charge_abs += fabs(charge);
 		#endif
@@ -120,8 +120,8 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 		* because it is not used/updated in field update sweeps. Recalculate it here.
 		*/
 		if (!w->do_acceptance) {
-			calc_orderparam(p, f, w, EVEN); // updates EVEN contribution only
-			muca_param = calc_orderparam(p, f, w, ODD); // updates ODD and returns the full value
+			calc_orderparam(l, f, p, w, EVEN); // updates EVEN contribution only
+			muca_param = calc_orderparam(l, f, p, w, ODD); // updates ODD and returns the full value
 		} else {
 			muca_param = w->param_value[EVEN] + w->param_value[ODD];
 		}
@@ -167,27 +167,27 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 
 	// write to the file from root node. This is very fast performance wise
 	// the ordering here should be the same as in print_labels()
-	if (!p->rank) {
+	if (!l->rank) {
 		fprintf(file, "%g %g ", weight, muca_param);
 		fprintf(file, "%g %g ",
-			action, wilson/((double)p->vol) );
+			action, wilson/((double)l->vol) );
 		#ifdef HIGGS
 			fprintf(file, "%g %g %g ",
-				hopping_phi/((double)p->vol), phi2/((double)p->vol), phi4/((double)p->vol)
+				hopping_phi/((double)l->vol), phi2/((double)l->vol), phi4/((double)l->vol)
 			);
 		#endif
 		#ifdef TRIPLET
 			fprintf(file, "%g %g %g ",
-				hopping_Sigma/((double)p->vol), Sigma2/((double)p->vol), Sigma4/((double)p->vol)
+				hopping_Sigma/((double)l->vol), Sigma2/((double)l->vol), Sigma4/((double)l->vol)
 			);
 			#ifdef HIGGS
 			fprintf(file, "%g ",
-				phi2Sigma2/((double)p->vol)
+				phi2Sigma2/((double)l->vol)
 			);
 			#endif
 		#endif
 		#ifdef U1
-			fprintf(file, "%g ", u1/((double)p->vol) );
+			fprintf(file, "%g ", u1/((double)l->vol) );
 		#endif
 		#ifdef TRIPLET
 			// store total magnetic charge density (should be ~0)
@@ -204,23 +204,23 @@ void measure(FILE* file, fields const* f, params const* p, weight* w) {
 /* Calculate local action for the system at site i.
 *	The construction is so that a loop over i gives the total action.
 */
-double action_local(fields const* f, params const* p, long i) {
+double action_local(lattice const* l, fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
-	tot += local_su2wilson(f, p, i);
+	tot += local_su2wilson(l, f, p, i);
 
 	#ifdef U1
-		tot += local_u1wilson(f, p, i);
+		tot += local_u1wilson(l, f, p, i);
 	#endif
 
 	#ifdef HIGGS
-		tot += covariant_doublet(f, p, i) + higgspotential(f, p, i);
+		tot += covariant_doublet(l, f, p, i) + higgspotential(f, p, i);
 	#endif
 	#ifdef TRIPLET
 		double mod = tripletsq(f->su2triplet[i]);
 		// potential + covariant derivative. Higgs portal term is included in higgspotential().
 		tot += p->msq_triplet * mod + p->b4 * mod * mod;
-		tot += covariant_triplet(f, p, i);
+		tot += covariant_triplet(l, f, p, i);
 	#endif
 
 	return tot;
@@ -229,12 +229,12 @@ double action_local(fields const* f, params const* p, long i) {
 
 /* Make a label file for local measurements.
 */
-void print_labels_local(params* p, char* fname) {
+void print_labels_local(lattice const* l, char* fname) {
 	FILE* f = fopen(fname, "w+");
 
 	int k = 1;
 	// first columns are the site coordinates
-	for (int dir=0; dir<p->dim; dir++) {
+	for (int dir=0; dir<l->dim; dir++) {
 		fprintf(f, "%d x%d\n", k, dir); k++;
 	}
 	#ifdef TRIPLET
@@ -251,33 +251,33 @@ void print_labels_local(params* p, char* fname) {
 * and that all nodes have the same number of (real) sites!
 * Could also just send the coordinates, but this needs more comms and/or memory...
 */
-void measure_local(char* fname, params const* p, fields const* f) {
+void measure_local(char* fname, lattice const* l, fields const* f, params const* p) {
 
 	FILE* file;
 
 	int n_meas = 1; // includes offset!
 	#ifdef TRIPLET
 		// Tr Sigma^2 = 0.5*Sigma^a Sigma^a
-		double Sigma2[p->sites]; n_meas++;
-		double magcharge[p->sites]; n_meas++;
+		double Sigma2[l->sites]; n_meas++;
+		double magcharge[l->sites]; n_meas++;
 	#endif
 
-	for (long i=0; i<p->sites; i++) {
+	for (long i=0; i<l->sites; i++) {
 
 		#ifdef TRIPLET
 
 			Sigma2[i] = tripletsq(f->su2triplet[i]);
-			magcharge[i] = magcharge_cube(p, f, i) / (2.0*M_PI*sqrt(p->betasu2)); // integer!
+			magcharge[i] = magcharge_cube(l, f, p, i) / (2.0*M_PI*sqrt(p->betasu2)); // integer!
 		#endif
 	} // end i
 
-	if (!p->rank) {
+	if (!l->rank) {
 		file = fopen(fname, "wb");
 	}
 
-	int coord_offset[p->dim];
-	for (int dir=0; dir<p->dim; dir++) {
-		coord_offset[dir] = p->offset[dir];
+	int coord_offset[l->dim];
+	for (int dir=0; dir<l->dim; dir++) {
+		coord_offset[dir] = l->offset[dir];
 	}
 
 	#ifdef MPI
@@ -285,11 +285,11 @@ void measure_local(char* fname, params const* p, fields const* f) {
 	* There will be one send per measurement array, incl. offset.
 	* So need tags to avoid errors, but I use blocking sends. */
 	int tag = 0;
-	if (p->rank != 0) {
-		MPI_Send(&coord_offset, p->dim, MPI_INT, 0, tag, MPI_COMM_WORLD); tag++;
+	if (l->rank != 0) {
+		MPI_Send(&coord_offset, l->dim, MPI_INT, 0, tag, MPI_COMM_WORLD); tag++;
 		#ifdef TRIPLET
-			MPI_Send(&Sigma2, p->sites, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD); tag++;
-			MPI_Send(&magcharge, p->sites, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD); tag++;
+			MPI_Send(&Sigma2, l->sites, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD); tag++;
+			MPI_Send(&magcharge, l->sites, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD); tag++;
 		#endif
 	}
 
@@ -297,32 +297,32 @@ void measure_local(char* fname, params const* p, fields const* f) {
 
 
 
-	if (!p->rank) {
+	if (!l->rank) {
 		// loop over MPI ranks
-		for (int r=0; r<p->size; r++) {
+		for (int r=0; r<l->size; r++) {
 
 			#ifdef MPI
 			// get the data and offsets from rank == r node (if r=0, just write own meas)
 			if (r != 0) {
 				tag = 0;
-				MPI_Recv(&coord_offset, p->dim, MPI_INT, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
+				MPI_Recv(&coord_offset, l->dim, MPI_INT, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
 				#ifdef TRIPLET
-					MPI_Recv(&Sigma2, p->sites, MPI_DOUBLE, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
-					MPI_Recv(&magcharge, p->sites, MPI_DOUBLE, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
+					MPI_Recv(&Sigma2, l->sites, MPI_DOUBLE, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
+					MPI_Recv(&magcharge, l->sites, MPI_DOUBLE, r, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE); tag++;
 				#endif
 			}
 			#endif
 
-			for (long i=0; i<p->sites; i++) {
+			for (long i=0; i<l->sites; i++) {
 
 
 				// Binary: smaller files
-				int coords[p->dim];
-				for (int dir=0; dir<p->dim; dir++) {
-					coords[dir] = p->coords[i][dir] + coord_offset[dir];
+				int coords[l->dim];
+				for (int dir=0; dir<l->dim; dir++) {
+					coords[dir] = l->coords[i][dir] + coord_offset[dir];
 				}
 
-				fwrite(coords, sizeof(*coords), p->dim, file);
+				fwrite(coords, sizeof(*coords), l->dim, file);
 
 				// merge measurements at site=i to an array for writing
 				int k = 0;
@@ -340,8 +340,8 @@ void measure_local(char* fname, params const* p, fields const* f) {
 				// Formatted: text files only
 				/*
 				// write coords
-				for (int dir=0; dir<p->dim; dir++) {
-					fprintf(file, "%ld ", p->coords[i][dir] + coord_offset[dir]);
+				for (int dir=0; dir<l->dim; dir++) {
+					fprintf(file, "%ld ", l->coords[i][dir] + coord_offset[dir]);
 				}
 				// then the measurements
 				#ifdef TRIPLET
@@ -357,7 +357,7 @@ void measure_local(char* fname, params const* p, fields const* f) {
 
 	}
 
-	if (!p->rank) {
+	if (!l->rank) {
 		fclose(file);
 	}
 

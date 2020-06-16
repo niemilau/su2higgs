@@ -13,12 +13,12 @@
 * Update a single SU(2) link using Metropolis.
 * Returns 1 if update was accepted and 0 if rejected.
 */
-int metro_su2link(fields* f, params const* p, long i, int dir) {
+int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir) {
 
 	double oldlink[4];
 	memcpy(oldlink, f->su2link[i][dir], SU2LINK*sizeof(double));
 
-	double linkact_old = localact_su2link(f, p, i, dir);
+	double linkact_old = localact_su2link(l, f, p, i, dir);
 
 	// generate new link randomly
 	double newlink[4];
@@ -26,7 +26,7 @@ int metro_su2link(fields* f, params const* p, long i, int dir) {
 
 	su2rot(f->su2link[i][dir], newlink);
 
-	double linkact_new = localact_su2link(f, p, i, dir);
+	double linkact_new = localact_su2link(l, f, p, i, dir);
 
 	double diff = linkact_new - linkact_old;
 	if (diff < 0) {
@@ -47,16 +47,16 @@ int metro_su2link(fields* f, params const* p, long i, int dir) {
 * and a_i(x) is in f.u1link
 * Returns 1 if update was accepted and 0 if rejected.
 */
-int metro_u1link(fields* f, params const* p, long i, int dir) {
+int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir) {
 
 	double oldlink = f->u1link[i][dir];
 
-	double linkact_old = localact_u1link(f, p, i, dir);
+	double linkact_old = localact_u1link(l, f, p, i, dir);
 
 	// multiply link by a random phase (can adjust the overall number here)
 	f->u1link[i][dir] += 1.0*(drand48() - 0.5);
 
-	double linkact_new = localact_u1link(f, p, i, dir);
+	double linkact_new = localact_u1link(l, f, p, i, dir);
 
 	double diff = linkact_new - linkact_old;
 	if (diff < 0) {
@@ -76,7 +76,7 @@ int metro_u1link(fields* f, params const* p, long i, int dir) {
 * Update a single SU(2) scalar doublet using Metropolis.
 * Returns 1 if update was accepted and 0 if rejected.
 */
-int metro_doublet(fields* f, params const* p, long i) {
+int metro_doublet(lattice const* l, fields* f, params const* p, long i) {
 
 	double oldfield[4];
 	oldfield[0] = f->su2doublet[i][0];
@@ -85,7 +85,7 @@ int metro_doublet(fields* f, params const* p, long i) {
 	oldfield[3] = f->su2doublet[i][3];
 
 
-	double act_old = localact_doublet(f, p, i);
+	double act_old = localact_doublet(l, f, p, i);
 
 	// modify the old field by random values
 	f->su2doublet[i][0] += 1.0*(drand48() - 0.5);
@@ -94,7 +94,7 @@ int metro_doublet(fields* f, params const* p, long i) {
 	f->su2doublet[i][3] += 1.0*(drand48() - 0.5);
 
 
-	double act_new = localact_doublet(f, p, i);
+	double act_new = localact_doublet(l, f, p, i);
 
 	int accept;
 	double diff = act_new - act_old;
@@ -120,14 +120,14 @@ int metro_doublet(fields* f, params const* p, long i) {
 * Update a single SU(2) scalar triplet using Metropolis.
 * Returns 1 if update was accepted and 0 if rejected.
 */
-int metro_triplet(fields* f, params const* p, long i) {
+int metro_triplet(lattice const* l, fields* f, params const* p, long i) {
 
 	double oldfield[3];
 	oldfield[0] = f->su2triplet[i][0];
 	oldfield[1] = f->su2triplet[i][1];
 	oldfield[2] = f->su2triplet[i][2];
 
-	double act_old = localact_triplet(f, p, i);
+	double act_old = localact_triplet(l, f, p, i);
 
 	// modify the old field by random values
 	f->su2triplet[i][0] += 1.0*(drand48() - 0.5);
@@ -135,7 +135,7 @@ int metro_triplet(fields* f, params const* p, long i) {
 	f->su2triplet[i][2] += 1.0*(drand48() - 0.5);
 
 
-	double act_new = localact_triplet(f, p, i);
+	double act_new = localact_triplet(l, f, p, i);
 
 	double diff = act_new - act_old;
 	if (diff < 0) {

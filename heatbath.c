@@ -10,7 +10,7 @@
 /*
 * Update a single SU(2) link using KP heatbath.
 */
-int heatbath_su2link(fields* f, params const* p, long i, int dir) {
+int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int dir) {
 
 	// only used if accept/reject step is needed
 	double oldlink[4];
@@ -21,13 +21,13 @@ int heatbath_su2link(fields* f, params const* p, long i, int dir) {
 		oldlink[1] = f->su2link[i][dir][1];
 		oldlink[2] = f->su2link[i][dir][2];
 		oldlink[3] = f->su2link[i][dir][3];
-		oldact += hopping_triplet_forward(f, p, i, dir);
+		oldact += hopping_triplet_forward(l, f, p, i, dir);
 	#endif
 
 
 	// calculate the staple and its determinant
 	double V[4];
-	su2link_staple(f, p, i, dir, V);
+	su2link_staple(l, f, p, i, dir, V);
 
 	double a = sqrt( su2sqr(V) );
 
@@ -100,7 +100,7 @@ int heatbath_su2link(fields* f, params const* p, long i, int dir) {
 
 	#ifdef TRIPLET
 		double newact = 0.0;
-		newact += hopping_triplet_forward(f, p, i, dir);
+		newact += hopping_triplet_forward(l, f, p, i, dir);
 		double diff = oldact - newact;
 		if (drand48() < exp(diff)) {
 			return 1;

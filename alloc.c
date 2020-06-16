@@ -108,10 +108,10 @@ void free_gaugefield(long sites, double ***field) {
 
 /** Allocate all the fields needed for a simulation.
  */
-void alloc_fields(params const* p, fields *f) {
+void alloc_fields(lattice const* l, fields *f) {
 
-	long sites = p->sites_total;
-	f->su2link = make_gaugefield(sites, p->dim, SU2LINK);
+	long sites = l->sites_total;
+	f->su2link = make_gaugefield(sites, l->dim, SU2LINK);
 
 	#ifdef HIGGS
 		f->su2doublet = make_field(sites, SU2DB);
@@ -123,16 +123,16 @@ void alloc_fields(params const* p, fields *f) {
     /* allocate U(1) gauge field, accessed as u1link[i][dir]. Note that memory
     * wise this is essentially just a non-gauge field with p.dim components.
     */
-    f->u1link = make_field(sites, p->dim);
+    f->u1link = make_field(sites, l->dim);
   #endif
 }
 
 
 /** Free all the fields allocated by alloc_fields().
  */
-void free_fields(params const* p, fields *f) {
+void free_fields(lattice const* l, fields *f) {
 
-	long sites = p->sites_total;
+	long sites = l->sites_total;
 	free_gaugefield(sites, f->su2link);
 	#ifdef HIGGS
 		free_field(f->su2doublet);
@@ -192,49 +192,49 @@ long **realloc_latticetable(long** arr, int dim, long oldsites, long newsites) {
 
 /* Allocate all needed lookup tables needed for layouting
 */
-void alloc_lattice_arrays(params *p, long sites) {
+void alloc_lattice_arrays(lattice *l, long sites) {
 
-  p->coords = alloc_latticetable(p->dim, sites);
-	p->next = alloc_latticetable(p->dim, sites);
-	p->prev = alloc_latticetable(p->dim, sites);
+  l->coords = alloc_latticetable(l->dim, sites);
+	l->next = alloc_latticetable(l->dim, sites);
+	l->prev = alloc_latticetable(l->dim, sites);
 
 	// allocate parity arrays
-	p->parity = malloc(sites * sizeof(*(p->parity)));
+	l->parity = malloc(sites * sizeof(*(l->parity)));
 
-	if (!p->rank)
+	if (!l->rank)
 		printf("Allocated memory for lookup tables.\n");
 }
 
 // Realloc everything originally allocated in alloc_lattice_arrays
-void realloc_lattice_arrays(params *p, long oldsites, long newsites) {
+void realloc_lattice_arrays(lattice *l, long oldsites, long newsites) {
 
-  p->coords = realloc_latticetable(p->coords, p->dim, oldsites, newsites);
-  p->next = realloc_latticetable(p->next, p->dim, oldsites, newsites);
-  p->prev = realloc_latticetable(p->prev, p->dim, oldsites, newsites);
+  l->coords = realloc_latticetable(l->coords, l->dim, oldsites, newsites);
+  l->next = realloc_latticetable(l->next, l->dim, oldsites, newsites);
+  l->prev = realloc_latticetable(l->prev, l->dim, oldsites, newsites);
 
-	p->parity = realloc(p->parity, newsites * sizeof(*(p->parity)));
+	l->parity = realloc(l->parity, newsites * sizeof(*(l->parity)));
 }
 
 
-/* Free all memory reserved for layouting and lookup tables.
-*
+/* Free all memory reserved for layouting, lookup tables
+* and comlists.
 */
-void free_lattice_arrays(params *p) {
+void free_lattice(lattice *l) {
+
+  // comlist
+  free_comlist(&l->comlist);
 
 	// lookup tables and parity:
-	free(p->parity);
-  free_latticetable(p->coords);
-	free_latticetable(p->next);
-	free_latticetable(p->prev);
+	free(l->parity);
+  free_latticetable(l->coords);
+	free_latticetable(l->next);
+	free_latticetable(l->prev);
 
 	// slicing:
-	free(p->sliceL);
-	free(p->nslices);
+	free(l->sliceL);
+	free(l->nslices);
 	// then finally the full lattice size, allocated in get_parameters()
-	free(p->L);
-
-	if (!p->rank)
-		printf("Freed memory allocated for layouting.\n");
+	free(l->L);
 }
 
 // Free memory allocated by allocate_latticetable()

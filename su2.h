@@ -37,7 +37,8 @@ double waittime;
 double Global_comms_time, Global_total_time;
 double Global_current_action; // for debugging gradient flows etc
 
-// general multipurpose struct params.
+/* Struct "lattice": contains info on lattice dimensions, lookup tables for
+* sites and everything related to parallelization. */
 typedef struct {
 	// layout parameters for MPI
 	int rank, size;
@@ -67,6 +68,7 @@ typedef struct {
 	char *parity;
 	long evensites, oddsites;
 	long evenhalos, oddhalos;
+	comlist_struct comlist;
 	// in layout.c we reorder lattice sites so that EVEN sites come first.
 	int reorder_parity; // for debugging purposes
 
@@ -78,6 +80,16 @@ typedef struct {
 		long area; // how many sites per z coordinate on the whole lattice; area = vol / L[z_dir]
 		// list of all real sites at fixed z coord in no particular order
 		long** site_at_z; // sites_at_z[z][j], 0<=j<sites_per_z
+	#endif
+} lattice;
+
+
+/* struct "params": contains control parameters such as number of iterations,
+* and also values for model-dependent parameters in the action */
+typedef struct {
+
+
+	#ifdef MEASURE_Z
 		int n_meas_z; // how many quantities to measure along z
 		int meas_interval_z; // read in from config file in get_parameters()
 	#endif
@@ -219,9 +231,9 @@ inline char otherparity(char parity) {
 }
 
 // comms.c (move elsewhere later?)
-void make_comlists(params *p, comlist_struct *comlist);
-void reorder_sitelist(params* p, sendrecv_struct* sr);
-void reorder_comlist(params* p, comlist_struct* comlist);
+void make_comlists(lattice *l, comlist_struct *comlist);
+void reorder_sitelist(lattice* l, sendrecv_struct* sr);
+void reorder_comlist(lattice* l, comlist_struct* comlist);
 double reduce_sum(double res);
 double allreduce(double res);
 void bcast_int(int *res);
@@ -241,27 +253,27 @@ void update_halo(comlist_struct* comlist, char parity, double** field, int dofs)
 void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs);
 void send_field(sendrecv_struct* send, MPI_Request* req, char parity, double** field, int dofs);
 #endif
-void test_comms(params p, comlist_struct comlist);
-void test_comms_individual(params p, comlist_struct comlist);
+void test_comms(lattice l);
+void test_comms_individual(lattice l);
 
 // layout.c
-void layout(params *p, comlist_struct *comlist);
-void make_slices(params *p);
-void sitemap(params *p);
-void set_parity(params *p);
-void paritymap(params* p, long* newindex);
-void remap_latticetable(params* p, long** arr, long* newindex, long maxindex);
-void remap_neighbor_table(params* p, long** arr, long* newindex, long maxindex);
-void remap_lattice_arrays(params* p, long* newindex, long maxindex);
-long findsite(params* p, long* x, int include_halos);
-void test_coords(params p);
-void test_neighbors(params p);
+void layout(lattice *l, int do_prints, int run_checks);
+void make_slices(lattice *l);
+void sitemap(lattice *l);
+void set_parity(lattice *l);
+void paritymap(lattice* l, long* newindex);
+void remap_latticetable(lattice* l, long** arr, long* newindex, long maxindex);
+void remap_neighbor_table(lattice* l, long** arr, long* newindex, long maxindex);
+void remap_lattice_arrays(lattice* l, long* newindex, long maxindex);
+long findsite(lattice const* l, long* x, int include_halos);
+void test_coords(lattice const* l);
+void test_neighbors(lattice const* l);
 void indexToCoords(short dim, int* L, long i, long* x);
 long coordsToIndex(short dim, int* L, long* x);
-int coordsToRank(params p, long* x);
-void printf0(params p, char *msg, ...);
+int coordsToRank(lattice const* l, long* coords);
+void printf0(lattice l, char *msg, ...);
 void die(int howbad);
-void print_lattice_2D(params *p);
+void print_lattice_2D(lattice *l);
 
 // alloc.c
 double *make_singletfield(long sites);
@@ -270,24 +282,24 @@ double ***make_gaugefield(long sites, int dim, int dofs);
 void free_singletfield(double *field);
 void free_field(double **field);
 void free_gaugefield(long sites, double ***field);
-void alloc_fields(params const* p, fields *f);
-void free_fields(params const* p, fields *f);
-void alloc_lattice_arrays(params *p, long sites);
+void alloc_fields(lattice const* l, fields *f);
+void free_fields(lattice const* l, fields *f);
+void alloc_lattice_arrays(lattice *l, long sites);
 long **alloc_latticetable(int dim, long sites);
 long **realloc_latticetable(long** arr, int dim, long oldsites, long newsites);
-void realloc_lattice_arrays(params *p, long oldsites, long newsites);
+void realloc_lattice_arrays(lattice *l, long oldsites, long newsites);
 void free_latticetable(long** list);
-void free_lattice_arrays(params *p);
+void free_lattice(lattice *l);
 void free_comlist(comlist_struct* comlist);
 
 // su2u1.c
 double su2sqr(double *u);
 void su2rot(double *u1, double *u2);
-double su2ptrace(fields const* f, params const* p, long i, int dir1, int dir2);
-long double local_su2wilson(fields const* f, params const* p, long i);
-double localact_su2link(fields const* f, params const* p, long i, int dir);
-void su2staple_wilson(fields const* f, params const* p, long i, int dir, double* V);
-void su2link_staple(fields const* f, params const* p, long i, int dir, double* V);
+double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
+long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i);
+double localact_su2link(lattice const* l, fields const* f, params const* p, long i, int dir);
+void su2staple_wilson(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
+void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
 double su2trace4(double *u1, double *u2, double *u3, double *u4);
 void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
 void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
@@ -295,101 +307,101 @@ double hopping_trace(double* phi1, double* u, double* phi2);
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a);
 double hopping_trace_triplet(double* a1, double* u, double* a2);
 // U(1) routines
-double u1ptrace(fields const* f, params const* p, long i, int dir1, int dir2);
-long double local_u1wilson(fields const* f, params const* p, long i);
-double localact_u1link(fields const* f, params const* p, long i, int dir);
+double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
+double local_u1wilson(lattice const* l, fields const* f, params const* p, long i);
+double localact_u1link(lattice const* l, fields const* f, params const* p, long i, int dir);
 // doublet routines
 double doubletsq(double* a);
 long double avg_doublet2(fields const* f, params const* p);
 long double avg_doublet4(fields const* f, params const* p);
-double hopping_doublet_forward(fields const* f, params const* p, long i, int dir);
-double hopping_doublet_backward(fields const* f, params const* p, long i, int dir);
-double covariant_doublet(fields const* f, params const* p, long i);
-double localact_doublet(fields const* f, params const* p, long i);
+double hopping_doublet_forward(lattice const* l, fields const* f, params const* p, long i, int dir);
+double hopping_doublet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
+double covariant_doublet(lattice const* l, fields const* f, params const* p, long i);
+double localact_doublet(lattice const* l, fields const* f, params const* p, long i);
 double higgspotential(fields const* f, params const* p, long i);
 // triplet routines
 double tripletsq(double* a);
-double hopping_triplet_forward(fields const* f, params const* p, long i, int dir);
-double hopping_triplet_backward(fields const* f, params const* p, long i, int dir);
-double covariant_triplet(fields const* f, params const* p, long i);
-double localact_triplet(fields const* f, params const* p, long i);
+double hopping_triplet_forward(lattice const* l, fields const* f, params const* p, long i, int dir);
+double hopping_triplet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
+double covariant_triplet(lattice const* l, fields const* f, params const* p, long i);
+double localact_triplet(lattice const* l, fields const* f, params const* p, long i);
 
 // metropolis.c
-int metro_su2link(fields* f, params const* p, long i, int dir);
-int metro_u1link(fields* f, params const* p, long i, int dir);
-int metro_doublet(fields* f, params const* p, long i);
-int metro_triplet(fields* f, params const* p, long i);
+int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
+int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir);
+int metro_doublet(lattice const* l, fields* f, params const* p, long i);
+int metro_triplet(lattice const* l, fields* f, params const* p, long i);
 
 // heatbath.c
-int heatbath_su2link(fields* f, params const* p, long i, int dir);
+int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
 
 // overrelax.c
 double polysolve3(long double a, long double b, long double c, long double d);
-int overrelax_doublet(fields* f, params const* p, long i);
-int overrelax_triplet(fields* f, params const* p, long i);
+int overrelax_doublet(lattice const* l, fields* f, params const* p, long i);
+int overrelax_triplet(lattice const* l, fields* f, params const* p, long i);
 
 // update.c
-void update_lattice(fields* f, params const* p, comlist_struct* comlist, counters* c, weight* w);
-void checkerboard_sweep_su2link(fields* f, params const* p, counters* c, int parity, int dir);
-void checkerboard_sweep_u1link(fields* f, params const* p, counters* c, int parity, int dir);
-int checkerboard_sweep_su2doublet(fields* f, params const* p, counters* c, weight* w, int parity, int metro);
-int checkerboard_sweep_su2triplet(fields* f, params const* p, counters* c, weight* w, int parity, int metro);
-void sync_halos(fields* f, params const* p, comlist_struct* comlist);
+void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight* w);
+void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
+void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
+int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
+int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
+void sync_halos(lattice* l, fields* f);
 void shuffle(int *arr, int len);
 
 // init.c
-void setsu2(fields f, params p);
+void setsu2(fields f, lattice l);
 void random_su2link(double *su2);
-void setu1(fields f, params p);
-void setfields(fields f, params p);
-void setdoublets(fields f, params p);
-void settriplets(fields f, params p);
-void copy_fields(params const* p, fields const* f_old, fields* f_new);
+void setu1(fields f, lattice l);
+void setfields(fields f, lattice l, params p);
+void setdoublets(fields f, lattice l, params p);
+void settriplets(fields f, lattice l, params p);
+void copy_fields(lattice const* l, fields const* f_old, fields* f_new);
 void init_counters(counters* c);
 
 // checkpoint.c
 void print_acceptance(params p, counters c);
-void read_field(params p, FILE *file, double *field, int size);
-void write_field(params p, FILE *file, double *field, int size);
-void save_lattice(params p, fields f, counters c);
-void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comlist);
+void write_field(lattice const* l, FILE *file, double *field, int size);
+void read_field(lattice const* l, FILE *file, double *field, int size);
+void save_lattice(lattice const* l, fields f, counters c, char* fname);
+void load_lattice(lattice* l, fields* f, counters* c, char* fname);
 
 // parameters.c
 void check_set(int set, char *name); // helper routine
-void get_parameters(char *filename, params *p);
-void get_weight_parameters(char *filename, params *p, weight* w);
-void print_parameters(params p);
-void read_updated_parameters(char *filename, params *p);
+void get_parameters(char *filename, lattice* l, params *p);
+void get_weight_parameters(char *filename, lattice const* l, params *p, weight* w);
+void print_parameters(lattice l, params p);
+void read_updated_parameters(char *filename, lattice const* l, params *p);
 
 
 // measure.c
-void measure(FILE* file, fields const* f, params const* p, weight* w);
+void measure(FILE* file, lattice const* l, fields const* f, params const* p, weight* w);
 // weight not necessarily constant because measure() can recalculate the order parameter
-double action_local(fields const* f, params const* p, long i);
+double action_local(lattice const* l, fields const* f, params const* p, long i);
 void print_labels();
-void measure_local(char* fname, params const* p, fields const* f);
-void print_labels_local(params* p, char* fname);
+void measure_local(char* fname, lattice const* l, fields const* f, params const* p);
+void print_labels_local(lattice const* l, char* fname);
 
 // multicanonical.c
-void load_weight(params const* p, weight *w);
-void save_weight(params const* p, weight const* w);
+void load_weight(lattice const* l, weight *w);
+void save_weight(lattice const* l, weight const* w);
 double get_weight(weight const* w, double val);
-void update_weight(params const* p, weight* w);
-int multicanonical_acceptance(params const* p, weight* w, double oldval, double newval);
+void update_weight(lattice const* l, weight* w);
+int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double newval);
 long whichbin(weight const* w, double val);
-double calc_orderparam(params const* p, fields const* f, weight* w, char par);
-void check_tunnel(params const* p, weight *w);
-void store_muca_fields(params const* p, fields* f, weight* w);
-void reset_muca_fields(params const* p, fields* f, weight* w, char par);
-void alloc_backup_arrays(params const* p, fields* f, weight const* w);
+double calc_orderparam(lattice const* l, fields const* f, params const* p, weight* w, char par);
+void check_tunnel(lattice const* l, weight *w);
+void store_muca_fields(lattice const* l, fields* f, weight* w);
+void reset_muca_fields(lattice const* l, fields* f, weight* w, char par);
+void alloc_backup_arrays(lattice const* l, fields* f, weight const* w);
 void free_muca_arrays(fields* f, weight *w);
 
 #ifdef MEASURE_Z
 	// z_coord.c
-	void init_z_coord(params* p);
-	void print_z_labels(params* p);
-	void measure_along_z(fields const* f, params const* p, long id);
-	void prepare_wall(fields* f, params const* p, comlist_struct* comlist);
+	void init_z_coord(lattice* l);
+	void print_z_labels(lattice const* l, params* p);
+	void measure_along_z(lattice const* l, fields const* f, params const* p, long id);
+	void prepare_wall(lattice* l, fields* f, params const* p);
 #endif
 
 
@@ -397,21 +409,21 @@ void free_muca_arrays(fields* f, weight *w);
 	// magfield.c
 	void matmat(double *in1, double *in2, int dag);
 	void projector(double *proj, double *adjoint);
-	void project_u1(params const* p, fields const* f, long i, int dir, double* pro);
-	double alpha_proj(params const* p, fields const* f, long i, int dir1, int dir2);
-	double magfield(params const* p, fields const* f, long i, int dir);
-	double magcharge_cube(params const* p, fields const* f, long i);
+	void project_u1(lattice const* l, fields const* f, long i, int dir, double* pro);
+	double alpha_proj(lattice const* l, fields const* f, params const* p, long i, int dir1, int dir2);
+	double magfield(lattice const* l, fields const* f, params const* p, long i, int dir);
+	double magcharge_cube(lattice const* l, fields const* f, params const* p, long i);
 #endif
 
 
 #ifdef GRADFLOW
 	// gradflow.c
-	void grad_flow(params* p, fields const* f, comlist_struct* comlist, weight* w, double t_max, double dt, int flow_id);
-	void grad_force_link(params const* p, fields const* f, double* force, long i, int dir);
-	void grad_force_triplet(params const* p, fields const* f, double* force, long i);
-	void calc_gradient(params const* p, fields const* f, fields* forces);
-	void flow_gauge(params const* p, fields* flow, fields const* forces, double dt);
-	void flow_triplet(params const* p, fields* flow, fields const* forces, double dt);
+	void grad_flow(lattice* l, fields const* f, params* p, weight* w, double t_max, double dt, int flow_id);
+	void grad_force_link(lattice const* l, fields const* f, params const* p, double* force, long i, int dir);
+	void grad_force_triplet(lattice const* l, fields const* f, params const* p, double* force, long i);
+	void calc_gradient(lattice const* l, fields const* f, params const* p, fields* forces);
+	void flow_gauge(lattice const* l, fields* flow, fields const* forces, double dt);
+	void flow_triplet(lattice const* l, fields* flow, fields const* forces, double dt);
 	void remove_counterterms(params* p);
 #endif
 
