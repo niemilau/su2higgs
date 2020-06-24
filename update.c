@@ -206,8 +206,8 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 				shuffle(par_a, NV);
 				shuffle(dir_a, NV);
 			}
-			bcast_int_array(par_a, NV);
-			bcast_int_array(dir_a, NV);
+			bcast_int_array(par_a, NV, l->comm);
+			bcast_int_array(dir_a, NV, l->comm);
 		}
 
 		// now update in the specified order
@@ -215,14 +215,14 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 			int dir = dir_a[j];
 			int par = par_a[j];
 			checkerboard_sweep_su2link(l, f, p, c, par, dir);
-			update_gaugehalo(&l->comlist, par, f->su2link, SU2LINK, dir);
+			update_gaugehalo(l, par, f->su2link, SU2LINK, dir);
 
 			#ifdef U1
 				checkerboard_sweep_u1link(l, f, p, c, par, dir);
 				// here I use update_halo() instead of update_gaugehalo(), so halo is
 				// actually updated for all directions after updating just one direction.
 				// Could be optimized. (is it OK to update U1 together with SU2 like here?)
-				update_halo(&l->comlist, par, f->u1link, l->dim);
+				update_halo(l, par, f->u1link, l->dim);
 			#endif
 		}
 	} // gauge links done
@@ -250,7 +250,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 		if (p->random_sweeps) {
 			par_a[0] = (drand48() < 0.5) ? EVEN : ODD;
 			par_a[1] = otherparity(par_a[0]);
-			bcast_int_array(par_a, 2);
+			bcast_int_array(par_a, 2, l->comm);
 		} else {
 			par_a[0] = EVEN; par_a[1] = ODD;
 		}
@@ -272,7 +272,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 
 				// if the sweep was rejected, no need to sync halos
 				if (accept) {
-					update_halo(&l->comlist, par, f->su2doublet, SU2DB);
+					update_halo(l, par, f->su2doublet, SU2DB);
 				}
 
 			}
@@ -295,7 +295,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 				accept = checkerboard_sweep_su2triplet(l, f, p, c, w, par, metro);
 				// if the sweep was rejected, no need to sync halos
 				if (accept) {
-					update_halo(&l->comlist, par, f->su2triplet, SU2TRIP);
+					update_halo(l, par, f->su2triplet, SU2TRIP);
 				}
 
 			}
@@ -313,18 +313,18 @@ void sync_halos(lattice* l, fields* f) {
 	for (int parity=0; parity<=1; parity++) {
 
 		for (int dir=0; dir<l->dim; dir++) {
-			update_gaugehalo(&(l->comlist), parity, f->su2link, SU2LINK, dir);
+			update_gaugehalo(l, parity, f->su2link, SU2LINK, dir);
 			#ifdef U1
-				update_halo(&(l->comlist), parity, f->u1link, l->dim);
+				update_halo(l, parity, f->u1link, l->dim);
 			#endif
 		}
 
 		#ifdef HIGGS
-			update_halo(&(l->comlist), parity, f->su2doublet, SU2DB);
+			update_halo(l, parity, f->su2doublet, SU2DB);
 		#endif
 
 		#ifdef TRIPLET
-			update_halo(&(l->comlist), parity, f->su2triplet, SU2TRIP);
+			update_halo(l, parity, f->su2triplet, SU2TRIP);
 		#endif
 
 	}

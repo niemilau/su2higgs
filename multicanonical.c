@@ -331,7 +331,7 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 	}
 
 	// broadcast outcome to all nodes
-	bcast_int(&accept);
+	bcast_int(&accept, l->comm);
 
 	// update hits and call update_weight() if necessary.
 	// do this only if the update was accepted.
@@ -442,7 +442,7 @@ double calc_orderparam(lattice const* l, fields const* f, params const* p, weigh
 			break;
 	}
 
-	tot = allreduce(tot) / l->vol;
+	tot = allreduce(tot, l->comm) / l->vol;
 
 	w->param_value[par] = tot;
 	// add other parity contribution

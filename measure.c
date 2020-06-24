@@ -132,26 +132,26 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	weight = -1.0 * weight;
 
 	// collect from other nodes
-	action = reduce_sum(action);
-	wilson = reduce_sum(wilson);
+	action = reduce_sum(action, l->comm);
+	wilson = reduce_sum(wilson, l->comm);
 	#ifdef U1
-	u1 = reduce_sum(u1wilson);
+	u1 = reduce_sum(u1wilson, l->comm);
 	#endif
 	#ifdef HIGGS
-	hopping_phi = reduce_sum(hopping_phi);
-	phi2 = reduce_sum(phi2);
-	phi4 = reduce_sum(phi4);
+	hopping_phi = reduce_sum(hopping_phi, l->comm);
+	phi2 = reduce_sum(phi2, l->comm);
+	phi4 = reduce_sum(phi4, l->comm);
 	#endif
 	#ifdef TRIPLET
-	hopping_Sigma = reduce_sum(hopping_Sigma);
-	Sigma2 = reduce_sum(Sigma2);
-	Sigma4 = reduce_sum(Sigma4);
-	mag_charge = reduce_sum(mag_charge);
-	mag_charge_abs = reduce_sum(mag_charge_abs);
+	hopping_Sigma = reduce_sum(hopping_Sigma, l->comm);
+	Sigma2 = reduce_sum(Sigma2, l->comm);
+	Sigma4 = reduce_sum(Sigma4, l->comm);
+	mag_charge = reduce_sum(mag_charge, l->comm);
+	mag_charge_abs = reduce_sum(mag_charge_abs, l->comm);
 	// magnetic charge should be quantized in units of 4pi/g
 	mag_charge_abs /= (2.0*M_PI*sqrt(p->betasu2)); // this is now the total number of monopoles
 		#ifdef HIGGS
-		phi2Sigma2 = reduce_sum(phi2Sigma2);
+		phi2Sigma2 = reduce_sum(phi2Sigma2, l->comm);
 		#endif
 	#endif
 
@@ -369,6 +369,5 @@ void measure_local(char* fname, lattice const* l, fields const* f, params const*
 		barrier();
 	#endif
 	*/
-	barrier();
 
 }

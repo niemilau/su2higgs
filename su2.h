@@ -9,8 +9,15 @@
 #include <stdarg.h>
 #include <time.h>
 
-
 #include "comms.h"
+
+#ifdef MPI
+	#include <mpi.h>
+#else
+	// No MPI, define dummy communicator (not actually used in serial)
+	typedef struct {} MPI_Comm;
+#endif
+
 
 // degrees of freedom per site for different fields
 #define SU2DB 4
@@ -43,6 +50,8 @@ typedef struct {
 	// layout parameters for MPI
 	int rank, size;
 
+	MPI_Comm comm;
+
 	// lattice dimensions, set in get_parameters()
 	int dim;
 	int *L;
@@ -58,8 +67,7 @@ typedef struct {
 	// neighboring sites: next[i][dir] gives the index of the next site after i in direction dir
 	long **next;
 	long **prev;
-	/* coords[i][dir] = x_dir coordinate on the full lattice of site i.
-	* Typically not used after layout(), so could free to save memory... */
+	// coords[i][dir] = x_dir coordinate on the full lattice of site i.
 	long **coords;
 	long *offset; // coordinate offset in my node wrt. the full lattice
 	long firstsite; // index of (x,y,z)=(0,0,0), with (x,y,z) being coordinates on the node
@@ -71,6 +79,13 @@ typedef struct {
 	comlist_struct comlist;
 	// in layout.c we reorder lattice sites so that EVEN sites come first.
 	int reorder_parity; // for debugging purposes
+
+	#ifdef BLOCKING
+		// communications between the blocked lattice and the original
+		comlist_struct blocklist;
+		// some MPI nodes may not fit on the blocked lattice and have to standby
+		int standby;
+	#endif
 
 	#ifdef MEASURE_Z
 		/* Single out a particular direction ("z coordinate") to study e.g. wall profile, correlation lengths.
@@ -87,21 +102,6 @@ typedef struct {
 /* struct "params": contains control parameters such as number of iterations,
 * and also values for model-dependent parameters in the action */
 typedef struct {
-
-
-	#ifdef MEASURE_Z
-		int n_meas_z; // how many quantities to measure along z
-		int meas_interval_z; // read in from config file in get_parameters()
-	#endif
-
-	#ifdef GRADFLOW
-		// these are all read from config (in parameters.c)
-		int do_flow; // if 0, will not do gradient flows
-		double flow_dt; // timestep
-		double flow_t_max; // max time for a single flow (start from t=0)
-		int flow_interval; // how many non-flow iterations between flows
-		int flow_meas_interval; // how often to measure during flowing (in units of dt)
-	#endif
 
 	// max iterations etc
 	int reset;
@@ -149,6 +149,20 @@ typedef struct {
 	// additional sweeps on top of scalar_sweeps
 	short update_su2doublet;
 	short update_su2triplet;
+
+	#ifdef MEASURE_Z
+		int n_meas_z; // how many quantities to measure along z
+		int meas_interval_z; // read in from config file in get_parameters()
+	#endif
+
+	#ifdef GRADFLOW
+		// these are all read from config (in parameters.c)
+		int do_flow; // if 0, will not do gradient flows
+		double flow_dt; // timestep
+		double flow_t_max; // max time for a single flow (start from t=0)
+		int flow_interval; // how many non-flow iterations between flows
+		int flow_meas_interval; // how often to measure during flowing (in units of dt)
+	#endif
 
 } params;
 
@@ -232,33 +246,35 @@ inline char otherparity(char parity) {
 
 // comms.c (move elsewhere later?)
 void make_comlists(lattice *l, comlist_struct *comlist);
+int addto_comlist(comlist_struct* comlist, int rank, long i, int sendrecv, char evenodd, long init_max);
 void reorder_sitelist(lattice* l, sendrecv_struct* sr);
 void reorder_comlist(lattice* l, comlist_struct* comlist);
-double reduce_sum(double res);
-double allreduce(double res);
-void bcast_int(int *res);
-void bcast_long (long *res);
-void bcast_double(double *res);
-void bcast_int_array(int *arr, int size);
-void barrier();
+double reduce_sum(double res, MPI_Comm comm);
+double allreduce(double res, MPI_Comm comm);
+long reduce_sum_long(long res, MPI_Comm comm);
+void bcast_int(int *res, MPI_Comm comm);
+void bcast_long (long *res, MPI_Comm comm);
+void bcast_double(double *res, MPI_Comm comm);
+void bcast_int_array(int *arr, int size, MPI_Comm comm);
+void barrier(MPI_Comm comm);
 // gauge links:
-void update_gaugehalo(comlist_struct* comlist, char parity, double*** field, int dofs, int dir);
+void update_gaugehalo(lattice* l, char parity, double*** field, int dofs, int dir);
 #ifdef MPI
-void send_gaugefield(sendrecv_struct* send, MPI_Request* req, char parity, double*** field, int dofs, int dir);
-void recv_gaugefield(sendrecv_struct* recv, char parity, double*** field, int dofs, int dir);
+void send_gaugefield(sendrecv_struct* send, MPI_Comm comm, MPI_Request* req, char parity, double*** field, int dofs, int dir);
+void recv_gaugefield(sendrecv_struct* recv, MPI_Comm comm, char parity, double*** field, int dofs, int dir);
 #endif
 // non-gauge fields:
-void update_halo(comlist_struct* comlist, char parity, double** field, int dofs);
+void update_halo(lattice* l, char parity, double** field, int dofs);
 #ifdef MPI
-void recv_field(sendrecv_struct* recv, char parity, double** field, int dofs);
-void send_field(sendrecv_struct* send, MPI_Request* req, char parity, double** field, int dofs);
+void recv_field(sendrecv_struct* recv, MPI_Comm comm, char parity, double** field, int dofs);
+void send_field(sendrecv_struct* send, MPI_Comm comm, MPI_Request* req, char parity, double** field, int dofs);
 #endif
-void test_comms(lattice l);
-void test_comms_individual(lattice l);
+void test_comms(lattice* l);
+void test_comms_individual(lattice* l);
 
 // layout.c
 void layout(lattice *l, int do_prints, int run_checks);
-void make_slices(lattice *l);
+void make_slices(lattice *l, int do_prints);
 void sitemap(lattice *l);
 void set_parity(lattice *l);
 void paritymap(lattice* l, long* newindex);
@@ -288,6 +304,8 @@ void alloc_lattice_arrays(lattice *l, long sites);
 long **alloc_latticetable(int dim, long sites);
 long **realloc_latticetable(long** arr, int dim, long oldsites, long newsites);
 void realloc_lattice_arrays(lattice *l, long oldsites, long newsites);
+void alloc_comlist(comlist_struct* comlist, int nodes);
+void realloc_comlist(comlist_struct* comlist, int sendrecv);
 void free_latticetable(long** list);
 void free_lattice(lattice *l);
 void free_comlist(comlist_struct* comlist);
@@ -425,6 +443,13 @@ void free_muca_arrays(fields* f, weight *w);
 	void flow_gauge(lattice const* l, fields* flow, fields const* forces, double dt);
 	void flow_triplet(lattice const* l, fields* flow, fields const* forces, double dt);
 	void remove_counterterms(params* p);
+#endif
+
+#ifdef BLOCKING
+	// blocking.c
+	int block_lattice(lattice* l, lattice* b, int* block_dir);
+	void make_blocklists(lattice* l, lattice* b, int* block_dir);
+	void standby_layout(lattice* l);
 #endif
 
 

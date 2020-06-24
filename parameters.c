@@ -321,7 +321,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
 	// Allocate memory for lattice side lengths.
 	// This couldn't be done earlier because we didn't know the dimension
 	// p.parity is allocated in alloc.c, alloc_neighbors().
-	l->L = malloc(l->dim * sizeof(l->L));
+	l->L = malloc(l->dim * sizeof(*(l->L)));
 
 	// read the file again for lattice sizes L_i. This could use some polishing
 	char istr[255];

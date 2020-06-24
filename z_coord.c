@@ -65,7 +65,7 @@ void init_z_coord(lattice* l) {
 
   // test that all nodes have the same sites_per_z
   long test_z = l->sites_per_z;
-  bcast_long(&test_z);
+  bcast_long(&test_z, l->comm);
   if (test_z != l->sites_per_z) {
     printf("Error in z_coord.c! Node %d has sites_per_z = %ld, while root node has %ld\n", l->rank, l->sites_per_z, test_z);
     die(421);
@@ -91,7 +91,7 @@ void print_z_labels(lattice const* l, params* p) {
 
   	fclose(f);
   }
-  bcast_int(&k);
+  bcast_int(&k, l->comm);
   p->n_meas_z = k-2; // k started from 1, not 0, and don't count the first column "z"
 }
 
@@ -160,7 +160,7 @@ void measure_along_z(lattice const* l, fields const* f, params const* p, long id
   // now combine results from all nodes
   for (z=0; z<z_max; z++) {
     for (k=0; k<p->n_meas_z; k++) {
-      meas[z][k] = reduce_sum(meas[z][k]);
+      meas[z][k] = reduce_sum(meas[z][k], l->comm);
     }
   }
 

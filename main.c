@@ -32,12 +32,13 @@ int main(int argc, char *argv[]) {
   MPI_Comm_rank(MPI_COMM_WORLD, &l.rank);
   MPI_Comm_size(MPI_COMM_WORLD, &l.size); // how many MPI threads
 
+	MPI_Comm_dup(MPI_COMM_WORLD, &l.comm); // duplicate WORLD, use the duplicate instead
+
 	printf0(l, "Starting %d MPI processes\n", l.size);
-  MPI_Barrier(MPI_COMM_WORLD);
 
 	#else // no MPI
-		l.rank = 0;
-		l.size = 1;
+	l.rank = 0;
+	l.size = 1;
 	#endif
 
 	// print usage if the arguments are invalid
@@ -58,7 +59,7 @@ int main(int argc, char *argv[]) {
 
 	// read in the config file.
 	// This needs to be done before allocating anything since we don't know the dimensions otherwise
-	get_parameters(argv[1], &l, &p);
+	get_parameters(argv[1], &l, &p); // allocs p.L
 	// print parameters from master node only (master = rank 0)
 	if (!l.rank) {
 		print_parameters(l, p);
@@ -71,11 +72,39 @@ int main(int argc, char *argv[]) {
 	start_time = clock();
 
 	int do_prints = 1;
-  layout(&l, do_prints, p.run_checks);
+  layout(&l, do_prints, p.run_checks); // allocs all tables and comlist
 
 	#ifdef MEASURE_Z
 		print_z_labels(&l, &p);
 		printf0(l, "Measuring profiles along direction %d every %d iterations\n", l.z_dir+1, p.meas_interval_z);
+	#endif
+
+	#ifdef BLOCKING
+		// some tests for blocking
+
+		// alloc blocklists for all lattices, including the original
+
+		alloc_comlist(&l.blocklist, l.size);
+		// main lattice will not need recv structures: realloc
+		realloc_comlist(&l.blocklist, RECV);
+		l.standby = 0;
+
+		printf0(l, "--- Start blocking ---\n");
+		int block_dir[2] = {1,1};
+		lattice b;
+
+		alloc_comlist(&b.blocklist, l.size);
+		block_lattice(&l, &b, block_dir);
+
+		fields blocked_f;
+		alloc_fields(&b, &blocked_f);
+		setfields(blocked_f, b, p);
+		sync_halos(&b, &blocked_f);
+
+		free_fields(&b, &blocked_f);
+		free_lattice(&b);
+
+		barrier(l.comm);
 	#endif
 
 	end_time = clock();
@@ -186,7 +215,7 @@ int main(int argc, char *argv[]) {
 		start_time = clock();
 		while (iter <= p.n_thermalize) {
 
-			barrier();
+			barrier(l.comm);
 			update_lattice(&l, &f, &p, &c, &w);
 			iter++;
 		}
@@ -211,7 +240,7 @@ int main(int argc, char *argv[]) {
 
 	// make sure weight is not written before all nodes get the initial weight.
 	// should not happen, but just to be sure
-	barrier();
+	barrier(l.comm);
 
 	start_time = clock();
 
@@ -290,12 +319,8 @@ int main(int argc, char *argv[]) {
 	if (p.multicanonical) {
 		free_muca_arrays(&f, &w);
 	}
-	// miscellaneous frees for stuff not allocated in alloc.c
-	#ifdef MEASURE_Z
-		free_latticetable(l.site_at_z);
-	#endif
 
-	barrier();
+	barrier(l.comm);
 
 	//printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
 	printf0(l, "\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n",

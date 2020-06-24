@@ -25,11 +25,14 @@ void layout(lattice *l, int do_prints, int run_checks) {
 
 	l->offset = malloc(l->dim * sizeof(*(l->offset))); // needed for sitemap()
 
-	make_slices(l);
+	make_slices(l, do_prints);
 
 	// slicing done, allocate lattice tables
 	alloc_lattice_arrays(l, l->sites_total);
 	// here both l->halos and l->sites_total still contain self halos
+	if (!l->rank && do_prints) {
+		printf("Allocated memory for lookup tables.\n");
+	}
 
 	long tot_old = l->sites_total;
 
@@ -43,7 +46,8 @@ void layout(lattice *l, int do_prints, int run_checks) {
 	realloc_lattice_arrays(l, tot_old, tot_new);
 	// ordering OK and self halos gone.
 
-	printf0(*l, "Each node needs %lu additional halo sites.\n", l->halos);
+	if (do_prints)
+		printf0(*l, "Each node needs %lu additional halo sites.\n", l->halos);
 
 	// site parity:
 	set_parity(l);
@@ -72,33 +76,34 @@ void layout(lattice *l, int do_prints, int run_checks) {
 	l->firstsite = findsite(l, x, 0);
 
 
-	barrier();
-
+	barrier(l->comm);
 	// construct communication tables
 	make_comlists(l, &(l->comlist));
 
 	// Run sanity checks on lattice layout and comms?
-	barrier();
+	barrier(l->comm);
 	if (run_checks) {
 
 		start = clock();
 
 		test_coords(l);
 		test_neighbors(l);
-		test_comms_individual(*l);
-		test_comms(*l);
+		test_comms(l);
+		test_comms_individual(l);
 
 		end = clock();
 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
-		printf0(*l, "All tests OK! Time taken: %lf seconds.\n", time);
+		if (do_prints) {
+			printf0(*l, "All tests OK! Time taken: %lf seconds.\n", time);
+		}
 	}
 
 	#ifdef MEASURE_Z
 		init_z_coord(l);
 	#endif
 
-	barrier();
+	barrier(l->comm);
 
 }
 
@@ -110,7 +115,7 @@ void layout(lattice *l, int do_prints, int run_checks) {
 * The routine checks that the sites can always be factorized evenly among the nodes, i.e, all nodes
 * get the same amount of sites. This will be assumed in all other routines in the file.
 */
-void make_slices(lattice *l) {
+void make_slices(lattice *l, int do_prints) {
 
 	// first check that the total number of lattice sites is possible
 	// to factorize in the given number of nodes (MPI processes)
@@ -199,8 +204,9 @@ void make_slices(lattice *l) {
 	* This is implemented in sitemap() below.
 	*/
 
+
 	// print the obtained processor layout and node sizes
-	if (!l->rank) {
+	if (!l->rank && do_prints) {
 		printf("Processor layout: ");
 		for (dir=0; dir<l->dim; dir++) {
 			if (dir>0) printf(" x ");
@@ -224,7 +230,8 @@ void make_slices(lattice *l) {
 		halosites *= (slice[dir]+2);
 	}
 	halosites = halosites - sites;
-	printf0(*l, " = %lu.\n",sites);
+	if (do_prints)
+		printf0(*l, " = %lu.\n",sites);
 
 	l->sites = sites;
 	// these will be modified later when we remove unneeded halos:
@@ -699,10 +706,7 @@ void layout(lattice *l, int do_prints, int run_checks) {
 		remap_lattice_arrays(l, newindex, l->sites_total);
 	}
 
-
-	l->comlist.neighbors = 0;
-	l->comlist.send_to = malloc(sizeof(*l->comlist.send_to));
-	l->comlist.recv_from = malloc(sizeof(*l->comlist.recv_from));
+	alloc_comlist(&l->comlist, 1); // empty comlist
 
 	#ifdef MEASURE_Z
 		init_z_coord(l);
@@ -906,7 +910,7 @@ inline long Lprod(int* L, int max) {
 * lattice with side lengths defined as in L, and store in x.
 * Can be used for the full lattice, or a single slice!
 * see Mathematica notebook coordinates.nb for analytical relations.
-* This obviously only works in a "natural" ordering of site indices
+* This only works in a "natural" ordering of site indices
 */
 void indexToCoords(short dim, int* L, long i, long* x) {
 
@@ -950,6 +954,9 @@ int coordsToRank(lattice const* l, long* coords) {
 	int i = coordsToIndex(l->dim, l->nslices, x);
 	free(x);
 
+	if (i >= l->size) {
+		printf("WARNING (Node %d): error in layout.c, coordsToRank()\n", l->rank);
+	}
 	return i;
 }
 
