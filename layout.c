@@ -708,10 +708,13 @@ void layout(lattice *l, int do_prints, int run_checks) {
 
 	alloc_comlist(&l->comlist, 1); // empty comlist
 
+	if (do_prints) {
+		printf("Site lookup tables constructed succesfully.\n");
+	}
+
 	#ifdef MEASURE_Z
 		init_z_coord(l);
 	#endif
-
 }
 
 void sitemap(lattice* l) {
@@ -735,7 +738,6 @@ void sitemap(lattice* l) {
 
 	}
 
-	printf("Site lookup tables constructed succesfully.\n");
 }
 
 

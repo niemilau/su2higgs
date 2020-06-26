@@ -80,31 +80,44 @@ int main(int argc, char *argv[]) {
 	#endif
 
 	#ifdef BLOCKING
-		// some tests for blocking
-
-		// alloc blocklists for all lattices, including the original
+		// alloc and initialize stuff needed for blocking
+		int block_levels = 4; // original lattice + block_levels more
 
 		alloc_comlist(&l.blocklist, l.size);
 		// main lattice will not need recv structures: realloc
 		realloc_comlist(&l.blocklist, RECV);
 		l.standby = 0;
 
-		printf0(l, "--- Start blocking ---\n");
-		int block_dir[2] = {1,1};
-		lattice b;
+		printf0(l, "\n--- Start blocking ---\n");
+		int block_dir[3] = {1,1,0};
 
-		alloc_comlist(&b.blocklist, l.size);
-		block_lattice(&l, &b, block_dir);
+		int max_level = max_block_level(&l, block_dir);
+		if (max_level < block_levels) {
+			printf0(l, "Warning: unable to block to %d levels; max is %d. Using %d levels instead.\n",
+										block_levels, max_level, max_level);
+			block_levels = max_level;
+		}
 
-		fields blocked_f;
-		alloc_fields(&b, &blocked_f);
-		setfields(blocked_f, b, p);
-		sync_halos(&b, &blocked_f);
+		lattice b[block_levels];
+		fields f_block[block_levels];
 
-		free_fields(&b, &blocked_f);
-		free_lattice(&b);
+		for (int k=0; k<block_levels; k++) {
+			lattice* base = NULL;
+			if (k == 0) {
+				// start from the original lattice
+				base = &l;
+			} else {
+				// use k-1 block level as the base
+				base = &b[k-1];
+			}
+
+			alloc_comlist(&b[k].blocklist, base->size);
+			block_lattice(base, &b[k], block_dir);
+			alloc_fields(&b[k], &f_block[k]);
+		}
 
 		barrier(l.comm);
+		printf0(l, "--- Blocking structs ready ---\n\n");
 	#endif
 
 	end_time = clock();
@@ -319,6 +332,13 @@ int main(int argc, char *argv[]) {
 	if (p.multicanonical) {
 		free_muca_arrays(&f, &w);
 	}
+
+	#ifdef BLOCKING
+		for (int k=0; k<block_levels; k++) {
+			free_fields(&b[k], &f_block[k]);
+			free_lattice(&b[k]);
+		}
+	#endif
 
 	barrier(l.comm);
 

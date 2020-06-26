@@ -251,8 +251,6 @@ void make_comlists(lattice *l, comlist_struct *comlist) {
 * and then blocking receive to update my own halos.
 * The advantage over blocking sendrecv is that since we just send everything
 * before starting receives, waiting for neighbors to send is significantly reduced.
-*
-* Return value is the time in seconds spent in the routine call->
 */
 void update_gaugehalo(lattice* l, char parity, double*** field, int dofs, int dir) {
 
@@ -316,12 +314,20 @@ void send_gaugefield(sendrecv_struct* send, MPI_Comm comm, MPI_Request* req, cha
 		send_offset = 0;
 		send_count = send->even;
 		send_max = send->even;
-	} else {
+	} else if (parity == ODD) {
 		// update odd
 		send_offset = send->even;
 		send_count = send->odd;
 		send_max = send->sites;
-	}
+	} else if (parity == EVENODD) {
+    // send both EVEN and ODD
+    send_offset = 0;
+    send_count = send->sites;
+    send_max = send->sites;
+  } else {
+    printf("invalid parity in send_gaugefield!! (comms.c)\n");
+    return;
+  }
 	send_count *= dofs;
 
 	// alloc buffer and copy field values there
@@ -360,12 +366,20 @@ void recv_gaugefield(sendrecv_struct* recv, MPI_Comm comm, char parity, double**
 		recv_offset = 0;
 		recv_count = recv->even;
 		recv_max = recv->even;
-	} else {
+	} else if (parity == ODD) {
 		// update odd
 		recv_offset = recv->even;
 		recv_count = recv->odd;
 		recv_max = recv->sites;
-	}
+	} else if (parity == EVENODD) {
+    // send both EVEN and ODD
+    recv_offset = 0;
+    recv_count = recv->sites;
+    recv_max = recv->sites;
+  } else {
+    printf("invalid parity in recv_gaugefield!! (comms.c)\n");
+    return;
+  }
 	recv_count *= dofs;
 
 	// alloc buffer and receive
@@ -449,12 +463,20 @@ void send_field(sendrecv_struct* send, MPI_Comm comm, MPI_Request* req, char par
 		send_offset = 0;
 		send_count = send->even;
 		send_max = send->even;
-	} else {
+	} else if (parity == ODD) {
 		// update odd
 		send_offset = send->even;
 		send_count = send->odd;
 		send_max = send->sites;
-	}
+	} else if (parity == EVENODD) {
+    // send both EVEN and ODD
+    send_offset = 0;
+    send_count = send->sites;
+    send_max = send->sites;
+  } else {
+    printf("invalid parity in send_field!! (comms.c)\n");
+    return;
+  }
 	send_count *= dofs;
 
 	// alloc buffer and copy field values there
@@ -492,12 +514,20 @@ void recv_field(sendrecv_struct* recv, MPI_Comm comm, char parity, double** fiel
 		recv_offset = 0;
 		recv_count = recv->even;
 		recv_max = recv->even;
-	} else {
+	} else if (parity == ODD) {
 		// update odd
 		recv_offset = recv->even;
 		recv_count = recv->odd;
 		recv_max = recv->sites;
-	}
+	} else if (parity == EVENODD) {
+    // send both EVEN and ODD
+    recv_offset = 0;
+    recv_count = recv->sites;
+    recv_max = recv->sites;
+  } else {
+    printf("invalid parity in recv_field!! (comms.c)\n");
+    return;
+  }
 	recv_count *= dofs;
 
 	// alloc buffer and receive

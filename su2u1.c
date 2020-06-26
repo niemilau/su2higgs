@@ -188,7 +188,7 @@ void su2staple_clockwise(double* V, double* u1, double* u2, double* u3) {
 * where mu = dir.
 */
 void su2staple_wilson(lattice const* l, fields const* f, params const* p, long i, int dir, double* V) {
-	double tot[4] = {0.0, 0.0, 0.0, 0.0};
+	double tot[SU2LINK] = { 0.0 };
 	double* u1 = NULL;
 	double* u2 = NULL;
 	double* u3 = NULL;
@@ -200,7 +200,7 @@ void su2staple_wilson(lattice const* l, fields const* f, params const* p, long i
 			u2 = f->su2link[ l->next[i][j] ][dir];
 			u3 = f->su2link[i][j];
 			su2staple_counterwise(V, u1, u2, u3);
-			for(int k=0; k<4; k++){
+			for(int k=0; k<SU2LINK; k++){
 				tot[k] += V[k];
 			}
 			// "lower" staple
@@ -208,13 +208,13 @@ void su2staple_wilson(lattice const* l, fields const* f, params const* p, long i
 			u2 = f->su2link[(l->prev[i][j])][dir];
 			u3 = f->su2link[(l->prev[i][j])][j];
 			su2staple_clockwise(V, u1, u2, u3);;
-			for(int k=0; k<4; k++){
+			for(int k=0; k<SU2LINK; k++){
 				tot[k] += V[k];
 			}
 		}
 	}
 
-	for(int k=0; k<4; k++){
+	for(int k=0; k<SU2LINK; k++){
 		V[k] = tot[k];
 	}
 
@@ -690,4 +690,214 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 	#endif
 
 	return tot;
+}
+
+
+/* Smearing routines. These construct a smeared field at each site
+* by averaging over the field and its covariant connection with nearest neighbors.
+* Naturally used with blocking routines.
+* In all routines here the input
+* smear_dir[j] = 1 if the direction j is to be smeared, 0 otherwise. */
+
+
+/* Smear the SU(2) link at site i and store in res (link components).
+* This is done by calculating extended staples in the smearing directions,
+* including only pure gauge contributions.
+* See M. Teper, Phys.Lett.B 183 (1987);
+* however Kari seems to use slightly different blocking where he
+* separately calculates two staples:
+* 	U_i(y) = V_i(x) V_i(x+i), where
+*		V_i(x) = U_i(x) + \sum_j U_j(x) U_i(x+j) U_j^+(x+i)
+* with the sum running over blocked directions, including backwards dirs, and j != i.
+* Kari has normalization factor of 1/3 in V_i because for i=1,2, the original link
+* plus a backwards and forward staple contributes. I am using Kari's method here.
+*/
+void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
+
+	if (!smear_dir[dir]) {
+		printf("WARNING: smearing gauge link without smearing the lattice dimension (in su2u1.c)\n");
+	}
+
+	double stap[SU2LINK] = { 0.0 };
+	memcpy(res, f->su2link[i][dir], SU2LINK * sizeof(*f->su2link[i][dir])); // will first construct res = V_dir(x)
+
+	double v2[SU2LINK]; // v2 = V_dir(x+dir)
+	memcpy(v2, f->su2link[ l->next[i][dir] ][dir], SU2LINK * sizeof(*f->su2link[i][dir]));
+
+	int paths = 1; // how many "paths" are involved in smearing
+	for (int j=0; j<l->dim; j++) {
+		if (j != dir && smear_dir[j]) {
+			// staples, but with the usual direction reversed (so take Hermitian conjugate)
+			su2staple_wilson_onedir(l, f, i, dir, j, 1, stap);
+			for (int k=0; k<SU2LINK; k++) {
+				res[k] += stap[k];
+			}
+
+			// repeat for site x+dir
+			su2staple_wilson_onedir(l, f, l->next[i][dir], dir, j, 1, stap);
+			for (int k=0; k<SU2LINK; k++) {
+				v2[k] += stap[k];
+			}
+
+			paths += 2; // counterwise and clockwise staples
+		}
+	}
+
+	// normalize
+	for (int k=0; k<SU2LINK; k++) {
+		res[k] /= paths;
+		v2[k] /= paths;
+	}
+
+	su2rot(res, v2); // res <- V1.V2 = V_dir(x) V_dir(x+dir)
+}
+
+
+/* Same as su2staple_wilson(), but only does the staple for U_mu(x) in one direction = nu.
+* If dagger = 1, also takes the Hermitian conjugate of both forward and backward staples */
+void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res) {
+	if (mu == nu) {
+		for(int k=0; k<SU2LINK; k++){
+			res[k] = 0.0;
+		}
+		return;
+	}
+
+	double tot[SU2LINK] = { 0.0 };
+	double* u1 = NULL;
+	double* u2 = NULL;
+	double* u3 = NULL;
+
+	// "upper" staple (U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
+	u1 = f->su2link[ l->next[i][mu] ][nu];
+	u2 = f->su2link[ l->next[i][nu] ][mu];
+	u3 = f->su2link[i][nu];
+	su2staple_counterwise(tot, u1, u2, u3);
+	for(int k=0; k<SU2LINK; k++) {
+		// take conjugate if needed
+		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
+		res[k] = tot[k];
+	}
+
+	// "lower" staple U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu)
+	long site = l->next[i][mu];
+	site = l->prev[site][nu];
+	u1 = f->su2link[site][nu];
+	u2 = f->su2link[ l->prev[i][nu] ][mu];
+	u3 = f->su2link[ l->prev[i][nu] ][mu];
+	su2staple_clockwise(tot, u1, u2, u3);;
+	for(int k=0; k<SU2LINK; k++) {
+		// take conjugate if needed
+		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
+		res[k] += tot[k];
+	}
+
+}
+
+
+/* Smear the triplet field at site i and store in res (triplet components).
+* This is done by calculating
+* 	Sigma(x) + sum_j U_j(x) Sigma(x+j) U^+_j (x)
+* and normalizing with the number of sites. The sum is over
+* directions specified in smear_dir, and contains both forward and backward terms.
+* Here U_{-j}(x) = U^+_j(x-j).
+*/
+void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i) {
+
+	int sites = 1; // how many sites are involved in smearing
+	double cov[SU2TRIP] = {0.0};
+
+	for (int dir=0; dir<l->dim; dir++) {
+		if (smear_dir[dir]) {
+			// forward connection
+			double* u = f->su2link[i][dir];
+			long next = l->next[i][dir];
+			double* b = f->su2triplet[next];
+			cov[0] += b[0]*(u[0]*u[0]) + b[0]*(u[1]*u[1]) - 2*b[2]*u[0]*u[2]
+							+ 2*b[1]*u[1]*u[2] - b[0]*(u[2]*u[2]) + 2*b[1]*u[0]*u[3]
+							+ 2*b[2]*u[1]*u[3] - b[0]*(u[3]*u[3]);
+
+			cov[1] += b[1]*(u[0]*u[0]) + 2*b[2]*u[0]*u[1] - b[1]*(u[1]*u[1])
+							+ 2*b[0]*u[1]*u[2] + b[1]*(u[2]*u[2]) - 2*b[0]*u[0]*u[3]
+							+ 2*b[2]*u[2]*u[3] - b[1]*(u[3]*u[3]);
+
+			cov[2] += b[2]*(u[0]*u[0]) - 2*b[1]*u[0]*u[1] - b[2]*(u[1]*u[1])
+							+ 2*b[0]*u[0]*u[2] - b[2]*(u[2]*u[2]) + 2*b[0]*u[1]*u[3]
+							+ 2*b[1]*u[2]*u[3] + b[2]*(u[3]*u[3]);
+
+			// backward connection
+			long prev = l->prev[i][dir];
+			u = f->su2link[prev][dir];
+			b = f->su2triplet[prev];
+			cov[0] += b[0]*(u[0]*u[0]) + b[0]*(u[1]*u[1]) + 2*b[2]*u[0]*u[2]
+							+ 2*b[1]*u[1]*u[2] - b[0]*(u[2]*u[2]) - 2*b[1]*u[0]*u[3]
+							+ 2*b[2]*u[1]*u[3] - b[0]*(u[3]*u[3]);
+
+			cov[1] += b[1]*(u[0]*u[0]) - 2*b[2]*u[0]*u[1] - b[1]*(u[1]*u[1])
+							+ 2*b[0]*u[1]*u[2] + b[1]*(u[2]*u[2]) + 2*b[0]*u[0]*u[3]
+							+ 2*b[2]*u[2]*u[3] - b[1]*(u[3]*u[3]);
+
+			cov[2] += b[2]*(u[0]*u[0]) + 2*b[1]*u[0]*u[1] - b[2]*(u[1]*u[1])
+							- 2*b[0]*u[0]*u[2] - b[2]*(u[2]*u[2]) + 2*b[0]*u[1]*u[3]
+							+ 2*b[1]*u[2]*u[3] + b[2]*(u[3]*u[3]);
+
+			sites += 2; // involves 2 nearest neighbors
+		}
+	}
+
+	for (int k=0; k<SU2TRIP; k++) {
+		res[k] = f->su2triplet[i][k] + cov[k];
+		res[k] /= sites;
+	}
+	// done
+}
+
+
+/* Smear all fields and store in f_b. Does not smear fields at odd sites in smearing
+* directions, because those are not needed for blocked lattices.
+*/
+void smear_fields(lattice const* l, fields const* f, fields* f_b, int* block_dir) {
+
+  // no halos
+  for (long i=0; i<l->sites; l++) {
+    int skip = 0;
+
+    // smear fields only on the sites that end up on the blocked lattice
+    for (int dir=0; dir<l->dim; dir++) {
+      if (block_dir[dir] && l->coords[i][dir] % 2 != 0) {
+        // no need to smear these
+        skip = 1;
+        break;
+      }
+    }
+
+    if (!skip) {
+      // create blocked fields by smearing in the specified dirs.
+
+      // gauge links. links pointing in non-smeared directions remain unchanged
+      for (int dir=0; dir<l->dim; dir++) {
+        if (block_dir[dir]) {
+          smear_link(l, f, block_dir, f_b->su2link[i][dir], i, dir);
+          #ifdef U1
+
+          #endif
+        } else {
+          memcpy(f_b->su2link[i][dir], f->su2link[i][dir], SU2LINK * sizeof(*f->su2link[i][dir]));
+          #ifdef U1
+            f_b->u1link[i][dir] = f->u1link[i][dir];
+          #endif
+        }
+      } // end dir
+
+      // scalars
+      #ifdef HIGGS
+
+      #endif
+      #ifdef TRIPLET
+        smear_triplet(l, f, block_dir, f_b->su2triplet[i], i);
+      #endif
+
+    }
+
+  } // end i
 }

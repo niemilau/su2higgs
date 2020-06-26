@@ -12,19 +12,44 @@
 #include "su2.h"
 #include "comms.h"
 
+/* Calculate how many blocking levels we can create for a given lattice
+* Does not accept blocking that shrinks a dimension down to a point!
+* The current routines also do not behave well in situations where
+* the length shrinks 2 -> 1, see test_blocking(). */
+int max_block_level(lattice const* l, int const* block_dir) {
+  int count = 0;
+  int ok = 1;
+  int len[l->dim];
+  memcpy(len, l->L, l->dim * sizeof(*(l->L)) );
+
+  while (ok) {
+    for (int dir=0; dir<l->dim; dir++) {
+      if (block_dir[dir] && (len[dir] % 2 != 0 || len[dir] <= 2) ) {
+        // cannot block this direction anymore
+        ok = 0;
+        return count;
+
+      } else if (block_dir[dir]) {
+        len[dir] /= 2;
+      }
+    }
+    count++;
+  }
+
+}
+
 /* Create a new, coarser lattice by effectively doubling the lattice
 * spacing in given directions.
 * block_dir[dir] = 1 if we do blocking in this direction, 0 otherwise.
-* Return value is 0 if there was a problem (couldn't make the lattice any coarser),
-* 1 otherwise.
 */
-int block_lattice(lattice* l, lattice* b, int* block_dir) {
+void block_lattice(lattice* l, lattice* b, int const* block_dir) {
 
-  // test that number of sites is even in each block dir
+  /* test that number of sites is even in each block dir,
+  * and not exactly 2 because then the blocking would remove that dimension altogether */
   for (int dir=0; dir<l->dim; dir++) {
-    if (block_dir[dir] && l->L[dir] % 2 != 0) {
+    if (block_dir[dir] && (l->L[dir] % 2 != 0 || l->L[dir] <= 2) ) {
       printf0(*l, "Can't perform any more blocking in direction %d !!\n", dir+1);
-      return 0;
+      return;
     }
   }
 
@@ -62,12 +87,14 @@ int block_lattice(lattice* l, lattice* b, int* block_dir) {
     b->standby = 1;
   }
 
-  printf0(*l, "Initializing blocked lattice of volume: ");
-  for (int dir=0; dir<b->dim; dir++) {
-    if (dir>0) printf0(*l, " x ");
-    printf0(*l, "%d", b->L[dir]);
+  if (!l->rank) {
+    printf("Initializing blocked lattice of volume: ");
+    for (int dir=0; dir<b->dim; dir++) {
+      if (dir>0) printf(" x ");
+      printf("%d", b->L[dir]);
+    }
+    printf(" (MPI size = %d)\n", b->size);
   }
-  printf0(*l, " (MPI size = %d)\n", b->size);
 
   #ifdef MPI
     // create a new communicator for the blocked lattice
@@ -102,9 +129,10 @@ int block_lattice(lattice* l, lattice* b, int* block_dir) {
   /* all nodes need to call this, because "standby" nodes still need to
   * send their fields to non-standby nodes*/
 
-  barrier(l->comm);
+  // finally, test
+  test_blocking(l, b, block_dir);
 
-  return 1;
+  barrier(l->comm);
 
 }
 
@@ -121,7 +149,7 @@ int block_lattice(lattice* l, lattice* b, int* block_dir) {
 * Assumes that all blocked nodes have the same
 * number of sites and that halos come after real sites!
 */
-void make_blocklists(lattice* l, lattice* b, int* block_dir) {
+void make_blocklists(lattice* l, lattice* b, int const* block_dir) {
 
   long block_sites = b->sites;
 
@@ -400,5 +428,296 @@ void standby_layout(lattice* l) {
   alloc_comlist(&l->comlist, 1); // sets sends,recvs = 0
 }
 
+/* Copy a smeared field on the original lattice 'l' to a blocked field
+* on blocked lattice 'b'. Only does communications between distinct nodes,
+* for transfering blocked fields between the same node use block_fields_ownnode().
+*/
+void transfer_blocked_field(lattice* l, lattice* b, double** field, double** field_b, int dofs) {
+
+  #ifdef MPI
+
+    int sends = l->blocklist.sends;
+    if (sends <= 0) {
+      return;
+    }
+
+    double start, end;
+	  start = clock();
+
+    // first nonblocking sends to everyone
+    MPI_Request req[sends];
+    for (int k=0; k<sends; k++) {
+      req[k] = MPI_REQUEST_NULL;
+
+      sendrecv_struct* send = &l->blocklist.send_to[k];
+      int rank = send->node;
+      if (rank == l->rank) {
+       // don't send to self. these are all done by block_fields_ownnode(),
+       // which is assumed to be called separately.
+       continue;
+      }
+
+      // allocates send buffer and does nonblocking send:
+      send_field(send, l->comm, &req[k], EVENODD, field, dofs);
+    }
+
+    // sends done, then blocking receives in the blocked nodes
+    if (!b->standby) {
+      int recvs = b->blocklist.recvs;
+      for (int m=0; m<recvs; m++) {
+        sendrecv_struct* recv = &b->blocklist.recv_from[m];
+        if (recv->node == b->rank) {
+          continue; // don't receive from self, call block_fields_ownnode() elsewhere
+        }
+        recv_field(recv, l->comm, EVENODD, field_b, dofs);
+      }
+    }
+
+    // recvs done, now wait and free send buffers
+    for (int k=0; k<sends; k++) {
+      sendrecv_struct* send = &l->blocklist.send_to[k];
+      if (send->node == l->rank) continue; // buffer for own node never allocated
+
+      MPI_Wait(&req[k], MPI_STATUS_IGNORE);
+      free(send->buf);
+    }
+
+    end = clock();
+    Global_comms_time += (double)(end - start) / CLOCKS_PER_SEC;
+
+    #endif
+    // do nothing in serial. Use block_fields_ownnode() instead.
+}
+
+
+/* Same as transfer_blocked_field(), but for a gauge field of type double***. */
+void transfer_blocked_gaugefield(lattice* l, lattice* b, double*** field, double*** field_b, int dofs, int dir) {
+
+  #ifdef MPI
+
+    int sends = l->blocklist.sends;
+    if (sends <= 0) {
+      return;
+    }
+
+    double start, end;
+	  start = clock();
+
+    // first nonblocking sends to everyone
+    MPI_Request req[sends];
+    for (int k=0; k<sends; k++) {
+      req[k] = MPI_REQUEST_NULL;
+
+      sendrecv_struct* send = &l->blocklist.send_to[k];
+      int rank = send->node;
+      if (rank == l->rank) {
+       // don't send to self. these are all done by block_fields_ownnode(),
+       // which is assumed to be called separately.
+       continue;
+      }
+
+      // allocates send buffer and does nonblocking send:
+      send_gaugefield(send, l->comm, &req[k], EVENODD, field, dofs, dir);
+    }
+
+    // sends done, then blocking receives in the blocked nodes
+    if (!b->standby) {
+      int recvs = b->blocklist.recvs;
+      for (int m=0; m<recvs; m++) {
+        sendrecv_struct* recv = &b->blocklist.recv_from[m];
+        if (recv->node == b->rank) {
+          continue; // don't receive from self, call block_fields_ownnode() elsewhere
+        }
+
+        recv_gaugefield(recv, l->comm, EVENODD, field_b, dofs, dir);
+      }
+    }
+
+    // recvs done, now wait and free send buffers
+    for (int k=0; k<sends; k++) {
+      sendrecv_struct* send = &l->blocklist.send_to[k];
+      if (send->node == l->rank) continue;
+
+      MPI_Wait(&req[k], MPI_STATUS_IGNORE);
+      free(send->buf);
+    }
+
+    end = clock();
+    Global_comms_time += (double)(end - start) / CLOCKS_PER_SEC;
+
+    #endif
+    // do nothing in serial. Use block_fields_ownnode() instead.
+}
+
+/* Transfer smeared fields on the full lattice (f_smeared) to
+* fields on the blocked lattice with less sites (f_blocked).
+*/
+void make_blocked_fields(lattice* l, lattice* b, fields const* f_smeared, fields* f_blocked) {
+
+  // first to all "sends" within my own node
+  block_fields_ownnode(l, b, f_smeared, f_blocked);
+
+  #ifdef MPI
+    // then contributions from other nodes
+
+    for (int dir=0; dir<l->dim; dir++) {
+      transfer_blocked_gaugefield(l, b, f_smeared->su2link, f_blocked->su2link, SU2LINK, dir);
+    }
+    #ifdef U1
+      transfer_blocked_field(l, b, f_smeared->u1link, f_blocked->u1link, l->dim);
+    #endif
+
+    #ifdef HIGGS
+      transfer_blocked_field(l, b, f_smeared->su2doublet, f_blocked->su2doublet, SU2DB);
+    #endif
+    #ifdef TRIPLET
+      transfer_blocked_field(l, b, f_smeared->su2triplet, f_blocked->su2triplet, SU2TRIP);
+    #endif
+
+  #endif // end MPI
+
+  // done, now just sync halos on the blocked lattice
+  sync_halos(b, f_blocked);
+}
+
+/* Copy smeared fields to the corresponding location on a blocked lattice,
+* but for own node only, without communications. Used by make_blocked_fields()
+* to avoid communicating with self (and in serial).
+*/
+void block_fields_ownnode(lattice const* l, lattice const* b, fields const* f_smeared, fields* f_blocked) {
+
+  if (b->standby) {
+    return;
+  }
+
+  // first find own node in the comlists
+  sendrecv_struct* send = NULL;
+  sendrecv_struct* recv = NULL;
+  int sends = l->blocklist.sends;
+  for (int k=0; k<sends; k++) {
+    if (l->blocklist.send_to[k].node == l->rank) {
+      send = &l->blocklist.send_to[k];
+      break;
+    }
+  }
+  if (send == NULL) {
+    return; // nothing to send to self
+  }
+
+  // same for receives
+  int recvs = b->blocklist.recvs;
+  for (int k=0; k<recvs; k++) {
+    if (b->blocklist.recv_from[k].node == b->rank) {
+      recv = &b->blocklist.recv_from[k];
+      break;
+    }
+  }
+  if (recv == NULL) {
+    // should not get here, because above we found stuff to send to self
+    printf("Error (1) in block_fields_ownnode()! (blocking.c)\n");
+    die(1002);
+  }
+
+  if (send->sites != recv->sites) {
+    printf("Error (2) in block_fields_ownnode()! (blocking.c)\n");
+    die(1003);
+  }
+
+  for (long i=0; i<send->sites; i++) {
+    long site_l = send->sitelist[i]; // site on the original lattice
+    long site_b = recv->sitelist[i]; // site on the blocked lattice
+
+    // now copy the smeared fields into the right places in f_blocked
+    for (int dir=0; dir<l->dim; dir++) {
+      memcpy(f_blocked->su2link[site_b][dir], f_smeared->su2link[site_l][dir], SU2LINK * sizeof(f_blocked->su2link[site_b][dir][0]));
+      #ifdef U1
+        f_blocked->u1link[site_b][dir] = f_smeared->u1link[site_l][dir];
+      #endif
+    }
+    #ifdef HIGGS
+      memcpy(f_blocked->su2doublet[site_b], f_smeared->su2doublet[site_l], SU2DB * sizeof(f_blocked->su2doublet[site_b][0]));
+    #endif
+    #ifdef TRIPLET
+      memcpy(f_blocked->su2triplet[site_b], f_smeared->su2triplet[site_l], SU2TRIP * sizeof(f_blocked->su2triplet[site_b][0]));
+    #endif
+  }
+  // self blocking done
+}
+
+/* Test routine: checks that fields on the original lattice end up
+* at the correct sites on the blocked lattice. I do this by assigning the field
+* a unique number at each site (using Cantor pairing). See test_comms_individual()
+* for a similar routine. */
+void test_blocking(lattice* l, lattice* b, int const* block_dir) {
+  fields f;
+  fields f_b;
+
+  alloc_fields(l, &f);
+  alloc_fields(b, &f_b);
+
+  long x, y;
+  // use just the SU(2) links for testing. no distinction between different dirs though
+  for (long i=0; i<l->sites; i++) {
+    // calculate a unique value using Cantor pairing
+    y = l->coords[i][0];
+		for (int dir=1; dir<l->dim; dir++) {
+			x = l->coords[i][dir];
+			y = y + 0.5 * (x + y + 1) * (x + y);
+		}
+
+    for (int dir=0; dir<l->dim; dir++) {
+      for (int k=0; k<SU2LINK; k++) {
+        // Obtain base number from Cantor, set different decimals for different components
+        f.su2link[i][dir][k] = y + (double) k / SU2LINK;
+        // initialize the blocked fields to something easy
+        if (i < b->sites) {
+          f_b.su2link[i][dir][k] = -1.0;
+        }
+      }
+    }
+  }
+
+  make_blocked_fields(l, b, &f, &f_b);
+
+  if (!b->standby) {
+    // check the new values in f_b
+    for (long i=0; i<b->sites; i++) {
+
+      // what are the coords BEFORE blocking?
+      long coords[b->dim];
+      for (int dir=0; dir<b->dim; dir++) {
+        if (block_dir[dir]) {
+          coords[dir] = b->coords[i][dir] * 2;
+        } else {
+          coords[dir] = b->coords[i][dir];
+        }
+      }
+
+      // repeat the Cantor pairing
+      y = coords[0];
+  		for (int dir=1; dir<b->dim; dir++) {
+  			x = coords[dir];
+  			y = y + 0.5 * (x + y + 1) * (x + y);
+  		}
+
+      for (int dir=0; dir<b->dim; dir++) {
+        for (int k=0; k<SU2LINK; k++) {
+          // predicted value:
+          double val = y + (double) k / SU2LINK;
+
+          if (abs(f_b.su2link[i][dir][k] - val) > 0.0001) {
+            printf("Node %d: error in test_blocking at site %ld, dir %d!! field val is %lf; was supposed to be %lf (blocking.c)\n"
+                , b->rank, i, dir, f_b.su2link[i][dir][k], val);
+          }
+        }
+      }
+
+    } // end i
+
+  }
+
+  free_fields(l, &f);
+  free_fields(b, &f_b);
+}
 
 #endif

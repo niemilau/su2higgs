@@ -32,6 +32,7 @@
 // parity identifiers
 #define EVEN 0
 #define ODD 1
+#define EVENODD 2
 
 // multicanonical order parameters
 #define PHISQ 1
@@ -317,6 +318,7 @@ double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
 long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i);
 double localact_su2link(lattice const* l, fields const* f, params const* p, long i, int dir);
 void su2staple_wilson(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
+void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res);
 void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
 double su2trace4(double *u1, double *u2, double *u3, double *u4);
 void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
@@ -343,6 +345,10 @@ double hopping_triplet_forward(lattice const* l, fields const* f, params const* 
 double hopping_triplet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
 double covariant_triplet(lattice const* l, fields const* f, params const* p, long i);
 double localact_triplet(lattice const* l, fields const* f, params const* p, long i);
+// smearing
+void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
+void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
+
 
 // metropolis.c
 int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
@@ -447,9 +453,15 @@ void free_muca_arrays(fields* f, weight *w);
 
 #ifdef BLOCKING
 	// blocking.c
-	int block_lattice(lattice* l, lattice* b, int* block_dir);
-	void make_blocklists(lattice* l, lattice* b, int* block_dir);
+	int max_block_level(lattice const* l, int const* block_dir);
+	void block_lattice(lattice* l, lattice* b, int const* block_dir);
+	void make_blocklists(lattice* l, lattice* b, int const* block_dir);
 	void standby_layout(lattice* l);
+	void transfer_blocked_gaugefield(lattice* l, lattice* b, double*** field, double*** field_b, int dofs, int dir);
+	void transfer_blocked_field(lattice* l, lattice* b, double** field, double** field_b, int dofs);
+	void make_blocked_fields(lattice* l, lattice* b, fields const* f_smeared, fields* f_blocked);
+	void block_fields_ownnode(lattice const* l, lattice const* b, fields const* f_smeared, fields* f_blocked);
+	void test_blocking(lattice* l, lattice* b, int const* block_dir);
 #endif
 
 
