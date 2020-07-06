@@ -81,11 +81,18 @@ typedef struct {
 	// in layout.c we reorder lattice sites so that EVEN sites come first.
 	int reorder_parity; // for debugging purposes
 
+	/* miscellaneous info about the lattice, used for example in correlation.c.
+	* Alloc'd and filled in by make_misc_tables() in layout.c */
+	int longest_dir; // longest direction on the full lattice
+	long* sites_per_coord; // how many sites for each coordinate x_dir
+	long*** sites_at_coord; // list of sites for a fixed x_dir (sites_at_coord[dir][x][i])
+
 	#ifdef BLOCKING
 		// communications between the blocked lattice and the original
 		comlist_struct blocklist;
 		// some MPI nodes may not fit on the blocked lattice and have to standby
 		int standby;
+		int blocking_level;
 	#endif
 
 	#ifdef MEASURE_Z
@@ -150,6 +157,15 @@ typedef struct {
 	// additional sweeps on top of scalar_sweeps
 	short update_su2doublet;
 	short update_su2triplet;
+
+	#ifdef CORRELATORS
+		int do_correlators;
+		int correlator_interval; // how often to measure correlators
+	#endif
+
+	#ifdef BLOCKING
+		int blocks; // how many times to block the lattice for correlators
+	#endif
 
 	#ifdef MEASURE_Z
 		int n_meas_z; // how many quantities to measure along z
@@ -245,7 +261,7 @@ inline char otherparity(char parity) {
 		return EVEN;
 }
 
-// comms.c (move elsewhere later?)
+// comms.c
 void make_comlists(lattice *l, comlist_struct *comlist);
 int addto_comlist(comlist_struct* comlist, int rank, long i, int sendrecv, char evenodd, long init_max);
 void reorder_sitelist(lattice* l, sendrecv_struct* sr);
@@ -279,6 +295,7 @@ void make_slices(lattice *l, int do_prints);
 void sitemap(lattice *l);
 void set_parity(lattice *l);
 void paritymap(lattice* l, long* newindex);
+void make_misc_tables(lattice* l);
 void remap_latticetable(lattice* l, long** arr, long* newindex, long maxindex);
 void remap_neighbor_table(lattice* l, long** arr, long* newindex, long maxindex);
 void remap_lattice_arrays(lattice* l, long* newindex, long maxindex);
@@ -314,6 +331,7 @@ void free_comlist(comlist_struct* comlist);
 // su2u1.c
 double su2sqr(double *u);
 void su2rot(double *u1, double *u2);
+void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2, double* u1);
 double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
 long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i);
 double localact_su2link(lattice const* l, fields const* f, params const* p, long i, int dir);
@@ -348,6 +366,7 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 // smearing
 void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
 void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
+void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
 
 
 // metropolis.c
@@ -420,6 +439,28 @@ void reset_muca_fields(lattice const* l, fields* f, weight* w, char par);
 void alloc_backup_arrays(lattice const* l, fields* f, weight const* w);
 void free_muca_arrays(fields* f, weight *w);
 
+#ifdef CORRELATORS
+// correlation.c
+	double higgs_correlator(lattice* l, fields const* f, int x, int dir);
+	#ifdef TRIPLET
+		double triplet_correlator(lattice* l, fields const* f, int d, int dir);
+		double projected_photon_operator(lattice* l, fields const* f, int z, int dir,
+		      int* mom, double* res_re, double* res_im);
+		void projected_photon_correlator(lattice* l, fields const* f, int d, int dir, double* res_re, double* res_im);
+		double projected_photon_operator_old(lattice* l, fields const* f, params const* p, int z, int dir,
+		      int* mom, double* res_re, double* res_im);
+		void projected_photon_correlator_old(lattice* l, fields const* f, params const* p, int d,
+		  		int dir, double* res_re, double* res_im);
+	#endif
+	double plane_sum(double (*funct)(double*), double** field, lattice* l, long x, int dir);
+	void measure_correlators(char* fname, lattice* l, fields const* f, params const* p, int dir, int meas_id);
+	void print_labels_correlators();
+	#ifdef BLOCKING
+	void measure_blocked_correlators(lattice* l, lattice* b, fields const* f, fields* f_b, params const* p,
+				int const* block_dir, int dir, int id);
+	#endif
+#endif
+
 #ifdef MEASURE_Z
 	// z_coord.c
 	void init_z_coord(lattice* l);
@@ -459,7 +500,7 @@ void free_muca_arrays(fields* f, weight *w);
 	void standby_layout(lattice* l);
 	void transfer_blocked_gaugefield(lattice* l, lattice* b, double*** field, double*** field_b, int dofs, int dir);
 	void transfer_blocked_field(lattice* l, lattice* b, double** field, double** field_b, int dofs);
-	void make_blocked_fields(lattice* l, lattice* b, fields const* f_smeared, fields* f_blocked);
+	void make_blocked_fields(lattice* l, lattice* b, fields const* f, fields* f_blocked);
 	void block_fields_ownnode(lattice const* l, lattice const* b, fields const* f_smeared, fields* f_blocked);
 	void test_blocking(lattice* l, lattice* b, int const* block_dir);
 #endif
