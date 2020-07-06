@@ -20,8 +20,7 @@ typedef struct {
 } trajectory;
 
 // hb_trajectory.c
-void write_trajectory_header(params* p, trajectory* traj, int current_traj, double init_val);
-void make_realtime_trajectories(params* p, fields* f, comlist_struct* comlist, counters* c, weight* w, trajectory* traj);
+void make_realtime_trajectories(lattice* l, fields const* f, params* p, counters* c, weight* w, trajectory* traj);
 void read_realtime_config(char *filename, trajectory* traj);
 
 #endif

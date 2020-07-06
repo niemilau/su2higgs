@@ -279,6 +279,7 @@ int main(int argc, char *argv[]) {
 
 	int flow_id = 1; // only used for gradient flows
 	int correlator_id = 1; // only used for correlators
+	int traj_id = 1; // only used for heatbath trajectories
 
 	// main iteration loop
 	while (iter <= p.iterations) {
@@ -297,6 +298,13 @@ int main(int argc, char *argv[]) {
 			if (p.do_flow && iter % p.flow_interval == 0) {
 				grad_flow(&l, &f, &p, &w, p.flow_t_max, p.flow_dt, flow_id);
 				flow_id++;
+			}
+		#endif
+
+		#ifdef HB_TRAJECTORY
+			if (iter % traj.mode_interval == 0) {
+				make_realtime_trajectories(&l, &f, &p, &c, &w, &traj);
+				traj_id++;
 			}
 		#endif
 
@@ -345,12 +353,6 @@ int main(int argc, char *argv[]) {
 			// update max iterations if the config file has been changed by the user
 			read_updated_parameters(argv[1], &l, &p);
 		} // end checkpoint
-
-		#ifdef HB_TRAJECTORY
-			if (iter % traj.mode_interval == 0) {
-				make_realtime_trajectories(&p, &f, &comlist, &c, &w, &traj);
-			}
-		#endif
 
 		iter++;
 
