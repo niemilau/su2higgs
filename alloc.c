@@ -317,6 +317,12 @@ void free_lattice(lattice *l) {
 	free_latticetable(l->next);
 	free_latticetable(l->prev);
 
+  // free stuff from make_misc_tables()
+  for (int dir=0; dir<l->dim; dir++) {
+    free_latticetable(l->sites_at_coord[dir]);
+  }
+  free(l->sites_at_coord);
+  free(l->sites_per_coord);
   #ifdef MEASURE_Z
     free_latticetable(l->site_at_z);
   #endif

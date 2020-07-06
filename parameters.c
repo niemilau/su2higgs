@@ -42,6 +42,15 @@ void get_parameters(char *filename, lattice* l, params *p) {
 
   int set_interval_z = 0;
 
+  #ifdef CORRELATORS
+    int set_do_correlators = 0;
+    int set_correlator_interval = 0;
+  #endif
+
+  #ifdef BLOCKING
+    int set_blocks = 0;
+  #endif
+
   #ifdef GRADFLOW
     int set_do_flow = 0;
     int set_flow_dt = 0;
@@ -314,6 +323,23 @@ void get_parameters(char *filename, lattice* l, params *p) {
     }
     #endif
 
+    #ifdef CORRELATORS
+      else if(!strcasecmp(key,"do_correlators")) {
+        p->do_correlators = strtol(value,NULL,10);
+        set_do_correlators = 1;
+      } else if(!strcasecmp(key,"correlator_interval")) {
+        p->correlator_interval = strtol(value,NULL,10);
+        set_correlator_interval = 1;
+      }
+    #endif
+
+    #ifdef BLOCKING
+      else if(!strcasecmp(key,"blocks")) {
+        p->blocks = strtol(value,NULL,10);
+        set_blocks = 1;
+      }
+    #endif
+
   }
 
 	check_set(set_dim, "dim");
@@ -430,6 +456,15 @@ void get_parameters(char *filename, lattice* l, params *p) {
     check_set(set_flow_interval, "flow_interval");
     check_set(set_flow_dt, "flow_dt");
     check_set(set_flow_t_max, "flow_t_max");
+  #endif
+
+  #ifdef CORRELATORS
+    check_set(set_do_correlators, "do_correlators");
+    check_set(set_correlator_interval, "correlator_interval");
+  #endif
+
+  #ifdef BLOCKING
+    check_set(set_blocks, "blocks");
   #endif
 
   fclose(config);

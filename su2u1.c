@@ -101,8 +101,7 @@ double su2trace4(double *u1, double *u2, double *u3, double *u4) {
 /* Calculate plaquette trace in the (dir1, dir2) plane
 *	of SU(2) link at lattice site i. Returns:
 * 	Re Tr U_mu(x) U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
-*	where mu = dir1, nu = dir2, x = site at index i
-*/
+*	where mu = dir1, nu = dir2, x = site at index i */
 double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 
 	double *u1 = f->su2link[i][dir1];
@@ -111,7 +110,26 @@ double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) 
 	double *u4 = f->su2link[i][dir2];
 
 	return su2trace4(u1, u2, u3, u4);
+}
 
+/* Calculate the SU(2) plaquette and store in u1 */
+void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2, double* u1) {
+
+	double u2[SU2LINK], u3[SU2LINK], u4[SU2LINK];
+	memcpy(u1, f->su2link[i][dir1], SU2LINK * sizeof(*u1));
+	memcpy(u2, f->su2link[ l->next[i][dir1] ][dir2], SU2LINK * sizeof(*u2));
+	memcpy(u3, f->su2link[ l->next[i][dir2] ][dir1], SU2LINK * sizeof(*u3));
+	memcpy(u4, f->su2link[i][dir2], SU2LINK * sizeof(*u4));
+
+	// conjugate u3 and u4
+	for (int k=1; k<SU2LINK; k++) {
+		u3[k] = -1.0 * u3[k];
+		u4[k] = -1.0 * u4[k];
+	}
+
+	su2rot(u3, u4); // u3 <- u3.u4
+	su2rot(u2, u3); // u2 <- u2.u3
+	su2rot(u1, u2); // u1 <- u1.u2
 }
 
 
@@ -585,8 +603,7 @@ double localact_doublet(lattice const* l, fields const* f, params const* p, long
 // We assume zero hypercharge for these
 
 /* Calculate Tr A^2 for an adjoint field.
-*	 This corresponds to 0.5 A^a A^a in continuum notation.
-*/
+*	 This corresponds to 0.5 A^a A^a in continuum notation. */
 double tripletsq(double* a) {
 	return 0.5*(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
 }
@@ -750,6 +767,13 @@ void smear_link(lattice const* l, fields const* f, int const* smear_dir, double*
 	}
 
 	su2rot(res, v2); // res <- V1.V2 = V_dir(x) V_dir(x+dir)
+	// in general this is unitary but not necessarily in SU(2). so normalize again:
+	double det = su2sqr(res);
+	det = sqrt(det);
+	for (int k=0; k<SU2LINK; k++) {
+		res[k] /= det;
+	}
+
 }
 
 
@@ -757,7 +781,8 @@ void smear_link(lattice const* l, fields const* f, int const* smear_dir, double*
 * If dagger = 1, also takes the Hermitian conjugate of both forward and backward staples */
 void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res) {
 	if (mu == nu) {
-		for(int k=0; k<SU2LINK; k++){
+		res[0] = 1.0;
+		for(int k=1; k<SU2LINK; k++) {
 			res[k] = 0.0;
 		}
 		return;
@@ -800,8 +825,7 @@ void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, 
 * 	Sigma(x) + sum_j U_j(x) Sigma(x+j) U^+_j (x)
 * and normalizing with the number of sites. The sum is over
 * directions specified in smear_dir, and contains both forward and backward terms.
-* Here U_{-j}(x) = U^+_j(x-j).
-*/
+* Here U_{-j}(x) = U^+_j(x-j). */
 void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i) {
 
 	int sites = 1; // how many sites are involved in smearing
@@ -856,10 +880,10 @@ void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, doub
 /* Smear all fields and store in f_b. Does not smear fields at odd sites in smearing
 * directions, because those are not needed for blocked lattices.
 */
-void smear_fields(lattice const* l, fields const* f, fields* f_b, int* block_dir) {
+void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir) {
 
   // no halos
-  for (long i=0; i<l->sites; l++) {
+  for (long i=0; i<l->sites; i++) {
     int skip = 0;
 
     // smear fields only on the sites that end up on the blocked lattice

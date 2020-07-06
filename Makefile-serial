@@ -2,7 +2,7 @@
 
 #CC := gcc -g -O3 -D HIGGS -D TRIPLET
 
-CC := gcc -g -O3 -D TRIPLET -D GRADFLOW -D BLOCKING 
+CC := gcc -g -O3 -D TRIPLET -D GRADFLOW -D BLOCKING -D CORRELATORS
 
 CFLAGS := 
 
@@ -10,7 +10,7 @@ LIBS := -lm
 
 OBJECTS := main.o layout.o comms.o alloc.o init.o parameters.o su2u1.o measure.o \
 	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o \
-	z_coord.c magfield.o gradflow.o blocking.o
+	z_coord.c magfield.o gradflow.o blocking.o correlation.o
 
 BINARY := build/su2_serial
 

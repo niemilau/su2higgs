@@ -120,6 +120,7 @@ void block_lattice(lattice* l, lattice* b, int const* block_dir) {
     standby_layout(b);
   }
 
+
   /* Now we need a mapping that tells us how to relate fields on the original lattice
   * to those on the blocked lattice. This is stored in the "blocklist", which
   * tells each node where they need to send which sites, and tells nodes on the
@@ -254,7 +255,7 @@ void make_blocklists(lattice* l, lattice* b, int const* block_dir) {
     for (long i=0; i<l->sites; i++) {
 
       int done = 0;
-      long coords[l->dim];
+      int coords[l->dim];
       // find new coords
       for (int dir=0; dir<l->dim; dir++) {
         coords[dir] = l->coords[i][dir];
@@ -420,13 +421,21 @@ void standby_layout(lattice* l) {
     l->offset[dir] = 0;
   }
 
+  l->longest_dir = 0;
+  l->sites_per_coord = malloc(1 * sizeof(*l->sites_per_coord));
+  l->sites_per_coord[0] = 1;
+  l->sites_at_coord = malloc(1 * sizeof(*l->sites_at_coord));
+  l->sites_at_coord[0] = alloc_latticetable(l->sites_per_coord[0], l->sliceL[0]);
+
   #ifdef MEASURE_Z
     l->sites_per_z = 1;
-    l->site_at_z = alloc_latticetable(l->sliceL[l->z_dir], l->sites_per_z);
+    l->z_dir = 0;
+    l->site_at_z = alloc_latticetable(l->sites_per_z, l->sliceL[0]);
   #endif
 
   alloc_comlist(&l->comlist, 1); // sets sends,recvs = 0
 }
+
 
 /* Copy a smeared field on the original lattice 'l' to a blocked field
 * on blocked lattice 'b'. Only does communications between distinct nodes,
@@ -554,7 +563,7 @@ void transfer_blocked_gaugefield(lattice* l, lattice* b, double*** field, double
 */
 void make_blocked_fields(lattice* l, lattice* b, fields const* f_smeared, fields* f_blocked) {
 
-  // first to all "sends" within my own node
+  // first do all "sends" within my own node
   block_fields_ownnode(l, b, f_smeared, f_blocked);
 
   #ifdef MPI
@@ -705,7 +714,7 @@ void test_blocking(lattice* l, lattice* b, int const* block_dir) {
           // predicted value:
           double val = y + (double) k / SU2LINK;
 
-          if (abs(f_b.su2link[i][dir][k] - val) > 0.0001) {
+          if (fabs(f_b.su2link[i][dir][k] - val) > 0.0001) {
             printf("Node %d: error in test_blocking at site %ld, dir %d!! field val is %lf; was supposed to be %lf (blocking.c)\n"
                 , b->rank, i, dir, f_b.su2link[i][dir][k], val);
           }

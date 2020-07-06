@@ -99,6 +99,8 @@ void layout(lattice *l, int do_prints, int run_checks) {
 		}
 	}
 
+	make_misc_tables(l);
+
 	#ifdef MEASURE_Z
 		init_z_coord(l);
 	#endif
@@ -712,9 +714,14 @@ void layout(lattice *l, int do_prints, int run_checks) {
 		printf("Site lookup tables constructed succesfully.\n");
 	}
 
+	make_misc_tables(l);
+
 	#ifdef MEASURE_Z
 		init_z_coord(l);
 	#endif
+
+
+
 }
 
 void sitemap(lattice* l) {
@@ -787,6 +794,59 @@ void die(int howbad) {
 /******************************************
 *	Mutual routines for both serial and MPI *
 ******************************************/
+
+/* Construct miscellaneous tables, such as lists of all sites at a fixed coordinate.
+* These are used for things such as correlation lengths, where it is necessary
+* to specify a direction for measurements. */
+void make_misc_tables(lattice* l) {
+	// find longest direction
+  int longest=l->dim-1;
+  for (int dir=l->dim-1; dir>=0; dir--) {
+    if (l->L[dir] > l->L[longest]) longest = dir;
+  }
+  l->longest_dir = longest;
+
+	// how many sites for each fixed coordinate, in all directions?
+	l->sites_per_coord = malloc(l->dim * sizeof(*l->sites_per_coord));
+	for (int dir=0; dir<l->dim; dir++) {
+
+		l->sites_per_coord[dir] = 1;
+		if (l->dim == 1) {
+			l->sites_per_coord[dir] = l->sliceL[dir];
+		}
+		else {
+
+			for (int dir2=0; dir2<l->dim; dir2++) {
+				if (dir2 != dir) {
+					l->sites_per_coord[dir] *= l->sliceL[dir2];
+				}
+			} // end dir2
+		}
+
+	} // end dir
+
+  /* sites_at_coord[dir][x]: list of all sites with coordinate x + offset[dir]
+	in direction dir */
+	l->sites_at_coord = malloc(l->dim * sizeof(*l->sites_at_coord));
+	for (int dir = 0; dir<l->dim; dir++) {
+	  l->sites_at_coord[dir] = alloc_latticetable(l->sites_per_coord[dir], l->sliceL[dir]);
+
+	  for (long nx=0; nx<l->sliceL[dir]; nx++) {
+	    long tot = 0;
+	    for (long i=0; i<l->sites; i++) {
+	      if (nx + l->offset[dir] == l->coords[i][dir]) {
+	        l->sites_at_coord[dir][nx][tot] = i;
+	        tot++;
+	      }
+	    }
+	    if (tot != l->sites_per_coord[dir]) {
+	      printf("Error counting sites in layout.c!\n");
+	      die(420);
+	    }
+	  }
+	}
+
+}
 
 /* Order sites according to their parity.
 * Assumes that self halos have been removed and sites ordered so that

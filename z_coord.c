@@ -47,7 +47,7 @@ void init_z_coord(lattice* l) {
   l->offset_z = l->offset[l->z_dir];
 
   // site_at_z[z] is a list of all sites with z coordinate offset_z + z
-  l->site_at_z = alloc_latticetable(l->sliceL[l->z_dir], l->sites_per_z);
+  l->site_at_z = alloc_latticetable(l->sites_per_z, l->sliceL[l->z_dir]);
 
   for (long nz=0; nz<l->sliceL[l->z_dir]; nz++) {
     long tot = 0;

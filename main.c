@@ -79,17 +79,36 @@ int main(int argc, char *argv[]) {
 		printf0(l, "Measuring profiles along direction %d every %d iterations\n", l.z_dir+1, p.meas_interval_z);
 	#endif
 
+	#ifdef CORRELATORS
+		int corr_dir = l.longest_dir;
+		if (p.do_correlators && !l.rank) {
+			print_labels_correlators();
+			printf("\nMeasuring correlation functions along direction %d every %d iterations\n", corr_dir, p.correlator_interval);
+		}
+	#endif
+
 	#ifdef BLOCKING
 		// alloc and initialize stuff needed for blocking
-		int block_levels = 4; // original lattice + block_levels more
+		int block_levels = p.blocks; // original lattice + block_levels more
 
 		alloc_comlist(&l.blocklist, l.size);
 		// main lattice will not need recv structures: realloc
 		realloc_comlist(&l.blocklist, RECV);
 		l.standby = 0;
+		l.blocking_level = 0;
 
-		printf0(l, "\n--- Start blocking ---\n");
-		int block_dir[3] = {1,1,0};
+		// block which directions? default: everything except the longest direction
+		int* block_dir = calloc(l.dim, sizeof(*block_dir));
+
+		printf0(l, "\n--- Using blocking in directions: ");
+		for (int dir=0; dir<l.dim; dir++) {
+			if (dir != l.longest_dir) {
+				block_dir[dir] = 1;
+				printf0(l, "%d ", dir);
+			}
+		}
+
+		printf0(l, ", up to %d levels ---\n", block_levels);
 
 		int max_level = max_block_level(&l, block_dir);
 		if (max_level < block_levels) {
@@ -114,6 +133,7 @@ int main(int argc, char *argv[]) {
 			alloc_comlist(&b[k].blocklist, base->size);
 			block_lattice(base, &b[k], block_dir);
 			alloc_fields(&b[k], &f_block[k]);
+			b[k].blocking_level = k+1;
 		}
 
 		barrier(l.comm);
@@ -258,6 +278,8 @@ int main(int argc, char *argv[]) {
 	start_time = clock();
 
 	int flow_id = 1; // only used for gradient flows
+	int correlator_id = 1; // only used for correlators
+
 	// main iteration loop
 	while (iter <= p.iterations) {
 
@@ -278,8 +300,31 @@ int main(int argc, char *argv[]) {
 			}
 		#endif
 
+		#ifdef CORRELATORS
+			if (p.do_correlators && iter % p.correlator_interval == 0) {
+				measure_correlators("correlators_0", &l, &f, &p, corr_dir, correlator_id);
+
+				#ifdef BLOCKING // repeat with blocked lattices
+					for (int k=0; k<block_levels; k++) {
+						lattice* base = NULL;
+						fields* f_base = NULL;
+						if (k == 0) {
+							base = &l;
+							f_base = &f;
+						} else {
+							base = &b[k-1];
+							f_base = &f_block[k-1];
+						}
+						measure_blocked_correlators(base, &b[k], f_base, &f_block[k], &p, block_dir, corr_dir, correlator_id);
+					}
+				#endif
+				correlator_id++;
+			}
+		#endif
+
 		// update all fields. multicanonical checks are contained in sweep routines
 		update_lattice(&l, &f, &p, &c, &w);
+
 
 		if (iter % p.checkpoint == 0) {
 			// Checkpoint time; print acceptance and save fields to latticefile
