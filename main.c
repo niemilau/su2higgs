@@ -116,6 +116,7 @@ int main(int argc, char *argv[]) {
 										block_levels, max_level, max_level);
 			block_levels = max_level;
 		}
+		fflush(stdout);
 
 		lattice b[block_levels];
 		fields f_block[block_levels];
@@ -147,6 +148,7 @@ int main(int argc, char *argv[]) {
 	init_counters(&c);
 
 	printf0(l, "Initialization done! Took %lf seconds.\n", timing);
+	fflush(stdout);
 
 	// initialize all fields
 	alloc_fields(&l, &f);
@@ -245,6 +247,7 @@ int main(int argc, char *argv[]) {
 
 
 		printf0(l, "\nThermalizing %ld iterations\n", p.n_thermalize);
+		fflush(stdout);
 		start_time = clock();
 		while (iter <= p.n_thermalize) {
 
@@ -347,6 +350,7 @@ int main(int argc, char *argv[]) {
 				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n",
 							iter, Global_total_time, 100.0*Global_comms_time/Global_total_time);
 				print_acceptance(p, c);
+				fflush(stdout);
 			}
 
 			save_lattice(&l, f, c, p.latticefile);
