@@ -112,12 +112,12 @@ void projector(double *proj, double *adjoint) {
  * in terms of real numbers times Pauli matrices. Note the comments
  * identifying elements below.
  */
- void project_u1(params const* p, fields const* f, long i, int dir, double* pro) {
+ void project_u1(lattice const* l, fields const* f, long i, int dir, double* pro) {
 	 /* Notation: hl = "left" adjoint field, normalized
 	 * 						hr = "right" adjoint field, normalized
 	 *						u = SU(2) link variable between "left" and "right"
 	 */
-	 long nextsite = p->next[i][dir];
+	 long nextsite = l->next[i][dir];
 
 	 // create the projectors
 	 double hl[SU2TRIP], hr[SU2TRIP];
@@ -187,18 +187,18 @@ void projector(double *proj, double *adjoint) {
 * eq (3.3) in hep-lat/0512006, at a given site i and directions dir1, dir2.
 * So the return value is alpha(x_i)_{dir1, dir2}
 */
-double alpha_proj(params const* p, fields const* f, long i, int dir1, int dir2) {
+double alpha_proj(lattice const* l, fields const* f, params const* p, long i, int dir1, int dir2) {
 	long nextsite;
 
 	// produce the projected link variables
 	double u1[8], u2[8], u3[8], u4[8];
 
-	project_u1(p, f, i, dir1, u1);
-	nextsite = p->next[i][dir1];
-	project_u1(p, f, nextsite, dir2, u2);
-	nextsite = p->next[i][dir2];
-	project_u1(p, f, nextsite, dir1, u3);
-	project_u1(p, f, i, dir2, u4);
+	project_u1(l, f, i, dir1, u1);
+	nextsite = l->next[i][dir1];
+	project_u1(l, f, nextsite, dir2, u2);
+	nextsite = l->next[i][dir2];
+	project_u1(l, f, nextsite, dir1, u3);
+	project_u1(l, f, i, dir2, u4);
 
 	// now calculate arg Tr u1.u2.u3^+.u4^+ using matmat()
 	// u1 <- u1.u2 etc
@@ -220,25 +220,25 @@ double alpha_proj(params const* p, fields const* f, long i, int dir1, int dir2) 
 * eq. 3.4 in hep-lat/0512006 (B_i(x) = 0.5 * eps_{ijk} alpha_{jk}).
 * Should work in arbitrary p.dim dimensions.
 */
-double magfield(params const* p, fields const* f, long i, int dir) {
+double magfield(lattice const* l, fields const* f, params const* p, long i, int dir) {
 
 	/* Two loops over the directions, with always d1 < d2.
 	* Also, need to account for the Levi-Civita symbol eps_{ijk}, with i = dir fixed.
 	* Now j < k always, so to get the correct sign we need 3 if checks (below).
 	*/
 	double res = 0.0;
-	for (int d1=0; d1<p->dim; d1++) {
+	for (int d1=0; d1<l->dim; d1++) {
 		if (d1 == dir) {
 			continue;
 		}
 		// always d1 < d2
-		for (int d2=d1+1; d2<p->dim; d2++) {
+		for (int d2=d1+1; d2<l->dim; d2++) {
 
 			if (d2 == dir) {
 				continue;
 			}
 
-			double alpha = alpha_proj(p, f, i, d1, d2);
+			double alpha = alpha_proj(l, f, p, i, d1, d2);
 
 			if (d1 > dir) {
 				// now dir < d1 < d2, so indices in eps_{ijk} are always in normal order
@@ -262,12 +262,12 @@ double magfield(params const* p, fields const* f, long i, int dir) {
 /* Calculate magnetic charge density (dimensionless) in a hypercube running
 * in the positive directions from lattice site i. Eq. (3.5) in hep-lat/0512006.
 */
-double magcharge_cube(params const* p, fields const* f, long i) {
+double magcharge_cube(lattice const* l, fields const* f, params const* p, long i) {
 
 	double res = 0.0;
-	for (int dir=0; dir<p->dim; dir++) {
-		double B1 = magfield(p, f, i, dir);
-		double B2 = magfield(p, f, p->next[i][dir], dir);
+	for (int dir=0; dir<l->dim; dir++) {
+		double B1 = magfield(l, f, p, i, dir);
+		double B2 = magfield(l, f, p, l->next[i][dir], dir);
 		res += B2 - B1;
 	}
 

@@ -80,13 +80,13 @@
 *
 * Note that w.hits is NOT stored!
 */
-void save_weight(params const* p, weight const* w) {
+void save_weight(lattice const* l, weight const* w) {
 
 	// for readonly run, do nothing
 	if (w->readonly)
 		return;
 
-	if(!p->rank) {
+	if(!l->rank) {
 		FILE *wfile = fopen(w->weightfile, "w");
 
 		fprintf(wfile, "%ld %lf %d %lf %lf %lf %lf\n", w->bins, w->increment, w->last_max, w->min, w->max, w->min_abs, w->max_abs);
@@ -105,9 +105,9 @@ void save_weight(params const* p, weight const* w) {
 * but overrides these if an existing weight file is found.
 * DO NOT call this more than once per run.
 */
-void load_weight(params const* p, weight *w) {
+void load_weight(lattice const* l, weight *w) {
 
-	printf0(*p, "\nLoading weightfile: %s\n", w->weightfile);
+	printf0(*l, "\nLoading weightfile: %s\n", w->weightfile);
 
   w->pos = malloc(w->bins * sizeof(*(w->pos)));
   w->W = malloc(w->bins * sizeof(*(w->W)));
@@ -121,9 +121,9 @@ void load_weight(params const* p, weight *w) {
 
   if(access(w->weightfile, R_OK) != 0) {
 		// no weight found; initialize a flat weight according to config file
-    printf0(*p,"Unable to access weightfile!!\n");
+    printf0(*l, "Unable to access weightfile!!\n");
 		if (w->readonly) {
-			printf0(*p, "No multicanonical weight given for a read-only run! Exiting...\n");
+			printf0(*l, "No multicanonical weight given for a read-only run! Exiting...\n");
 			die(20);
 		}
 
@@ -140,8 +140,8 @@ void load_weight(params const* p, weight *w) {
     }
 		w->last_max = 0; // assume starting from min
 
-		printf0(*p, "Initialized new weight \n");
-		save_weight(p, w);
+		printf0(*l, "Initialized new weight \n");
+		save_weight(l, w);
 
   } else {
 		// found existing weight, use it instead of the one specified in config
@@ -155,7 +155,7 @@ void load_weight(params const* p, weight *w) {
 		read = fscanf(wfile, "%ld %lf %d %lf %lf %lf %lf ", &bins_read, &w->increment, &w->last_max, &w->min, &w->max, &w->min_abs, &w->max_abs);
 
 		if (read != 7) {
-			printf0(*p, "Error reading first line of weightfile! \n");
+			printf0(*l, "Error reading first line of weightfile! \n");
 			die(22);
 		}
 
@@ -169,7 +169,7 @@ void load_weight(params const* p, weight *w) {
     for(i=0; i<w->bins; i++) {
       read = fscanf(wfile, "%lf %lf", &(w->pos[i]), &(w->W[i]));
       if(read != 2) {
-				printf0(*p, "Error reading weightfile! Got %d values at line %ld\n", read, i+2);
+				printf0(*l, "Error reading weightfile! Got %d values at line %ld\n", read, i+2);
 				die(22);
       }
     }
@@ -178,18 +178,18 @@ void load_weight(params const* p, weight *w) {
 
 		if (!w->readonly) {
 			if (w->min < w->min_abs || w->max > w->max_abs) {
-				printf0(*p, "Weight error! Weight update range is larger than weighting range!\n");
-				printf0(*p, "Got w.min %lf, w.min_abs %lf ; w.max %lf, w.max_abs %lf \n", w->min, w->min_abs, w->max, w->max_abs);
+				printf0(*l, "Weight error! Weight update range is larger than weighting range!\n");
+				printf0(*l, "Got w.min %lf, w.min_abs %lf ; w.max %lf, w.max_abs %lf \n", w->min, w->min_abs, w->max, w->max_abs);
 				die(24);
 			}
 		}
 
   } // weight loading/initialization OK
 
-	printf0(*p, "Using weight function with %ld bins in range %lf, %lf\n", w->bins, w->min_abs, w->max_abs);
+	printf0(*l, "Using weight function with %ld bins in range %lf, %lf\n", w->bins, w->min_abs, w->max_abs);
 	if (!w->readonly) {
-		printf0(*p, "Will modify weight in range %lf, %lf\n", w->min, w->max);
-		printf0(*p, "starting with increment %lf, last_max %d\n", w->increment, w->last_max);
+		printf0(*l, "Will modify weight in range %lf, %lf\n", w->min, w->max);
+		printf0(*l, "starting with increment %lf, last_max %d\n", w->increment, w->last_max);
 	}
 
 	// restart accumulation of muca hits even if existing weight is loaded
@@ -253,7 +253,7 @@ double get_weight(weight const* w, double val) {
 * multicanonical acceptance. After updating, checks whether
 * w->increment should be decreased for the next loop.
 */
-void update_weight(params const* p, weight* w) {
+void update_weight(lattice const* l, weight* w) {
 
 	if (w->readonly) {
 		return;
@@ -263,7 +263,7 @@ void update_weight(params const* p, weight* w) {
 		w->W[i] += w->hits[i] * w->increment / w->bins;
 	}
 
-	check_tunnel(p, w);
+	check_tunnel(l, w);
 
 	for (long i=0; i<w->bins; i++) {
 		w->hits[i] = 0;
@@ -277,7 +277,7 @@ void update_weight(params const* p, weight* w) {
 * through the barrier and decrease w->increment.
 * Note that this count is not reset when weight is updated.
 */
-void check_tunnel(params const* p, weight* w) {
+void check_tunnel(lattice const* l, weight* w) {
 
 	int tunnel = 0;
 	if (w->last_max && w->hits[w->min_bin] > 0) {
@@ -292,7 +292,7 @@ void check_tunnel(params const* p, weight* w) {
 
 	if (tunnel > 0) {
 		w->increment *= w->reduction_factor;
-		printf0(*p, "\nReducing weight update factor! Now %lf \n", w->increment);
+		printf0(*l, "\nReducing weight update factor! Now %lf \n", w->increment);
 	}
 
 }
@@ -302,17 +302,17 @@ void check_tunnel(params const* p, weight* w) {
 * oldval is the old order parameter value before field was updated locally
 * Return 1 if update was accepted, 0 otherwise.
 */
-int multicanonical_acceptance(params const* p, weight* w, double oldval, double newval) {
+int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double newval) {
 
 	// if we call this function while w->do_acceptance is 0 then something went wrong
 	if (!w->do_acceptance) {
-		printf0(*p, "Should not get here!! in multicanonical.c\n");
+		printf0(*l, "Should not get here!! in multicanonical.c\n");
 		die(-1000);
 	}
 
 	// acc/rej only in root node
 	int accept;
-	if (p->rank == 0) {
+	if (l->rank == 0) {
 
 		double W_new, W_old;
 
@@ -331,7 +331,7 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 	}
 
 	// broadcast outcome to all nodes
-	bcast_int(&accept);
+	bcast_int(&accept, l->comm);
 
 	// update hits and call update_weight() if necessary.
 	// do this only if the update was accepted.
@@ -349,8 +349,8 @@ int multicanonical_acceptance(params const* p, weight* w, double oldval, double 
 			w->m++;
 			if (w->m >= w->update_interval) {
 				// update weight function, save it and start over
-				update_weight(p, w);
-				save_weight(p, w);
+				update_weight(l, w);
+				save_weight(l, w);
 				w->m = 0;
 			}
 		}
@@ -410,13 +410,13 @@ long whichbin(weight const* w, double val) {
 * Only the contribution from sites with parity = par is recalculated
 * while the other parity contribution is read from w.param_value
 */
-double calc_orderparam(params const* p, fields const* f, weight* w, char par) {
+double calc_orderparam(lattice const* l, fields const* f, params const* p, weight* w, char par) {
 	double tot = 0.0;
 	long offset, max;
 	if (par == EVEN) {
-		offset = 0; max = p->evensites;
+		offset = 0; max = l->evensites;
 	} else {
-		offset = p->evensites; max = p->sites;
+		offset = l->evensites; max = l->sites;
 	}
 
 	switch(w->orderparam) {
@@ -442,7 +442,7 @@ double calc_orderparam(params const* p, fields const* f, weight* w, char par) {
 			break;
 	}
 
-	tot = allreduce(tot) / p->vol;
+	tot = allreduce(tot, l->comm) / l->vol;
 
 	w->param_value[par] = tot;
 	// add other parity contribution
@@ -455,11 +455,11 @@ double calc_orderparam(params const* p, fields const* f, weight* w, char par) {
 * Ordering in the backup array is exactly the same as in the original field array.
 * TODO: only store sites of a given parity?
 */
-void store_muca_fields(params const* p, fields* f, weight* w) {
+void store_muca_fields(lattice const* l, fields* f, weight* w) {
 
 	switch(w->orderparam) {
 		case SIGMASQ :
-			for (long i=0; i<p->sites; i++) {
+			for (long i=0; i<l->sites; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
 				}
@@ -467,14 +467,14 @@ void store_muca_fields(params const* p, fields* f, weight* w) {
 			break;
     case PHI2MINUSSIGMA2 :
 		case PHI2SIGMA2 :
-			for (long i=0; i<p->sites; i++) {
+			for (long i=0; i<l->sites; i++) {
 				for (int dof=0; dof<SU2TRIP; dof++) {
 					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
 				}
 			}
 			// continue to store Higgs
 		case PHISQ :
-			for (long i=0; i<p->sites; i++) {
+			for (long i=0; i<l->sites; i++) {
 				for (int dof=0; dof<SU2DB; dof++) {
 					f->backup_doublet[i][dof] = f->su2doublet[i][dof];
 				}
@@ -486,13 +486,13 @@ void store_muca_fields(params const* p, fields* f, weight* w) {
 
 /* Undo field updates if the multicanonical step is rejected.
 */
-void reset_muca_fields(params const* p, fields* f, weight* w, char par) {
+void reset_muca_fields(lattice const* l, fields* f, weight* w, char par) {
 
 	long offset, max;
 	if (par == EVEN) {
-		offset = 0; max = p->evensites;
+		offset = 0; max = l->evensites;
 	} else {
-		offset = p->evensites; max = p->sites;
+		offset = l->evensites; max = l->sites;
 	}
 
 	switch(w->orderparam) {
@@ -523,16 +523,16 @@ void reset_muca_fields(params const* p, fields* f, weight* w, char par) {
 
 
 // Allocate field backup arrays
-void alloc_backup_arrays(params const* p, fields* f, weight const* w) {
+void alloc_backup_arrays(lattice const* l, fields* f, weight const* w) {
 	switch(w->orderparam) {
 		case SIGMASQ :
-			f->backup_triplet = make_field(p->sites, SU2TRIP);
+			f->backup_triplet = make_field(l->sites, SU2TRIP);
 			break;
 		case PHI2SIGMA2 :
     case PHI2MINUSSIGMA2 :
-			f->backup_triplet = make_field(p->sites, SU2TRIP);
+			f->backup_triplet = make_field(l->sites, SU2TRIP);
 		case PHISQ :
-			f->backup_doublet = make_field(p->sites, SU2DB);
+			f->backup_doublet = make_field(l->sites, SU2DB);
 			break;
 	}
 }

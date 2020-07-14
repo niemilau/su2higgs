@@ -7,61 +7,54 @@
 #include "su2.h"
 #include "hb_trajectory.h"
 
-void write_trajectory_header(params* p, trajectory* traj, int current_traj, double init_val) {
-  // file should be open in root node (only in root!)
-  if (p->rank == 0 && traj->trajectoryfile == NULL) {
-    printf("Error in hb_trajectory.c; trajectory file not open!\n");
-    die(-321);
-  }
 
-  if(!p->rank) {
-    fprintf(traj->trajectoryfile, "\n--- Trajectory %d starting from %lf --- \n", current_traj, init_val);
-  }
-}
-
-
-void make_realtime_trajectories(params* p, fields* f, comlist_struct* comlist, counters* c, weight* w, trajectory* traj) {
+void make_realtime_trajectories(lattice* l, fields const* f, params* p, counters* c, weight* w, trajectory* traj) {
 
   // enter "heatbath trajectory mode" by turning off multicanonical weighting
   // and randomizing order of gauge link updates
   w->do_acceptance = 0;
   p->random_sweeps = 1;
-  // backup initial configuration
-  printf0(*p, "");
-  save_lattice(*p, *f, *c);
 
-  // open trajectory file in root node
-  if (!p->rank) {
-    traj->trajectoryfile = fopen("trajectory", "a");
-  }
 
   int iter_traj = 1;
   int current_traj = 1;
   double muca_param;
+
+  // copy field configuration to a new struct
+  fields f_traj;
+  alloc_fields(l, &f_traj);
+  copy_fields(l, f, &f_traj);
+  sync_halos(l, &f_traj);
+
   // recalculate muca parameter
-  calc_orderparam(p, f, w, EVEN); // updates EVEN contribution only
-  double init_value = calc_orderparam(p, f, w, ODD); // updates ODD and returns the full value
+  calc_orderparam(l, &f_traj, p, w, EVEN); // updates EVEN contribution only
+  double init_value = calc_orderparam(l, &f_traj, p, w, ODD); // updates ODD and returns the full value
 
-  printf0(*p, "Generating %d heatbath trajectories starting at order parameter value %lf\n",
-      traj->n_traj, init_value);
 
-  // header for the first trajectory
-  write_trajectory_header(p, traj, current_traj, init_value);
+  // open trajectory file in root node and write header
+  if (!l->rank) {
+    // printf("Generating %d heatbath trajectories starting at order parameter value %lf\n", traj->n_traj, init_value);
+    traj->trajectoryfile = fopen("trajectory", "a");
+    fprintf(traj->trajectoryfile, "\n--- Trajectory id: %d starting from %lf --- \n", current_traj, init_value);
+  }
 
   while (current_traj <= traj->n_traj) {
 
     // perform measurements every traj.interval iterations.
     if (iter_traj % traj->interval == 0 || iter_traj == 1) {
-      measure(traj->trajectoryfile, f, p, c, w);
+      measure(traj->trajectoryfile, l, &f_traj, p, w);
       // after measurement, check if the trajectory completed
       muca_param = w->param_value[EVEN] + w->param_value[ODD];
+
       if (muca_param > traj->max || muca_param < traj->min) {
+
         // trajectory done, revert back to the initial configuration and repeat
-        load_lattice(p, f, c, comlist);
+        copy_fields(l, f, &f_traj);
+        sync_halos(l, &f_traj);
         current_traj++;
         if (current_traj <= traj->n_traj) {
           // write header for the next trajectory
-          write_trajectory_header(p, traj, current_traj, init_value);
+          fprintf(traj->trajectoryfile, "\n--- Trajectory id: %d starting from %lf --- \n", current_traj, init_value);
           iter_traj = 1;
           continue;
         } // else: will automatically exit the while loop
@@ -70,8 +63,7 @@ void make_realtime_trajectories(params* p, fields* f, comlist_struct* comlist, c
     }
 
     // update fields as usual, but now there is no multicanonical weighting
-    barrier();
-    update_lattice(f, p, comlist, c, w);
+    update_lattice(l, &f_traj, p, c, w);
 
     iter_traj++;
   }
@@ -81,10 +73,11 @@ void make_realtime_trajectories(params* p, fields* f, comlist_struct* comlist, c
   w->do_acceptance = 1;
   p->random_sweeps = 0;
   // close trajectory file
-  if (!p->rank)	{
+  if (!l->rank)	{
     fclose(traj->trajectoryfile);
-    printf("Trajectories ready\n");
+    //printf("Trajectories ready\n");
   }
+  free_fields(l, &f_traj);
 
 }
 

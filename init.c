@@ -15,10 +15,10 @@
 */
 
 // set SU(2) links to unity
-void setsu2(fields f, params p) {
+void setsu2(fields f, lattice l) {
 
-	for (long i=0; i<p.sites_total; i++) {
-		for (int dir=0; dir<p.dim; dir++) {
+	for (long i=0; i<l.sites_total; i++) {
+		for (int dir=0; dir<l.dim; dir++) {
 			f.su2link[i][dir][0] = 1.0;
 			f.su2link[i][dir][1] = 0.0;
 			f.su2link[i][dir][2] = 0.0;
@@ -28,10 +28,10 @@ void setsu2(fields f, params p) {
 }
 
 // set U(1) links to unity
-void setu1(fields f, params p) {
+void setu1(fields f, lattice l) {
 
-	for (long i=0; i<p.sites_total; i++) {
-		for (int dir=0; dir<p.dim; dir++) {
+	for (long i=0; i<l.sites_total; i++) {
+		for (int dir=0; dir<l.dim; dir++) {
 			f.u1link[i][dir] = 0.0;
 		}
 	}
@@ -58,8 +58,8 @@ void random_su2link(double *su2) {
 }
 
 // Initialize SU(2) doublets to unity * 1/sqrt(2).
-void setdoublets(fields f, params p) {
-	for (long i=0; i<p.sites_total; i++) {
+void setdoublets(fields f, lattice l, params p) {
+	for (long i=0; i<l.sites_total; i++) {
 		f.su2doublet[i][0] = p.phi0;
 		f.su2doublet[i][1] = 0.0;
 		f.su2doublet[i][2] = 0.0;
@@ -69,8 +69,8 @@ void setdoublets(fields f, params p) {
 
 
 // Initialize SU(2) adjoint scalars
-void settriplets(fields f, params p) {
-	for (long i=0; i<p.sites_total; i++) {
+void settriplets(fields f, lattice l, params p) {
+	for (long i=0; i<l.sites_total; i++) {
 		f.su2triplet[i][0] = p.sigma0;
 		f.su2triplet[i][1] = 0.0;
 		f.su2triplet[i][2] = 0.0;
@@ -79,18 +79,18 @@ void settriplets(fields f, params p) {
 
 
 // Initialize all fields used in the simulation
-void setfields(fields f, params p) {
+void setfields(fields f, lattice l, params p) {
 
-	setsu2(f, p);
+	setsu2(f, l);
 	#ifdef U1
-		setu1(f, p);
+		setu1(f, l);
 	#endif
 
 	#ifdef HIGGS
-		setdoublets(f, p);
+		setdoublets(f, l, p);
 	#endif
 	#ifdef TRIPLET
-		settriplets(f, p);
+		settriplets(f,l, p);
 	#endif
 }
 
@@ -100,12 +100,12 @@ void setfields(fields f, params p) {
 * without wanting to lose the equilibrium configuration.
 * Does not modify the old fields struct
 */
-void copy_fields(params const* p, fields const* f_old, fields* f_new) {
+void copy_fields(lattice const* l, fields const* f_old, fields* f_new) {
 
-	for (long i=0; i<p->sites_total; i++) {
+	for (long i=0; i<l->sites_total; i++) {
 
 		// gauge links
-		for (int dir=0; dir<p->dim; dir++) {
+		for (int dir=0; dir<l->dim; dir++) {
 			memcpy(f_new->su2link[i][dir], f_old->su2link[i][dir], SU2LINK*sizeof(f_old->su2link[i][dir][0]));
 
 			#ifdef U1

@@ -67,15 +67,15 @@ void print_acceptance(params p, counters c) {
 * Theory parameters such as beta_G and masses are NOT stored!
 * Neither are model-specific acceptance rates.
 */
-void save_lattice(params p, fields f, counters c) {
+void save_lattice(lattice const* l, fields f, counters c, char* fname) {
 
 	FILE *file;
-	if (p.rank == 0) {
-		file = fopen(p.latticefile, "wb");
+	if (l->rank == 0) {
+		file = fopen(fname, "wb");
 		// first line: p.size p.dim L1 L2 ... Ln
-		fwrite(&p.size, sizeof(p.size), 1, file);
-		fwrite(&p.dim, sizeof(p.dim), 1, file);
-		fwrite(p.L, sizeof(p.L[0]), p.dim, file);
+		fwrite(&l->size, sizeof(l->size), 1, file);
+		fwrite(&l->dim, sizeof(l->dim), 1, file);
+		fwrite(l->L, sizeof(l->L[0]), l->dim, file);
 
 		// second line: iteration total_time comms_time
 		fwrite(&c.iter, sizeof(c.iter), 1, file);
@@ -84,20 +84,20 @@ void save_lattice(params p, fields f, counters c) {
 	}
 
 	// fields. file is only open in root node, so others cannot use it here.
-	write_field(p, file, &f.su2link[0][0][0], p.dim * SU2LINK);
+	write_field(l, file, &f.su2link[0][0][0], l->dim * SU2LINK);
 	#ifdef U1
-	write_field(p, file, &f.u1link[0][0], p.dim);
+	write_field(l, file, &f.u1link[0][0], l->dim);
 	#endif
 	#ifdef HIGGS
-	write_field(p, file, &f.su2doublet[0][0], SU2DB);
+	write_field(l, file, &f.su2doublet[0][0], SU2DB);
 	#endif
 	#ifdef TRIPLET
-	write_field(p, file, &f.su2triplet[0][0], SU2TRIP);
+	write_field(l, file, &f.su2triplet[0][0], SU2TRIP);
 	#endif
 
-	if (p.rank == 0) {
+	if (l->rank == 0) {
 		fclose(file);
-		printf("Written fields to %s.\n", p.latticefile);
+		printf("Written fields to %s.\n", fname);
 	}
 
 }
@@ -111,11 +111,11 @@ void save_lattice(params p, fields f, counters c) {
 * counters and iteration number can be kept in sync, while only the root node
 * reads fields and distributes them to others.
 */
-void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comlist) {
+void load_lattice(lattice* l, fields* f, counters* c, char* fname) {
 
 	FILE *file;
 
-	file = fopen(p->latticefile, "rb");
+	file = fopen(fname, "rb");
 
 	// first line: p.size p.dim L1 L2 ... Ln
 	int dim, size, read = 0;
@@ -128,34 +128,34 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 
 	if (!read) {
 		// did not read anything...
-		printf0(*p, "Error reading latticefile!\n");
+		printf0(*l, "Error reading latticefile!\n");
 		die(500);
 	}
 
 	int ok = 1;
 	// check that dimensions of the lattice file match those in our config
-	if (p->dim != dim || p->size != size)
+	if (l->dim != dim || l->size != size)
 		ok = 0;
 
 	if (ok) {
-		for (int d=0; d<p->dim; d++) {
-			if (L[d] != p->L[d])
+		for (int d=0; d<l->dim; d++) {
+			if (L[d] != l->L[d])
 				ok = 0;
 		}
 	}
 
 	if (!ok) {
-		printf0(*p, "Dimensions in latticefile do not match! Got:\n");
-		printf0(*p, " 	MPI size %d, dimension %d, volume ", size, dim);
+		printf0(*l, "Dimensions in latticefile do not match! Got:\n");
+		printf0(*l, " 	MPI size %d, dimension %d, volume ", size, dim);
 		for (int d=0; d<dim; d++) {
-			printf0(*p, "%d x ", L[d]);
+			printf0(*l, "%d x ", L[d]);
 		}
-		printf0(*p, "\b\b \b\n\nWas supposed to be: \n");
-		printf0(*p, "	MPI size %d, dimension %d, volume ", p->size, p->dim);
-		for (int d=0; d<p->dim; d++) {
-			printf0(*p, "%d x ", p->L[d]);
+		printf0(*l, "\b\b \b\n\nWas supposed to be: \n");
+		printf0(*l, "	MPI size %d, dimension %d, volume ", l->size, l->dim);
+		for (int d=0; d<l->dim; d++) {
+			printf0(*l, "%d x ", l->L[d]);
 		}
-		printf0(*p, "\b\b \b\n");
+		printf0(*l, "\b\b \b\n");
 		die(501);
 	}
 
@@ -166,25 +166,25 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 	read += fread(&Global_comms_time, sizeof(Global_comms_time), 1, file);
 
 	// if not root node, can close the file here
-	if (p->rank != 0)
+	if (l->rank != 0)
 		fclose(file);
 
 	// Read fields. Ordering HAS to be same as in save_lattice()
-	read_field(*p, file, &f->su2link[0][0][0], p->dim * SU2LINK);
+	read_field(l, file, &f->su2link[0][0][0], l->dim * SU2LINK);
 	#ifdef U1
-	read_field(*p, file, &f->u1link[0][0], p->dim);
+	read_field(l, file, &f->u1link[0][0], l->dim);
 	#endif
 	#ifdef HIGGS
-	read_field(*p, file, &f->su2doublet[0][0], SU2DB);
+	read_field(l, file, &f->su2doublet[0][0], SU2DB);
 	#endif
 	#ifdef TRIPLET
-	read_field(*p, file, &f->su2triplet[0][0], SU2TRIP);
+	read_field(l, file, &f->su2triplet[0][0], SU2TRIP);
 	#endif
 
 	// finally, sync all halo fields; these were not loaded from the file
-	sync_halos(f, p, comlist);
+	sync_halos(l, f);
 
-	if (p->rank == 0) {
+	if (l->rank == 0) {
 		fclose(file);
 	}
 }
@@ -199,13 +199,13 @@ void load_lattice(params const* p, fields* f, counters* c, comlist_struct* comli
 * field = pointer to first element of the field array (e.g. &f.su2link[0][0][0])
 * size = how many components the field has at a single site
 */
-void write_field(params p, FILE *file, double *field, int size) {
+void write_field(lattice const* l, FILE *file, double *field, int size) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	// how many sites in my node, excluding halos?
-	long max = p.sites * size;
+	long max = l->sites * size;
 
-	if (p.rank == 0) {
+	if (l->rank == 0) {
 		// start by writing the field in root node
 		fwrite(field, sizeof(*field), max, file);
 	} else {
@@ -214,11 +214,11 @@ void write_field(params p, FILE *file, double *field, int size) {
 	}
 
 
-	if (p.rank == 0) {
+	if (l->rank == 0) {
 		// in root node, receive from all nodes one at a time
 		double* buf = malloc(max * sizeof(*buf));
 
-		for (int rank=1; rank<p.size; rank++) {
+		for (int rank=1; rank<l->size; rank++) {
 			// Probe message size here, in case the other node has different number of sites
 			MPI_Status status;
 			int count;
@@ -248,14 +248,14 @@ void write_field(params p, FILE *file, double *field, int size) {
 * by the root node, which then sends the field to the other nodes.
 * Note that we send and receive TWO messages per node, so need to use tags.
 */
-void read_field(params p, FILE *file, double *field, int size) {
+void read_field(lattice const* l, FILE *file, double *field, int size) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	int maxtag = 1, fieldtag = 2;
 	// how many sites in my node
-	long max = p.sites * size;
+	long max = l->sites * size;
 
-	if (p.rank == 0) {
+	if (l->rank == 0) {
 		// first read the field belonging to root node
 		long read = fread(field, sizeof(*field), max, file);
 		if (read != max) {
@@ -269,11 +269,11 @@ void read_field(params p, FILE *file, double *field, int size) {
 		MPI_Recv(field, max, MPI_DOUBLE, 0, fieldtag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
 
-	if (p.rank == 0) {
+	if (l->rank == 0) {
 
 		double* buf = malloc(max * sizeof(*buf));
 
-		for (int rank=1; rank<p.size; rank++) {
+		for (int rank=1; rank<l->size; rank++) {
 			long newmax;
 			// in root node, first receive their max
 			MPI_Recv(&newmax, 1, MPI_LONG, rank, maxtag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -310,9 +310,9 @@ void read_field(params p, FILE *file, double *field, int size) {
 * field = pointer to first element of the field array (e.g. &f.su2link[0][0][0])
 * size = how many components the field has at a single site
 */
-void write_field(params p, FILE *file, double *field, int size) {
+void write_field(lattice const* l, FILE *file, double *field, int size) {
 
-	long max = p.sites * size;
+	long max = l->sites * size;
 	// write the whole field at once
 	fwrite(field, sizeof(*field), max, file);
 
@@ -320,13 +320,13 @@ void write_field(params p, FILE *file, double *field, int size) {
 
 /* Reads in a field, assuming the format in write_field().
 */
-void read_field(params p, FILE *file, double *field, int size) {
+void read_field(lattice const* l, FILE *file, double *field, int size) {
 
-	long max = p.sites * size;
+	long max = l->sites * size;
 	long read = fread(field, sizeof(*field), max, file);
 
 	if (read != max) {
-		printf0(p, "Error reading field!\n");
+		printf0(*l, "Error reading field!\n");
 		die(505);
 	}
 

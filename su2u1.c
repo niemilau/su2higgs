@@ -101,17 +101,35 @@ double su2trace4(double *u1, double *u2, double *u3, double *u4) {
 /* Calculate plaquette trace in the (dir1, dir2) plane
 *	of SU(2) link at lattice site i. Returns:
 * 	Re Tr U_mu(x) U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
-*	where mu = dir1, nu = dir2, x = site at index i
-*/
-double su2ptrace(fields const* f, params const* p, long i, int dir1, int dir2) {
+*	where mu = dir1, nu = dir2, x = site at index i */
+double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 
 	double *u1 = f->su2link[i][dir1];
-	double *u2 = f->su2link[ p->next[i][dir1] ][dir2];
-	double *u3 = f->su2link[ p->next[i][dir2] ][dir1];
+	double *u2 = f->su2link[ l->next[i][dir1] ][dir2];
+	double *u3 = f->su2link[ l->next[i][dir2] ][dir1];
 	double *u4 = f->su2link[i][dir2];
 
 	return su2trace4(u1, u2, u3, u4);
+}
 
+/* Calculate the SU(2) plaquette and store in u1 */
+void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2, double* u1) {
+
+	double u2[SU2LINK], u3[SU2LINK], u4[SU2LINK];
+	memcpy(u1, f->su2link[i][dir1], SU2LINK * sizeof(*u1));
+	memcpy(u2, f->su2link[ l->next[i][dir1] ][dir2], SU2LINK * sizeof(*u2));
+	memcpy(u3, f->su2link[ l->next[i][dir2] ][dir1], SU2LINK * sizeof(*u3));
+	memcpy(u4, f->su2link[i][dir2], SU2LINK * sizeof(*u4));
+
+	// conjugate u3 and u4
+	for (int k=1; k<SU2LINK; k++) {
+		u3[k] = -1.0 * u3[k];
+		u4[k] = -1.0 * u4[k];
+	}
+
+	su2rot(u3, u4); // u3 <- u3.u4
+	su2rot(u2, u3); // u2 <- u2.u3
+	su2rot(u1, u2); // u1 <- u1.u2
 }
 
 
@@ -187,34 +205,34 @@ void su2staple_clockwise(double* V, double* u1, double* u2, double* u3) {
  																	+ U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu) )
 * where mu = dir.
 */
-void su2staple_wilson(fields const* f, params const* p, long i, int dir, double* V) {
-	double tot[4] = {0.0, 0.0, 0.0, 0.0};
+void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V) {
+	double tot[SU2LINK] = { 0.0 };
 	double* u1 = NULL;
 	double* u2 = NULL;
 	double* u3 = NULL;
 
-	for (int j=0; j<p->dim; j++) {
+	for (int j=0; j<l->dim; j++) {
 		if (j != dir) {
 			// "upper" staple
-			u1 = f->su2link[ p->next[i][dir] ][j];
-			u2 = f->su2link[ p->next[i][j] ][dir];
+			u1 = f->su2link[ l->next[i][dir] ][j];
+			u2 = f->su2link[ l->next[i][j] ][dir];
 			u3 = f->su2link[i][j];
 			su2staple_counterwise(V, u1, u2, u3);
-			for(int k=0; k<4; k++){
+			for(int k=0; k<SU2LINK; k++){
 				tot[k] += V[k];
 			}
 			// "lower" staple
-			u1 = f->su2link[ p->prev[(p->next[i][dir])][j] ][j];
-			u2 = f->su2link[(p->prev[i][j])][dir];
-			u3 = f->su2link[(p->prev[i][j])][j];
+			u1 = f->su2link[ l->prev[(l->next[i][dir])][j] ][j];
+			u2 = f->su2link[(l->prev[i][j])][dir];
+			u3 = f->su2link[(l->prev[i][j])][j];
 			su2staple_clockwise(V, u1, u2, u3);;
-			for(int k=0; k<4; k++){
+			for(int k=0; k<SU2LINK; k++){
 				tot[k] += V[k];
 			}
 		}
 	}
 
-	for(int k=0; k<4; k++){
+	for(int k=0; k<SU2LINK; k++){
 		V[k] = tot[k];
 	}
 
@@ -238,9 +256,9 @@ void su2staple_wilson(fields const* f, params const* p, long i, int dir, double*
 * Triplet is not included here, because its' hopping term is quadratic in the link
 * and cannot be expressed as a simple staple.
 */
-void su2link_staple(fields const* f, params const* p, long i, int dir, double* V) {
+void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V) {
 
-	su2staple_wilson(f, p, i, dir, V);
+	su2staple_wilson(l, f, i, dir, V);
 	for (int k=0; k<4; k++) {
 		V[k] *= -0.5 * p->betasu2;
 	}
@@ -249,7 +267,7 @@ void su2link_staple(fields const* f, params const* p, long i, int dir, double* V
 		// a_j(x) = 0 if hypercharge is neglected.
 		double nextphi[4];
 		double currentphi[4];
-		long nextsite = p->next[i][dir];
+		long nextsite = l->next[i][dir];
 		// we want Hermitian conjugate of Phi(x):
 
 		currentphi[0] = f->su2doublet[i][0];
@@ -297,13 +315,13 @@ void su2link_staple(fields const* f, params const* p, long i, int dir, double* V
 /* Calculate Wilson action for a single SU(2) link.  Explicitly, calculates:
 * beta * \Sum_{i < j} ( 1 - 0.5 Re Tr U_i (x) U_j (x+i) U_i(x+j)^+ U_j(x)^+ )
 */
-long double local_su2wilson(fields const* f, params const* p, long i) {
+long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i) {
 
 	long double res = 0.0;
 
-	for (int dir1 = 0; dir1 < p->dim; dir1++) {
+	for (int dir1 = 0; dir1 < l->dim; dir1++) {
 		for (int dir2 = 0; dir2 < dir1; dir2++ ) {
-			res += (1.0 - 0.5 * su2ptrace(f, p, i, dir2, dir1) );
+			res += (1.0 - 0.5 * su2ptrace(l, f, i, dir2, dir1) );
 		}
 	}
 
@@ -320,14 +338,14 @@ long double local_su2wilson(fields const* f, params const* p, long i) {
 *
 * The constant term in beta \sum (1 - 0.5 ptrace) is also included for convenience.
 */
-double localact_su2link(fields const* f, params const* p, long i, int dir) {
+double localact_su2link(lattice const* l, fields const* f, params const* p, long i, int dir) {
 
 	double tot = 0.0;
 
-	for (int dir2 = 0; dir2<p->dim; dir2++) {
+	for (int dir2 = 0; dir2<l->dim; dir2++) {
 		if (dir2 != dir) {
-			tot += (1.0 - 0.5 * su2ptrace(f, p, i, dir, dir2));
-			tot += (1.0 - 0.5 * su2ptrace(f, p, p->prev[i][dir2], dir, dir2));
+			tot += (1.0 - 0.5 * su2ptrace(l, f, i, dir, dir2));
+			tot += (1.0 - 0.5 * su2ptrace(l, f, l->prev[i][dir2], dir, dir2));
 		}
 	}
 	tot *= p->betasu2;
@@ -336,7 +354,7 @@ double localact_su2link(fields const* f, params const* p, long i, int dir) {
 	double staple[4];
 	double V[4];
 	memcpy(V, f.su2link[i][dir], SU2LINK*sizeof(double));
-	su2staple_wilson(f, p, i, dir, staple);
+	su2staple_wilson(f, i, dir, staple);
 	su2rot(V,staple);
 
 	tot = p.betasu2 * (1.0 * p.dim * 0.5 - 0.5*2*V[0]);
@@ -344,14 +362,93 @@ double localact_su2link(fields const* f, params const* p, long i, int dir) {
 
 	// hopping terms:
 	#ifdef HIGGS
-		tot += hopping_doublet_forward(f, p, i, dir);
+		tot += hopping_doublet_forward(l, f, p, i, dir);
 	#endif
 	#ifdef TRIPLET
-		tot += hopping_triplet_forward(f, p, i, dir);
+		tot += hopping_triplet_forward(l, f, p, i, dir);
 	#endif
 
 	return tot;
 }
+
+/* Calculate a simple plaquette "clover" for SU(2) at a given site, see
+*	fig 1 in hep-lat/0106023. This calculates their eq. 12 in the (d1, d2) plane.
+* Heuristically, this reproduces the field strength tensor at the lattice site
+* at O(a), while the standard plaquette gives F_ij in
+* the middle of the plaquette. If O_munu is the clover, then for SU(N)
+* g F_munu(x) = -i/8 [(O_munu(x) - O^+_munu(x)) - 1/N Tr(O_munu(x) - O^+_munu(x)) ],
+* i.e. the antihermitian part of O_munu projected to the Lie algebra. */
+void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, double* clover) {
+
+	su2plaquette(l, f, i, d1, d2, clover); // standard plaquette
+
+	// add other plaquettes in (d1,d2) plane that begin at site i
+	double u1[SU2LINK], u2[SU2LINK], u3[SU2LINK], u4[SU2LINK];
+	long site;
+
+	// U_nu(x) U^+_mu(x+nu-mu) U^+_nu(x-mu) U_mu(x-mu)
+	memcpy(u1, f->su2link[i][d2], SU2LINK * sizeof(*u1));
+	site = l->next[i][d2];
+	site = l->prev[site][d1]; // x + nu - mu
+	memcpy(u2, f->su2link[site][d1], SU2LINK * sizeof(*u1));
+	site = l->prev[i][d1]; // x - mu
+	memcpy(u3, f->su2link[site][d2], SU2LINK * sizeof(*u1));
+	memcpy(u4, f->su2link[site][d1], SU2LINK * sizeof(*u1));
+	// take conjugates and multiply
+	for (int k=1; k<SU2LINK; k++) {
+		u2[k] = -1.0*u2[k];
+		u3[k] = -1.0*u3[k];
+	}
+	su2rot(u3, u4);
+	su2rot(u2, u3);
+	su2rot(u1, u2);
+	for (int k=0; k<SU2LINK; k++) {
+		clover[k] += u1[k];
+	}
+
+	// U^+_mu(x-mu) U^+_nu(x-nu-mu) U_mu(x-mu-nu) U_nu(x-nu
+	site = l->prev[i][d1]; // x - mu
+	memcpy(u1, f->su2link[site][d1], SU2LINK * sizeof(*u1));
+	site = l->prev[site][d2]; // x - nu - mu
+	memcpy(u2, f->su2link[site][d2], SU2LINK * sizeof(*u1));
+	memcpy(u3, f->su2link[site][d1], SU2LINK * sizeof(*u1));
+	site = l->prev[i][d2]; // x - nu
+	memcpy(u4, f->su2link[site][d2], SU2LINK * sizeof(*u1));
+	// take conjugates and multiply
+	for (int k=1; k<SU2LINK; k++) {
+		u1[k] = -1.0*u1[k];
+		u2[k] = -1.0*u2[k];
+	}
+	su2rot(u3, u4);
+	su2rot(u2, u3);
+	su2rot(u1, u2);
+	for (int k=0; k<SU2LINK; k++) {
+		clover[k] += u1[k];
+	}
+
+	// U^+_nu(x-nu) U_mu(x-nu) U_nu(x+mu-nu)U^+_mu(x)
+	site = l->prev[i][d2]; // x - nu
+	memcpy(u1, f->su2link[site][d2], SU2LINK * sizeof(*u1));
+	memcpy(u2, f->su2link[site][d1], SU2LINK * sizeof(*u1));
+	site = l->next[site][d1]; // x + mu - nu
+	memcpy(u3, f->su2link[site][d2], SU2LINK * sizeof(*u1));
+	memcpy(u4, f->su2link[i][d1], SU2LINK * sizeof(*u1));
+	// take conjugates and multiply
+	for (int k=1; k<SU2LINK; k++) {
+		u1[k] = -1.0*u1[k];
+		u4[k] = -1.0*u4[k];
+	}
+	su2rot(u3, u4);
+	su2rot(u2, u3);
+	su2rot(u1, u2);
+	for (int k=0; k<SU2LINK; k++) {
+		clover[k] += u1[k];
+	}
+
+	// done
+}
+
+
 
 /**********************************
 * 	Routines for U(1) fields		*
@@ -362,11 +459,11 @@ double localact_su2link(fields const* f, params const* p, long i, int dir) {
 * but for U(1). Note that since we take the real part,
 * the result is just a cosine.
 */
-double u1ptrace(fields const* f, params const* p, long i, int dir1, int dir2) {
+double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 
 	double u1 = f->u1link[i][dir1];
-	double u2 = f->u1link[ p->next[i][dir1] ][dir2];
-	double u3 = f->u1link[ p->next[i][dir2] ][dir1];
+	double u2 = f->u1link[ l->next[i][dir1] ][dir2];
+	double u3 = f->u1link[ l->next[i][dir2] ][dir1];
 	double u4 = f->u1link[i][dir2];
 
 	return cos(u1 + u2 - u3 - u4);
@@ -379,13 +476,13 @@ double u1ptrace(fields const* f, params const* p, long i, int dir1, int dir2) {
 *  Specifically, calculates:
 * beta_U1 * \Sum_{i < j} [1 - cos(a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x)]
 */
-long double local_u1wilson(fields const* f, params const* p, long i) {
+double local_u1wilson(lattice const* l, fields const* f, params const* p, long i) {
 
-	long double res = 0.0;
+	double res = 0.0;
 
-	for (int dir1 = 0; dir1 < p->dim; dir1++) {
+	for (int dir1 = 0; dir1 < l->dim; dir1++) {
 		for (int dir2 = 0; dir2 < dir1; dir2++ ) {
-			res += (1.0 - u1ptrace(f, p, i, dir2, dir1) );
+			res += (1.0 - u1ptrace(l, f, i, dir2, dir1) );
 		}
 	}
 
@@ -399,21 +496,21 @@ long double local_u1wilson(fields const* f, params const* p, long i) {
 *
 * See localact_su2link() for SU(2) version.
 */
-double localact_u1link(fields const* f, params const* p, long i, int dir) {
+double localact_u1link(lattice const* l, fields const* f, params const* p, long i, int dir) {
 
 	double tot = 0.0;
 
-	for (int dir2 = 0; dir2<p->dim; dir2++) {
+	for (int dir2 = 0; dir2<l->dim; dir2++) {
 		if (dir2 != dir) {
-			tot += (1.0 - u1ptrace(f, p, i, dir, dir2));
-			tot += (1.0 - u1ptrace(f, p, p->prev[i][dir2], dir, dir2));
+			tot += (1.0 - u1ptrace(l, f, i, dir, dir2));
+			tot += (1.0 - u1ptrace(l, f, l->prev[i][dir2], dir, dir2));
 		}
 	}
 	tot *= p->betau1;
 
 	// hopping terms:
 	#ifdef HIGGS
-		tot += hopping_doublet_forward(f, p, i, dir);
+		tot += hopping_doublet_forward(l, f, p, i, dir);
 	#endif
 
 	return tot;
@@ -475,13 +572,13 @@ double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 *		-Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3)
 * for j = dir and \alpha_j(x) = 0 if hypercharge is neglected.
 */
-double hopping_doublet_forward(fields const* f, params const* p, long i, int dir) {
+double hopping_doublet_forward(lattice const* l, fields const* f, params const* p, long i, int dir) {
 	double *phi1 = f->su2doublet[i];
 	double *phi2 = NULL;
 	double *U = NULL;
 	double tot = 0.0;
 
-	phi2 = f->su2doublet[(p->next[i][dir])];
+	phi2 = f->su2doublet[(l->next[i][dir])];
 	U = f->su2link[i][dir];
 
 	#ifndef U1
@@ -500,13 +597,13 @@ double hopping_doublet_forward(fields const* f, params const* p, long i, int dir
 *		- Tr \Phi(x-j)^+ U_j(x-j) \Phi(x) exp(-i \alpha_j(x-j) \sigma_3)
 * for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected.
 */
-double hopping_doublet_backward(fields const* f, params const* p, long i, int dir) {
+double hopping_doublet_backward(lattice const* l, fields const* f, params const* p, long i, int dir) {
 	double *phi1 = NULL;
 	double *phi2 = f->su2doublet[i];
 	double *U = NULL;
 	double tot = 0.0;
 
-	long previous = p->prev[i][dir];
+	long previous = l->prev[i][dir];
 
 	phi1 = f->su2doublet[previous];
 	U = f->su2link[previous][dir];
@@ -526,12 +623,12 @@ double hopping_doublet_backward(fields const* f, params const* p, long i, int di
 * in the "forward" directions. Specifically, calculates
 *		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ]
 */
-double covariant_doublet(fields const* f, params const* p, long i) {
+double covariant_doublet(lattice const* l, fields const* f, params const* p, long i) {
 	double tot = 0.0;
 	double mod = doubletsq(f->su2doublet[i]);
-	for (int dir=0; dir<p->dim; dir++){
+	for (int dir=0; dir<l->dim; dir++){
 		// multiply by 2 here because doubletsq gives 0.5 Tr Phi^+ Phi
-		tot += 2.0 * mod + hopping_doublet_forward(f, p, i, dir);
+		tot += 2.0 * mod + hopping_doublet_forward(l, f, p, i, dir);
 	}
 
 	return tot;
@@ -562,16 +659,16 @@ double higgspotential(fields const* f, params const* p, long i) {
 * in "forward" and "backwards" directions.
 * Used in metropolis update.
 */
-double localact_doublet(fields const* f, params const* p, long i) {
+double localact_doublet(lattice const* l, fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
 	// Full covariant derivative with the local Tr Phi^+ Phi included,
 	// and summed over directions:
-	tot += covariant_doublet(f, p, i);
+	tot += covariant_doublet(l, f, p, i);
 
-	for (int dir=0; dir<p->dim; dir++) {
+	for (int dir=0; dir<l->dim; dir++) {
 		// contribution from backwards hopping terms:
-		tot += hopping_doublet_backward(f, p, i, dir);
+		tot += hopping_doublet_backward(l, f, p, i, dir);
 	}
 
 	tot += higgspotential(f, p, i);
@@ -585,8 +682,7 @@ double localact_doublet(fields const* f, params const* p, long i) {
 // We assume zero hypercharge for these
 
 /* Calculate Tr A^2 for an adjoint field.
-*	 This corresponds to 0.5 A^a A^a in continuum notation.
-*/
+*	 This corresponds to 0.5 A^a A^a in continuum notation. */
 double tripletsq(double* a) {
 	return 0.5*(a[0]*a[0] + a[1]*a[1] + a[2]*a[2]);
 }
@@ -613,13 +709,13 @@ double hopping_trace_triplet(double* a1, double* u, double* a2) {
 *		-2 Tr A(x) U_j(x) A(x+j) U_j(x)^+
 * for j = dir.
 */
-double hopping_triplet_forward(fields const* f, params const* p, long i, int dir) {
+double hopping_triplet_forward(lattice const* l, fields const* f, params const* p, long i, int dir) {
 	double *a1 = f->su2triplet[i];
 	double *a2 = NULL;
 	double *U = NULL;
 	double tot = 0.0;
 
-	a2 = f->su2triplet[p->next[i][dir]];
+	a2 = f->su2triplet[l->next[i][dir]];
 	U = f->su2link[i][dir];
 
 	tot -= 2.0 * hopping_trace_triplet(a1, U, a2);
@@ -632,13 +728,13 @@ double hopping_triplet_forward(fields const* f, params const* p, long i, int dir
 *		-2 Tr A(x-j) U_j(x-j) A(x) U_j(x-j)^+
 * for j = dir.
 */
-double hopping_triplet_backward(fields const* f, params const* p, long i, int dir) {
+double hopping_triplet_backward(lattice const* l, fields const* f, params const* p, long i, int dir) {
 	double *a1 = NULL;
 	double *a2 = f->su2triplet[i];
 	double *U = NULL;
 	double tot = 0.0;
 
-	long previous = p->prev[i][dir];
+	long previous = l->prev[i][dir];
 
 	a1 = f->su2triplet[previous];
 	U = f->su2link[previous][dir];
@@ -653,11 +749,11 @@ double hopping_triplet_backward(fields const* f, params const* p, long i, int di
 *		2 \sum_j [ Tr A^2 - Tr A(x) U_j(x) A(x+j) U_j(x)^+ ]
 * using hopping_triplet_forward().
 */
-double covariant_triplet(fields const* f, params const* p, long i) {
+double covariant_triplet(lattice const* l, fields const* f, params const* p, long i) {
 	double tot = 0.0;
 	double mod = tripletsq(f->su2triplet[i]);
-	for (int dir=0; dir<p->dim; dir++) {
-		tot += 2.0 * mod + hopping_triplet_forward(f, p, i, dir);
+	for (int dir=0; dir<l->dim; dir++) {
+		tot += 2.0 * mod + hopping_triplet_forward(l, f, p, i, dir);
 	}
 
 	return tot;
@@ -668,16 +764,16 @@ double covariant_triplet(fields const* f, params const* p, long i) {
 * in "forward" and "backwards" directions.
 * Used in metropolis update.
 */
-double localact_triplet(fields const* f, params const* p, long i) {
+double localact_triplet(lattice const* l, fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
 	// Full covariant derivative with the local 2*Tr A^2 included,
 	// and summed over directions:
-	tot += covariant_triplet(f, p, i);
+	tot += covariant_triplet(l, f, p, i);
 
-	for (int dir=0; dir<p->dim; dir++) {
+	for (int dir=0; dir<l->dim; dir++) {
 		// contribution from backwards hopping terms:
-		tot += hopping_triplet_backward(f, p, i, dir);
+		tot += hopping_triplet_backward(l, f, p, i, dir);
 	}
 
 	// add potential
@@ -690,4 +786,220 @@ double localact_triplet(fields const* f, params const* p, long i) {
 	#endif
 
 	return tot;
+}
+
+
+/* Smearing routines. These construct a smeared field at each site
+* by averaging over the field and its covariant connection with nearest neighbors.
+* Naturally used with blocking routines.
+* In all routines here the input
+* smear_dir[j] = 1 if the direction j is to be smeared, 0 otherwise. */
+
+
+/* Smear the SU(2) link at site i and store in res (link components).
+* This is done by calculating extended staples in the smearing directions,
+* including only pure gauge contributions.
+* See M. Teper, Phys.Lett.B 183 (1987);
+* however Kari seems to use slightly different blocking where he
+* separately calculates two staples:
+* 	U_i(y) = V_i(x) V_i(x+i), where
+*		V_i(x) = U_i(x) + \sum_j U_j(x) U_i(x+j) U_j^+(x+i)
+* with the sum running over blocked directions, including backwards dirs, and j != i.
+* Kari has normalization factor of 1/3 in V_i because for i=1,2, the original link
+* plus a backwards and forward staple contributes. I am using Kari's method here.
+*/
+void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
+
+	if (!smear_dir[dir]) {
+		printf("WARNING: smearing gauge link without blocking the lattice dimension (in su2u1.c)\n");
+	}
+
+	double stap[SU2LINK] = { 0.0 };
+	memcpy(res, f->su2link[i][dir], SU2LINK * sizeof(*f->su2link[i][dir])); // will first construct res = V_dir(x)
+
+	double v2[SU2LINK]; // v2 = V_dir(x+dir)
+	memcpy(v2, f->su2link[ l->next[i][dir] ][dir], SU2LINK * sizeof(*f->su2link[i][dir]));
+
+	int paths = 1; // how many "paths" are involved in smearing
+	for (int j=0; j<l->dim; j++) {
+		if (j != dir && smear_dir[j]) {
+			// staples, but with the usual direction reversed (so take Hermitian conjugate)
+			su2staple_wilson_onedir(l, f, i, dir, j, 1, stap);
+			for (int k=0; k<SU2LINK; k++) {
+				res[k] += stap[k];
+			}
+
+			// repeat for site x+dir
+			su2staple_wilson_onedir(l, f, l->next[i][dir], dir, j, 1, stap);
+			for (int k=0; k<SU2LINK; k++) {
+				v2[k] += stap[k];
+			}
+
+			paths += 2; // counterwise and clockwise staples
+		}
+	}
+
+	// normalize
+	for (int k=0; k<SU2LINK; k++) {
+		res[k] /= ((double) paths);
+		v2[k] /= ((double) paths);
+	}
+
+	su2rot(res, v2); // res <- V1.V2 = V_dir(x) V_dir(x+dir)
+	// in general this is unitary but not necessarily in SU(2). so normalize again:
+	double det = su2sqr(res);
+	det = sqrt(det);
+	for (int k=0; k<SU2LINK; k++) {
+		res[k] /= det;
+	}
+
+}
+
+
+/* Same as su2staple_wilson(), but only does the staple for U_mu(x) in one direction = nu.
+* If dagger = 1, also takes the Hermitian conjugate of both forward and backward staples */
+void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res) {
+	if (mu == nu) {
+		res[0] = 1.0;
+		for(int k=1; k<SU2LINK; k++) {
+			res[k] = 0.0;
+		}
+		return;
+	}
+
+	double tot[SU2LINK] = { 0.0 };
+	double* u1 = NULL;
+	double* u2 = NULL;
+	double* u3 = NULL;
+
+	// "upper" staple U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
+	u1 = f->su2link[ l->next[i][mu] ][nu];
+	u2 = f->su2link[ l->next[i][nu] ][mu];
+	u3 = f->su2link[i][nu];
+	su2staple_counterwise(tot, u1, u2, u3);
+	for(int k=0; k<SU2LINK; k++) {
+		// take conjugate if needed
+		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
+		res[k] = tot[k];
+	}
+
+	// "lower" staple U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu)
+	long site = l->next[i][mu];
+	site = l->prev[site][nu];
+	u1 = f->su2link[site][nu];
+	u2 = f->su2link[ l->prev[i][nu] ][mu];
+	u3 = f->su2link[ l->prev[i][nu] ][nu];
+	su2staple_clockwise(tot, u1, u2, u3);;
+	for(int k=0; k<SU2LINK; k++) {
+		// take conjugate if needed
+		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
+		res[k] += tot[k];
+	}
+
+}
+
+
+/* Smear the triplet field at site i and store in res (triplet components).
+* This is done by calculating
+* 	Sigma(x) + sum_j U_j(x) Sigma(x+j) U^+_j (x)
+* and normalizing with the number of sites. The sum is over
+* directions specified in smear_dir, and contains both forward and backward terms.
+* Here U_{-j}(x) = U^+_j(x-j). */
+void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i) {
+
+	int sites = 1; // how many sites are involved in smearing
+	double cov[SU2TRIP] = {0.0};
+
+	for (int dir=0; dir<l->dim; dir++) {
+		if (smear_dir[dir]) {
+			// forward connection Ui(x) Sigma(x+i) Ui^+(x)
+			double* u = f->su2link[i][dir];
+			long next = l->next[i][dir];
+			double* b = f->su2triplet[next];
+			cov[0] += b[0]*(u[0]*u[0]) + b[0]*(u[1]*u[1]) - 2*b[2]*u[0]*u[2]
+							+ 2*b[1]*u[1]*u[2] - b[0]*(u[2]*u[2]) + 2*b[1]*u[0]*u[3]
+							+ 2*b[2]*u[1]*u[3] - b[0]*(u[3]*u[3]);
+
+			cov[1] += b[1]*(u[0]*u[0]) + 2*b[2]*u[0]*u[1] - b[1]*(u[1]*u[1])
+							+ 2*b[0]*u[1]*u[2] + b[1]*(u[2]*u[2]) - 2*b[0]*u[0]*u[3]
+							+ 2*b[2]*u[2]*u[3] - b[1]*(u[3]*u[3]);
+
+			cov[2] += b[2]*(u[0]*u[0]) - 2*b[1]*u[0]*u[1] - b[2]*(u[1]*u[1])
+							+ 2*b[0]*u[0]*u[2] - b[2]*(u[2]*u[2]) + 2*b[0]*u[1]*u[3]
+							+ 2*b[1]*u[2]*u[3] + b[2]*(u[3]*u[3]);
+
+			// backward connection Ui^+(x-i) Sigma(x-i) Ui(x-i)
+			long prev = l->prev[i][dir];
+			u = f->su2link[prev][dir];
+			b = f->su2triplet[prev];
+			cov[0] += b[0]*(u[0]*u[0]) + b[0]*(u[1]*u[1]) + 2*b[2]*u[0]*u[2]
+							+ 2*b[1]*u[1]*u[2] - b[0]*(u[2]*u[2]) - 2*b[1]*u[0]*u[3]
+							+ 2*b[2]*u[1]*u[3] - b[0]*(u[3]*u[3]);
+
+			cov[1] += b[1]*(u[0]*u[0]) - 2*b[2]*u[0]*u[1] - b[1]*(u[1]*u[1])
+							+ 2*b[0]*u[1]*u[2] + b[1]*(u[2]*u[2]) + 2*b[0]*u[0]*u[3]
+							+ 2*b[2]*u[2]*u[3] - b[1]*(u[3]*u[3]);
+
+			cov[2] += b[2]*(u[0]*u[0]) + 2*b[1]*u[0]*u[1] - b[2]*(u[1]*u[1])
+							- 2*b[0]*u[0]*u[2] - b[2]*(u[2]*u[2]) + 2*b[0]*u[1]*u[3]
+							+ 2*b[1]*u[2]*u[3] + b[2]*(u[3]*u[3]);
+
+			sites += 2; // involves 2 nearest neighbors
+		}
+	}
+
+	for (int k=0; k<SU2TRIP; k++) {
+		res[k] = f->su2triplet[i][k] + cov[k];
+		res[k] = res[k] / ((double) sites);
+	}
+}
+
+
+/* Smear all fields and store in f_b. Does not smear fields at odd sites in smearing
+* directions, because those are not needed for blocked lattices.
+*/
+void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir) {
+
+  // no halos
+  for (long i=0; i<l->sites; i++) {
+    int skip = 0;
+
+    // smear fields only on the sites that end up on the blocked lattice
+    for (int dir=0; dir<l->dim; dir++) {
+      if (block_dir[dir] && l->coords[i][dir] % 2 != 0) {
+        // no need to smear these
+        skip = 1;
+        break;
+      }
+    }
+
+    if (!skip) {
+      // create blocked fields by smearing in the specified dirs.
+
+      // gauge links. links pointing in non-smeared directions remain unchanged
+      for (int dir=0; dir<l->dim; dir++) {
+        if (block_dir[dir]) {
+          smear_link(l, f, block_dir, f_b->su2link[i][dir], i, dir);
+          #ifdef U1
+
+          #endif
+        } else {
+          memcpy(f_b->su2link[i][dir], f->su2link[i][dir], SU2LINK * sizeof(*f->su2link[i][dir]));
+          #ifdef U1
+            f_b->u1link[i][dir] = f->u1link[i][dir];
+          #endif
+        }
+      } // end dir
+
+      // scalars
+      #ifdef HIGGS
+
+      #endif
+      #ifdef TRIPLET
+        smear_triplet(l, f, block_dir, f_b->su2triplet[i], i);
+      #endif
+
+    }
+
+  } // end i
 }

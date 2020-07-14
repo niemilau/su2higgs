@@ -27,7 +27,7 @@ void check_set(int set, char *name) {
  * This routine also checks that no essential parameters are missing.
  * Original implementation by David Weir.
  */
-void get_parameters(char *filename, params *p) {
+void get_parameters(char *filename, lattice* l, params *p) {
 
 	int set_dim = 0;
   int set_L = 0;
@@ -41,6 +41,15 @@ void get_parameters(char *filename, params *p) {
   int set_local_meas = 0;
 
   int set_interval_z = 0;
+
+  #ifdef CORRELATORS
+    int set_do_correlators = 0;
+    int set_correlator_interval = 0;
+  #endif
+
+  #ifdef BLOCKING
+    int set_blocks = 0;
+  #endif
 
   #ifdef GRADFLOW
     int set_do_flow = 0;
@@ -124,7 +133,7 @@ void get_parameters(char *filename, params *p) {
       fprintf(stderr,"Unable to read input line: %s",total);
 
 		else if(!strcasecmp(key,"dim")) {
-      p->dim = strtol(value,NULL,10);
+      l->dim = strtol(value,NULL,10);
       set_dim = 1;
     }
 		else if(!strcasecmp(key,"multicanonical")) {
@@ -214,7 +223,7 @@ void get_parameters(char *filename, params *p) {
 				p->resultsfile = stderr;
       } else {
 				// open results file for the master node only
-				if(!p->rank) {
+				if(!l->rank) {
 					p->resultsfile = fopen(value, "a");
 				} else {
 					p->resultsfile = NULL;
@@ -314,6 +323,23 @@ void get_parameters(char *filename, params *p) {
     }
     #endif
 
+    #ifdef CORRELATORS
+      else if(!strcasecmp(key,"do_correlators")) {
+        p->do_correlators = strtol(value,NULL,10);
+        set_do_correlators = 1;
+      } else if(!strcasecmp(key,"correlator_interval")) {
+        p->correlator_interval = strtol(value,NULL,10);
+        set_correlator_interval = 1;
+      }
+    #endif
+
+    #ifdef BLOCKING
+      else if(!strcasecmp(key,"blocks")) {
+        p->blocks = strtol(value,NULL,10);
+        set_blocks = 1;
+      }
+    #endif
+
   }
 
 	check_set(set_dim, "dim");
@@ -321,12 +347,12 @@ void get_parameters(char *filename, params *p) {
 	// Allocate memory for lattice side lengths.
 	// This couldn't be done earlier because we didn't know the dimension
 	// p.parity is allocated in alloc.c, alloc_neighbors().
-	p->L = malloc(p->dim * sizeof(p->L));
+	l->L = malloc(l->dim * sizeof(*(l->L)));
 
 	// read the file again for lattice sizes L_i. This could use some polishing
 	char istr[255];
 	int set = 0;
-	for (int i=1; i<=p->dim; i++) {
+	for (int i=1; i<=l->dim; i++) {
 		char LL[256] = "L";
 		rewind(config);
 		sprintf(istr, "%d", i);
@@ -353,14 +379,14 @@ void get_parameters(char *filename, params *p) {
 				fprintf(stderr,"Unable to read input line: %s",total);
 
 			if(!strcasecmp(key, LL)) {
-				p->L[i-1] = strtol(value,NULL,10);
+				l->L[i-1] = strtol(value,NULL,10);
 				set++;
 				continue;
 			}
 		}
 	}
 
-	if (set != p->dim) {
+	if (set != l->dim) {
 		fprintf(stderr,
 		"Failed to set lattice lengths! Only set %d sides.\n", set);
 	} else {
@@ -371,11 +397,11 @@ void get_parameters(char *filename, params *p) {
 
 
   // calculate total volume now that we know the side lengths
-  p->vol = 1;
-  for (int dir=0; dir<p->dim; dir++) {
-    p->vol *= p->L[dir];
-		if (p->L[dir] % 2 != 0) {
-			printf0(*p, "WARNING!! Lattice side length L%d is an odd number! Checkerboard updating is not well defined...\n", dir);
+  l->vol = 1;
+  for (int dir=0; dir<l->dim; dir++) {
+    l->vol *= l->L[dir];
+		if (l->L[dir] % 2 != 0) {
+			printf0(*l, "WARNING!! Lattice side length L%d is an odd number! Checkerboard updating is not well defined...\n", dir);
 		}
   }
 
@@ -432,6 +458,15 @@ void get_parameters(char *filename, params *p) {
     check_set(set_flow_t_max, "flow_t_max");
   #endif
 
+  #ifdef CORRELATORS
+    check_set(set_do_correlators, "do_correlators");
+    check_set(set_correlator_interval, "correlator_interval");
+  #endif
+
+  #ifdef BLOCKING
+    check_set(set_blocks, "blocks");
+  #endif
+
   fclose(config);
 
 }
@@ -440,7 +475,7 @@ void get_parameters(char *filename, params *p) {
 /* Just like get_parameters(), but reads params related to
 * multicanonical weighting.
 */
-void get_weight_parameters(char *filename, params *p, weight* w) {
+void get_weight_parameters(char *filename, lattice const* l, params *p, weight* w) {
 
 	if (!p->multicanonical) {
 		// no multicanonical, so just set dummy values
@@ -535,27 +570,27 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 				#ifdef HIGGS
         else if(!strcasecmp(value,"phisq")) {
   	       w->orderparam = PHISQ;
-           printf0(*p, "Multicanonical order parameter: phi^2\n");
+           printf0(*l, "Multicanonical order parameter: phi^2\n");
         }
 				#endif
 				#ifdef TRIPLET
 				else if (!strcasecmp(value,"Sigmasq")) {
   	       w->orderparam = SIGMASQ;
-           printf0(*p, "Multicanonical order parameter: Tr Sigma^2 \n");
+           printf0(*l, "Multicanonical order parameter: Tr Sigma^2 \n");
         }
 				else if (!strcasecmp(value,"phi2Sigma2")) {
   	       w->orderparam = PHI2SIGMA2;
-           printf0(*p, "Multicanonical order parameter: phi^2 Tr Sigma^2 \n");
+           printf0(*l, "Multicanonical order parameter: phi^2 Tr Sigma^2 \n");
         }
           #ifdef HIGGS
           else if (!strcasecmp(value,"phi2minusSigma2")) {
     	       w->orderparam = PHI2MINUSSIGMA2;
-             printf0(*p, "Multicanonical order parameter: phi^2 - Tr Sigma^2 \n");
+             printf0(*l, "Multicanonical order parameter: phi^2 - Tr Sigma^2 \n");
           }
           #endif
 				#endif
 				else {
-          printf0(*p, "Unknown multicanonical order parameter!!\n");
+          printf0(*l, "Unknown multicanonical order parameter!!\n");
           w->orderparam = 0;
         }
       } // end order param
@@ -583,13 +618,13 @@ void get_weight_parameters(char *filename, params *p, weight* w) {
 /** Write a summary of the loaded parameters to stderr.
  */
 
-void print_parameters(params p) {
+void print_parameters(lattice l, params p) {
 	printf("Volume ");
-	for (int dir = 0; dir<p.dim; dir++) {
+	for (int dir = 0; dir<l.dim; dir++) {
     if (dir>0) printf(" x ");
-		printf("%d", p.L[dir]);
+		printf("%d", l.L[dir]);
 	}
-	printf( ", total %lu\n",p.vol);
+	printf( ", total %lu\n", l.vol);
 
   printf("iterations %lu, measurement interval %lu, checkpoint interval %lu\n",
 		p.iterations, p.interval, p.checkpoint);
@@ -621,7 +656,7 @@ void print_parameters(params p) {
 /* Read config file again and update certain values. This is called at every checkpoint to
 * see if the iterations limit has been changed by the user.
 */
-void read_updated_parameters(char *filename, params *p) {
+void read_updated_parameters(char *filename, lattice const* l, params *p) {
 
 	FILE *config;
 	long new;
@@ -654,21 +689,21 @@ void read_updated_parameters(char *filename, params *p) {
 				new = strtol(value,NULL,10);
 				if (p->iterations != new) {
 					p->iterations = new;
-					printf0(*p, "Updated max iterations to %ld\n", new);
+					printf0(*l, "Updated max iterations to %ld\n", new);
 				}
 			}
 			else if(!strcasecmp(key,"interval")) {
 				new = strtol(value,NULL,10);
 				if (p->interval != new) {
 					p->interval = new;
-					printf0(*p, "Updated measurement interval to %ld\n", new);
+					printf0(*l, "Updated measurement interval to %ld\n", new);
 				}
 			}
 			else if(!strcasecmp(key,"checkpoint")) {
 				new = strtol(value,NULL,10);
 				if (p->checkpoint != new) {
 					p->checkpoint = new;
-					printf0(*p, "Updated checkpoint interval to %ld\n", new);
+					printf0(*l, "Updated checkpoint interval to %ld\n", new);
 				}
 			}
 

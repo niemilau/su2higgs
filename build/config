@@ -8,15 +8,15 @@
 
 dim 3
 
-L1 12
-L2 12
-L3 12
+L1 32
+L2 32
+L3 32
 
 # start new simulation (initial configuration still read from latticefile)?
 reset 0
 
 # iterations
-iterations 50000
+iterations 2000000
 
 # how many thermalization sweeps before starting measurements/weighting?
 n_thermalize 100
@@ -39,7 +39,7 @@ latticefile lattice
 ### parameters
 ## at T = 122.3, a = 0.008240436430478594
 # gauge couplings
-betasu2 10.0
+betasu2 8.0
 #betau1 8.0
 
 # doublet
@@ -47,9 +47,8 @@ msq -1.2821488473242986
 lambda 0.20270573608868533
 
 # triplet
-msq_triplet -2.0685031289328344
-b4 0.44344700535747866
-
+msq_triplet -0.741522
+b4 0.175
 a2 2.6953060227675745
 
 # initial values for fields (overwritten by existing lattice file)
@@ -96,17 +95,14 @@ readonly 1
 increment 0.3
 
 
-#### Gradient flow ####
-
-do_flow 1
-flow_dt 0.02
-flow_t_max 4.0
-
-## how many iterations between gradient flows
+do_flow 0
+flow_meas_interval 10
+flow_dt 0.05
 flow_interval 1000
+flow_t_max 10
 
-## how often to measure during flow (in units of dt)
-flow_meas_interval 5
+measure_local 0
 
-## store local measurements? very expensive!
-measure_local 1
+do_correlators 1
+correlator_interval 10
+blocks 4
