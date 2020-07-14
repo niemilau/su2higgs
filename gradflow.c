@@ -200,7 +200,7 @@ void grad_force_link(lattice const* l, fields const* f, params const* p, double*
   */
 
   double s[SU2LINK];
-  su2staple_wilson(l, f, p, i, dir, s);
+  su2staple_wilson(l, f, i, dir, s);
   for (int a=0; a<SU2LINK; a++) {
     s[a] *= - p->betasu2 / (8.0);
   }

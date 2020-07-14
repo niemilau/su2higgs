@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
 		int corr_dir = l.longest_dir;
 		if (p.do_correlators && !l.rank) {
 			print_labels_correlators();
-			printf("\nMeasuring correlation functions along direction %d every %d iterations\n", corr_dir, p.correlator_interval);
+			printf("\nMeasuring correlation functions along direction %d every %d iterations\n", corr_dir+1, p.correlator_interval);
 		}
 	#endif
 
@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 
 		#ifdef CORRELATORS
 			if (p.do_correlators && iter % p.correlator_interval == 0) {
-				measure_correlators("correlators_0", &l, &f, &p, corr_dir, correlator_id);
+				measure_correlators("correl0", &l, &f, &p, corr_dir, correlator_id);
 
 				#ifdef BLOCKING // repeat with blocked lattices
 					for (int k=0; k<block_levels; k++) {

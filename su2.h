@@ -45,6 +45,10 @@ double waittime;
 double Global_comms_time, Global_total_time;
 double Global_current_action; // for debugging gradient flows etc
 
+typedef struct {
+	double re, im;
+}	complex;
+
 /* Struct "lattice": contains info on lattice dimensions, lookup tables for
 * sites and everything related to parallelization. */
 typedef struct {
@@ -261,6 +265,14 @@ inline char otherparity(char parity) {
 		return EVEN;
 }
 
+// multiply two complex numbers
+inline complex cmult(complex z1, complex z2) {
+	complex res;
+	res.re = z1.re*z2.re - z1.im*z2.im;
+	res.im = z2.re*z1.im + z1.re*z2.im;
+	return res;
+}
+
 // comms.c
 void make_comlists(lattice *l, comlist_struct *comlist);
 int addto_comlist(comlist_struct* comlist, int rank, long i, int sendrecv, char evenodd, long init_max);
@@ -335,12 +347,13 @@ void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2,
 double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
 long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i);
 double localact_su2link(lattice const* l, fields const* f, params const* p, long i, int dir);
-void su2staple_wilson(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
+void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V);
 void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res);
 void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
 double su2trace4(double *u1, double *u2, double *u3, double *u4);
 void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
 void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
+void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, double* clover);
 double hopping_trace(double* phi1, double* u, double* phi2);
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a);
 double hopping_trace_triplet(double* a1, double* u, double* a2);
@@ -444,9 +457,8 @@ void free_muca_arrays(fields* f, weight *w);
 	double higgs_correlator(lattice* l, fields const* f, int x, int dir);
 	#ifdef TRIPLET
 		double triplet_correlator(lattice* l, fields const* f, int d, int dir);
-		double projected_photon_operator(lattice* l, fields const* f, int z, int dir,
-		      int* mom, double* res_re, double* res_im);
-		void projected_photon_correlator(lattice* l, fields const* f, int d, int dir, double* res_re, double* res_im);
+		complex projected_photon_operator(lattice* l, fields const* f, int z, int dir, int* mom);
+		complex projected_photon_correlator(lattice* l, fields const* f, int d, int dir);
 		double projected_photon_operator_old(lattice* l, fields const* f, params const* p, int z, int dir,
 		      int* mom, double* res_re, double* res_im);
 		void projected_photon_correlator_old(lattice* l, fields const* f, params const* p, int d,

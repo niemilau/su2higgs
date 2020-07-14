@@ -665,7 +665,7 @@ void test_blocking(lattice* l, lattice* b, int const* block_dir) {
   alloc_fields(b, &f_b);
 
   long x, y;
-  // use just the SU(2) links for testing. no distinction between different dirs though
+  // use SU(2) links (and triplet if specified) for testing. no distinction between different dirs though
   for (long i=0; i<l->sites; i++) {
     // calculate a unique value using Cantor pairing
     y = l->coords[i][0];
@@ -684,6 +684,15 @@ void test_blocking(lattice* l, lattice* b, int const* block_dir) {
         }
       }
     }
+    #ifdef TRIPLET
+      for (int k=0; k<SU2TRIP; k++) {
+
+        f.su2triplet[i][k] = y + (double) k / SU2TRIP;
+        if (i < b->sites) {
+          f_b.su2triplet[i][k] = -1.0;
+        }
+      }
+    #endif
   }
 
   make_blocked_fields(l, b, &f, &f_b);
@@ -720,6 +729,18 @@ void test_blocking(lattice* l, lattice* b, int const* block_dir) {
           }
         }
       }
+
+      #ifdef TRIPLET
+        for (int k=0; k<SU2TRIP; k++) {
+          // predicted value:
+          double val = y + (double) k / SU2TRIP;
+
+          if (fabs(f_b.su2triplet[i][k] - val) > 0.0001) {
+            printf("Node %d: error in test_blocking at site %ld!! triplet val is %lf; was supposed to be %lf (blocking.c)\n"
+                , b->rank, i, f_b.su2triplet[i][k], val);
+          }
+        }
+      #endif
 
     } // end i
 
