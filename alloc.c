@@ -76,24 +76,18 @@ double ***make_gaugefield(long sites, int dim, int dofs) {
 }
 
 
-/* Free the memory allocated by make_singletfield()
-*
-*/
+/* Free the memory allocated by make_singletfield() */
 void free_singletfield(double *field) {
   free(field);
 }
 
-/* Free the contiguous memory allocated by make_field()
-*
-*/
+/* Free the contiguous memory allocated by make_field() */
 void free_field(double **field) {
 	free(field[0]);
   free(field);
 }
 
-/* Free the contiguous memory allocated by make_gaugefield()
-*
-*/
+/* Free the contiguous memory allocated by make_gaugefield() */
 void free_gaugefield(long sites, double ***field) {
 
 	free(field[0][0]);
@@ -106,8 +100,7 @@ void free_gaugefield(long sites, double ***field) {
 }
 
 
-/** Allocate all the fields needed for a simulation.
- */
+/* Allocate all the fields needed for a simulation. */
 void alloc_fields(lattice const* l, fields *f) {
 
 	long sites = l->sites_total;
@@ -116,20 +109,21 @@ void alloc_fields(lattice const* l, fields *f) {
 	#ifdef HIGGS
 		f->su2doublet = make_field(sites, SU2DB);
 	#endif
+  #ifdef HIGGS2
+    f->doublet2 = make_field(sites, SU2DB);
+  #endif
 	#ifdef TRIPLET
 		f->su2triplet = make_field(sites, SU2TRIP);
 	#endif
   #ifdef U1
     /* allocate U(1) gauge field, accessed as u1link[i][dir]. Note that memory
-    * wise this is essentially just a non-gauge field with p.dim components.
-    */
+    * wise this is essentially just a non-gauge field with p.dim components. */
     f->u1link = make_field(sites, l->dim);
   #endif
 }
 
 
-/** Free all the fields allocated by alloc_fields().
- */
+/* Free all the fields allocated by alloc_fields(). */
 void free_fields(lattice const* l, fields *f) {
 
 	long sites = l->sites_total;
@@ -137,6 +131,9 @@ void free_fields(lattice const* l, fields *f) {
 	#ifdef HIGGS
 		free_field(f->su2doublet);
 	#endif
+  #ifdef HIGGS2
+    free_field(f->doublet2);
+  #endif
 	#ifdef TRIPLET
 		free_field(f->su2triplet);
 	#endif
@@ -148,8 +145,7 @@ void free_fields(lattice const* l, fields *f) {
 
 
 /* Allocate contiguous memory for long-valued 2D array.
-* These are mainly used for navigating on the lattice
-*/
+* These are mainly used for navigating on the lattice */
 long **alloc_latticetable(int dim, long sites) {
 
 	long **array = malloc(sites * sizeof(*(array)));

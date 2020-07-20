@@ -44,6 +44,18 @@ void print_acceptance(params p, counters c) {
 		}
 	#endif
 
+	#ifdef HIGGS2
+		if (p.algorithm_su2doublet == METROPOLIS) {
+			printf("Higgs2 %.2lf%%, ",
+				100.0*c.accepted_doublet2/c.total_doublet2);
+
+		} else if (p.algorithm_su2doublet == OVERRELAX) {
+			printf("Higgs2 overrelax %.2lf%%, Higgs2 Metropolis %.2lf%%, ",
+				100.0*c.acc_overrelax_doublet2/c.total_overrelax_doublet2,
+				100.0*c.accepted_doublet2/c.total_doublet2);
+		}
+	#endif
+
 	#ifdef TRIPLET
 		if (p.algorithm_su2triplet == METROPOLIS) {
 			printf("Triplet %.2lf%%, ",
@@ -86,13 +98,16 @@ void save_lattice(lattice const* l, fields f, counters c, char* fname) {
 	// fields. file is only open in root node, so others cannot use it here.
 	write_field(l, file, &f.su2link[0][0][0], l->dim * SU2LINK);
 	#ifdef U1
-	write_field(l, file, &f.u1link[0][0], l->dim);
+		write_field(l, file, &f.u1link[0][0], l->dim);
 	#endif
 	#ifdef HIGGS
-	write_field(l, file, &f.su2doublet[0][0], SU2DB);
+		write_field(l, file, &f.su2doublet[0][0], SU2DB);
+	#endif
+	#ifdef HIGGS2
+		write_field(l, file, &f.doublet2[0][0], SU2DB);
 	#endif
 	#ifdef TRIPLET
-	write_field(l, file, &f.su2triplet[0][0], SU2TRIP);
+		write_field(l, file, &f.su2triplet[0][0], SU2TRIP);
 	#endif
 
 	if (l->rank == 0) {
@@ -172,13 +187,16 @@ void load_lattice(lattice* l, fields* f, counters* c, char* fname) {
 	// Read fields. Ordering HAS to be same as in save_lattice()
 	read_field(l, file, &f->su2link[0][0][0], l->dim * SU2LINK);
 	#ifdef U1
-	read_field(l, file, &f->u1link[0][0], l->dim);
+		read_field(l, file, &f->u1link[0][0], l->dim);
 	#endif
 	#ifdef HIGGS
-	read_field(l, file, &f->su2doublet[0][0], SU2DB);
+		read_field(l, file, &f->su2doublet[0][0], SU2DB);
+	#endif
+	#ifdef HIGGS2
+		read_field(l, file, &f->doublet2[0][0], SU2DB);
 	#endif
 	#ifdef TRIPLET
-	read_field(l, file, &f->su2triplet[0][0], SU2TRIP);
+		read_field(l, file, &f->su2triplet[0][0], SU2TRIP);
 	#endif
 
 	// finally, sync all halo fields; these were not loaded from the file

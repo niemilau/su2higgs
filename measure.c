@@ -84,7 +84,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 		#ifdef HIGGS
 			for (int dir=0; dir<l->dim; dir++) {
-				hopping_phi += hopping_doublet_forward(l, f, p, i, dir) / l->dim;
+				hopping_phi += hopping_doublet_forward(l, f, p, f->su2doublet, i, dir) / l->dim;
 			}
 			mod = doubletsq(f->su2doublet[i]);
 			phi2 += mod;
@@ -127,7 +127,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	action = reduce_sum(action, l->comm);
 	wilson = reduce_sum(wilson, l->comm);
 	#ifdef U1
-	u1 = reduce_sum(u1wilson, l->comm);
+	u1wilson = reduce_sum(u1wilson, l->comm);
 	#endif
 	#ifdef HIGGS
 	hopping_phi = reduce_sum(hopping_phi, l->comm);
@@ -179,7 +179,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			#endif
 		#endif
 		#ifdef U1
-			fprintf(file, "%g ", u1/((double)l->vol) );
+			fprintf(file, "%g ", u1wilson/((double)l->vol) );
 		#endif
 		#ifdef TRIPLET
 			// store total magnetic charge density (should be ~0)
@@ -205,13 +205,11 @@ double action_local(lattice const* l, fields const* f, params const* p, long i) 
 		tot += local_u1wilson(l, f, p, i);
 	#endif
 
+	tot += higgspotential(f, p, i); // does nothing if no scalars are present
 	#ifdef HIGGS
-		tot += covariant_doublet(l, f, p, i) + higgspotential(f, p, i);
+		tot += covariant_doublet(l, f, p, f->su2doublet, i);
 	#endif
 	#ifdef TRIPLET
-		double mod = tripletsq(f->su2triplet[i]);
-		// potential + covariant derivative. Higgs portal term is included in higgspotential().
-		tot += p->msq_triplet * mod + p->b4 * mod * mod;
 		tot += covariant_triplet(l, f, p, i);
 	#endif
 
@@ -219,8 +217,7 @@ double action_local(lattice const* l, fields const* f, params const* p, long i) 
 }
 
 
-/* Make a label file for local measurements.
-*/
+/* Make a label file for local measurements. */
 void print_labels_local(lattice const* l, char* fname) {
 	FILE* f = fopen(fname, "w+");
 

@@ -33,6 +33,7 @@ double plane_sum(double (*funct)(double*), double** field, lattice* l, long x, i
   return res;
 }
 
+#ifdef HIGGS
 /* Calculate H(l) = (1/V) \sum_z h(z) h(z+l),
 * where h(z) = \sum_{x,y} Tr\Phi(z)\Phi(z).
 * Below the argument d = l and dir specifies which direction z lives in. */
@@ -55,6 +56,8 @@ double higgs_correlator(lattice* l, fields const* f, int d, int dir) {
   // also: doubletsq measures 0.5 Tr Phi^+ Phi, so multiply by 4 to get H(l)
   return 4.0*res / ((double) l->vol);
 }
+
+#endif // end HIGGS
 
 
 #ifdef TRIPLET
@@ -273,6 +276,13 @@ void measure_blocked_correlators(lattice* l, lattice* b, fields const* f, fields
   }
   fields f_smear;
   alloc_fields(l, &f_smear);
+
+  #if defined (HIGGS) || defined (HIGGS2)
+    printf("Error in correlation.c: Higgs smearing not yet implemented!!!\n");
+    free_fields(l, &f_smear);
+    return;
+  #endif
+
   smear_fields(l, f, &f_smear, block_dir);
   // transfer the smeared fields on the blocked lattice:
   make_blocked_fields(l, b, &f_smear, f_b);

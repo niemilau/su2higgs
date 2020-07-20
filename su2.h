@@ -132,9 +132,7 @@ typedef struct {
 	*/
 	int random_sweeps;
 
-	// Parameters in the action
-	// possible generalization: make separate structures
-	// for each field in the theory that contain their respective params
+	/* Parameters in the action */
 	double betasu2; // 4/(g^2)
 	double betau1; // 2/(g'^2)
 	// doublet
@@ -144,6 +142,13 @@ typedef struct {
 	double msq_triplet;
 	double a2; // Higgs portal
 	double b4; // self quartic
+
+	#ifdef HIGGS2
+		double msq_phi2;
+		complex m12sq;
+		double lam2, lam3, lam4;
+		complex lam5, lam6, lam7;
+	#endif
 
 	// initial values for fields
 	double phi0; // doublet
@@ -202,6 +207,11 @@ typedef struct {
 	double **su2triplet;
 	double **u1link;
 
+	#ifdef HIGGS2
+		double **doublet2;
+		double **backup_doublet2;
+	#endif
+
 	// backup arrays. these are used in global multicanonical steps in case the update sweep needs to be undone
 	double **backup_doublet;
 	double **backup_triplet;
@@ -222,6 +232,11 @@ typedef struct {
 	// count overrelax updates
 	long total_overrelax_doublet, acc_overrelax_doublet;
 	long total_overrelax_triplet, acc_overrelax_triplet;
+
+	#ifdef HIGGS2
+		long accepted_doublet2, total_doublet2;
+		long acc_overrelax_doublet2, total_overrelax_doublet2;
+	#endif
 
 	long total_muca, accepted_muca;
 } counters;
@@ -373,9 +388,11 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 double doubletsq(double* a);
 long double avg_doublet2(fields const* f, params const* p);
 long double avg_doublet4(fields const* f, params const* p);
-double hopping_doublet_forward(lattice const* l, fields const* f, params const* p, long i, int dir);
-double hopping_doublet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
-double covariant_doublet(lattice const* l, fields const* f, params const* p, long i);
+double hopping_doublet_forward(lattice const* l, fields const* f, params const* p,
+		double** phi, long i, int dir);
+double hopping_doublet_backward(lattice const* l, fields const* f, params const* p,
+		double** phi, long i, int dir);
+double covariant_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i);
 double localact_doublet(lattice const* l, fields const* f, params const* p, long i);
 double higgspotential(fields const* f, params const* p, long i);
 // triplet routines
@@ -415,12 +432,12 @@ int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight
 void shuffle(int *arr, int len);
 
 // init.c
-void setsu2(fields f, lattice l);
+void setsu2(fields* f, lattice const* l);
 void random_su2link(double *su2);
-void setu1(fields f, lattice l);
-void setfields(fields f, lattice l, params p);
-void setdoublets(fields f, lattice l, params p);
-void settriplets(fields f, lattice l, params p);
+void setu1(fields* f, lattice const* l);
+void setfields(fields* f, lattice* l, params const* p);
+void setdoublets(fields* f, lattice const* l, params const* p);
+void settriplets(fields* f, lattice const* l, params const* p);
 void copy_fields(lattice const* l, fields const* f_old, fields* f_new);
 void init_counters(counters* c);
 

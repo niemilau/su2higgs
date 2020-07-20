@@ -254,8 +254,7 @@ void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double
 *    -----
 *
 * Triplet is not included here, because its' hopping term is quadratic in the link
-* and cannot be expressed as a simple staple.
-*/
+* and cannot be expressed as a simple staple. */
 void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V) {
 
 	su2staple_wilson(l, f, i, dir, V);
@@ -349,8 +348,8 @@ double localact_su2link(lattice const* l, fields const* f, params const* p, long
 		}
 	}
 	tot *= p->betasu2;
-
-/* same using staples, for debugging. Both work.
+	/*
+	//same using staples, for debugging. Both work.
 	double staple[4];
 	double V[4];
 	memcpy(V, f.su2link[i][dir], SU2LINK*sizeof(double));
@@ -362,7 +361,7 @@ double localact_su2link(lattice const* l, fields const* f, params const* p, long
 
 	// hopping terms:
 	#ifdef HIGGS
-		tot += hopping_doublet_forward(l, f, p, i, dir);
+		tot += hopping_doublet_forward(l, f, p, f->su2doublet, i, dir);
 	#endif
 	#ifdef TRIPLET
 		tot += hopping_triplet_forward(l, f, p, i, dir);
@@ -449,7 +448,6 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 }
 
 
-
 /**********************************
 * 	Routines for U(1) fields		*
 ***********************************/
@@ -510,7 +508,7 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 
 	// hopping terms:
 	#ifdef HIGGS
-		tot += hopping_doublet_forward(l, f, p, i, dir);
+		tot += hopping_doublet_forward(l, f, p, f->su2doublet, i, dir);
 	#endif
 
 	return tot;
@@ -522,8 +520,7 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 ***********************************/
 
 /* Calculate 0.5 Tr \Phi^+ \Phi
-*	 which corresponds to \phi^\dagger \phi in continuum notation.
-*/
+*	 which corresponds to \phi^\dagger \phi in continuum notation. */
 double doubletsq(double* a) {
 	return 0.5 * (a[0]*a[0] + a[1]*a[1] + a[2]*a[2] + a[3]*a[3]);
 }
@@ -532,8 +529,7 @@ double doubletsq(double* a) {
 /* Calculate trace of two SU(2) doublets and a SU(2) link. Used in hopping terms.
 * Specifically, calculates:
 *		Tr \Phi_1^+ U \Phi_2.
-* Note that this is always real.
-*/
+* Note that this is always real. */
 double hopping_trace(double* phi1, double* u, double* phi2) {
 
 	return phi1[0]*phi2[0]*u[0] + phi1[1]*phi2[1]*u[0] + phi1[2]*phi2[2]*u[0] +
@@ -546,8 +542,7 @@ double hopping_trace(double* phi1, double* u, double* phi2) {
 
 /* Same as hopping_trace(), but includes hypercharge.
 * Specifically, calculates:
-*		Re Tr \Phi_1^+ U \Phi_2 exp[-i a sigma_3].
-*/
+*		Re Tr \Phi_1^+ U \Phi_2 exp[-i a sigma_3]. */
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 	double s = sin(a);
 	double c = cos(a);
@@ -567,88 +562,90 @@ double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 }
 
 
-/* Calculate the hopping term for a SU(2) doublet at site i,
+/* Calculate the hopping term for a SU(2) doublet 'phi' at site i,
 * in the "forward" direction. Specifically, calculates
 *		-Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3)
-* for j = dir and \alpha_j(x) = 0 if hypercharge is neglected.
-*/
-double hopping_doublet_forward(lattice const* l, fields const* f, params const* p, long i, int dir) {
-	double *phi1 = f->su2doublet[i];
+* for j = dir and \alpha_j(x) = 0 if hypercharge is neglected. */
+double hopping_doublet_forward(lattice const* l, fields const* f, params const* p,
+			double** phi, long i, int dir) {
+	double *phi1 = phi[i];
 	double *phi2 = NULL;
 	double *U = NULL;
 	double tot = 0.0;
 
-	phi2 = f->su2doublet[(l->next[i][dir])];
+	phi2 = phi[l->next[i][dir]];
 	U = f->su2link[i][dir];
 
 	#ifndef U1
-	// no U(1)
-	tot -= hopping_trace(phi1, U, phi2);
+		// no U(1)
+		tot -= hopping_trace(phi1, U, phi2);
 	#else
-	// include U(1)
-	tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[i][dir]);
+		// include U(1)
+		tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[i][dir]);
 	#endif
 
 	return tot;
 }
 
-/* Calculate the hopping term for a SU(2) doublet at site i,
+/* Calculate the hopping term for a SU(2) doublet 'phi' at site i,
 * in the "backwards" direction. Specifically, calculates
 *		- Tr \Phi(x-j)^+ U_j(x-j) \Phi(x) exp(-i \alpha_j(x-j) \sigma_3)
-* for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected.
-*/
-double hopping_doublet_backward(lattice const* l, fields const* f, params const* p, long i, int dir) {
+* for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected. */
+double hopping_doublet_backward(lattice const* l, fields const* f, params const* p,
+		double** phi, long i, int dir) {
+
 	double *phi1 = NULL;
-	double *phi2 = f->su2doublet[i];
+	double *phi2 = phi[i];
 	double *U = NULL;
 	double tot = 0.0;
 
 	long previous = l->prev[i][dir];
 
-	phi1 = f->su2doublet[previous];
+	phi1 = phi[previous];
 	U = f->su2link[previous][dir];
 
 	#ifndef U1
-	// no U(1)
-	tot -= hopping_trace(phi1, U, phi2);
+		// no U(1)
+		tot -= hopping_trace(phi1, U, phi2);
 	#else
-	// include U(1)
-	tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[previous][dir]);
+		// include U(1)
+		tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[previous][dir]);
 	#endif
 
 	return tot;
 }
 
-/* Calculate the full covariant derivative for a SU(2) doublet at site i,
+/* Calculate the full covariant derivative for an SU(2) doublet 'phi' at site i,
 * in the "forward" directions. Specifically, calculates
-*		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ]
-*/
-double covariant_doublet(lattice const* l, fields const* f, params const* p, long i) {
+*		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ] */
+double covariant_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i) {
 	double tot = 0.0;
-	double mod = doubletsq(f->su2doublet[i]);
+	double mod = doubletsq(phi[i]);
 	for (int dir=0; dir<l->dim; dir++){
 		// multiply by 2 here because doubletsq gives 0.5 Tr Phi^+ Phi
-		tot += 2.0 * mod + hopping_doublet_forward(l, f, p, i, dir);
+		tot += 2.0 * mod + hopping_doublet_forward(l, f, p, phi, i, dir);
 	}
 
 	return tot;
 }
 
 
-/* Calculate the Higgs potential for a su2doublet field at site i.
+/* Calculate the full scalar potential at site i, including all scalar fields.
 * Specifically: V = 0.5 m^2 Tr(\Phi^+ \Phi) + 0.25 * \lambda (Tr(\Phi^+ \Phi))^2 in the SM.
-* Contributions from other fields that couple to Higgs are also included.
-* Used in localact_doublet(), which is used in metropolis update.
-*
-*/
+* Used in localact_doublet(), which is used in metropolis update. */
 double higgspotential(fields const* f, params const* p, long i) {
 
-	double mod = doubletsq(f->su2doublet[i]);
-	double pot = p->msq_phi * mod + p->lambda_phi * mod*mod;
+	#ifdef HIGGS
+		double mod = doubletsq(f->su2doublet[i]);
+		double pot = p->msq_phi * mod + p->lambda_phi * mod*mod;
+	#endif
 
 	#ifdef TRIPLET
-	// add term 0.5 Tr Phi^+ Phi Tr A^2
-		pot += p->a2 * mod * tripletsq(f->su2triplet[i]);
+		double mod_trip = tripletsq(f->su2triplet[i]); // 0.5 Tr Sigma^2
+		pot += p->msq_triplet * mod_trip + p->b4 * mod_trip * mod_trip;
+		#ifdef HIGGS
+			pot += p->a2 * mod * mod_trip;
+		#endif
 	#endif
 
 	return pot;
@@ -657,18 +654,17 @@ double higgspotential(fields const* f, params const* p, long i) {
 /* Calculate the action due to single su2doublet field at site i.
 * This includes the potential, as well as hopping terms
 * in "forward" and "backwards" directions.
-* Used in metropolis update.
-*/
+* Used in metropolis update. */
 double localact_doublet(lattice const* l, fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
 	// Full covariant derivative with the local Tr Phi^+ Phi included,
 	// and summed over directions:
-	tot += covariant_doublet(l, f, p, i);
+	tot += covariant_doublet(l, f, p, f->su2doublet, i);
 
 	for (int dir=0; dir<l->dim; dir++) {
 		// contribution from backwards hopping terms:
-		tot += hopping_doublet_backward(l, f, p, i, dir);
+		tot += hopping_doublet_backward(l, f, p, f->su2doublet, i, dir);
 	}
 
 	tot += higgspotential(f, p, i);
@@ -690,8 +686,7 @@ double tripletsq(double* a) {
 /* Calculate trace of two SU(2) doublets and two SU(2) links. Used in adjoint hopping terms.
 * Specifically, calculates:
 *		Tr A1 U A2 U^+.
-* Note that this is always real.
-*/
+* Note that this is always real. */
 double hopping_trace_triplet(double* a1, double* u, double* a2) {
 
 	return 0.5 * ( a1[0]*a2[0]*(u[0]*u[0]) + a1[1]*a2[1]*(u[0]*u[0]) + a1[2]*a2[2]*(u[0]*u[0]) -
@@ -806,8 +801,7 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 *		V_i(x) = U_i(x) + \sum_j U_j(x) U_i(x+j) U_j^+(x+i)
 * with the sum running over blocked directions, including backwards dirs, and j != i.
 * Kari has normalization factor of 1/3 in V_i because for i=1,2, the original link
-* plus a backwards and forward staple contributes. I am using Kari's method here.
-*/
+* plus a backwards and forward staple contributes. I am using Kari's method here. */
 void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
 
 	if (!smear_dir[dir]) {
@@ -898,6 +892,9 @@ void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, 
 
 }
 
+// TODO doublet
+void smear_doublet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i) {
+}
 
 /* Smear the triplet field at site i and store in res (triplet components).
 * This is done by calculating

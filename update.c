@@ -348,6 +348,10 @@ void sync_halos(lattice* l, fields* f) {
 			update_halo(l, parity, f->su2doublet, SU2DB);
 		#endif
 
+		#ifdef HIGGS2
+			update_halo(l, parity, f->doublet2, SU2DB);
+		#endif
+
 		#ifdef TRIPLET
 			update_halo(l, parity, f->su2triplet, SU2TRIP);
 		#endif

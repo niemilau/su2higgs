@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
 		printf0(l, "Fields loaded succesfully.\n");
 	} else {
 		printf0(l, "No latticefile found; starting with cold configuration.\n");
-		setfields(f, l, p);
+		setfields(&f, &l, &p);
 		sync_halos(&l, &f);
 		p.reset = 1;
 	}
@@ -368,11 +368,11 @@ int main(int argc, char *argv[]) {
 	if (!l.rank)
 		printf("Freed memory allocated for fields.\n");
 
-	free_lattice(&l);
 	if (p.multicanonical) {
 		free_muca_arrays(&f, &w);
 	}
 
+	free_lattice(&l);
 	#ifdef BLOCKING
 		for (int k=0; k<block_levels; k++) {
 			free_fields(&b[k], &f_block[k]);
