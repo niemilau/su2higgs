@@ -59,12 +59,12 @@ void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, cou
 
 /* Sweep over the lattice in a checkerboard layout and update half of the doublets.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
-* Return value is 1 if the entire sweep was accepted by multicanonical, 0 otherwise.
-*/
+* Return value is 0 if ALL local updates were rejected by multicanonical, nonzero otherwise */
 int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro) {
 
 	int accept = 1;
-	double muca_param_old = 0;
+	long muca_interval = l->sites_total; // initialize to some large value to avoid bugs
+	long muca_count = 0;
 	long offset, max;
 	if (parity == EVEN) {
 		offset = 0; max = l->evensites;
@@ -72,18 +72,21 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 		offset = l->evensites; max = l->sites;
 	}
 
-	// multicanonical preparations if the order parameter depends on the doublet
+	// check if multicanonical is to be used
 	int do_muca = 0;
 	if (w->do_acceptance) {
 		if (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
-			muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
 			store_muca_fields(l, f, w);
 			do_muca = 1;
+			muca_interval = (max - offset) / w->checks_per_sweep; // takes floor if not integer
+			if (muca_interval <= 0) muca_interval = 1;
+			accept = 0; // the sweep may be rejected by multicanonical
 		}
 	}
 
-	// then the update sweep
+	// then the update sweep, doing a global muca acc/rej every muca_interval sites
 	for (long i=offset; i<max; i++) {
+
 		if (p->algorithm_su2doublet == OVERRELAX && (metro == 0)) {
 			c->acc_overrelax_doublet += overrelax_doublet(l, f, p, i);
 			c->total_overrelax_doublet++;
@@ -92,32 +95,54 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 			c->accepted_doublet += metro_doublet(l, f, p, i);
 			c->total_doublet++;
 		}
+
+		if (do_muca) {
+			muca_count++;
+			if (muca_count % muca_interval == 0) {
+				// do the global muca acc/rej step, and take new backups unless the sweep is finished
+				int make_backups = (i < max-1);
+				accept += muca_check(l, f, p, c, w, parity, make_backups);
+				/* if rejected, the field changes have now been undone. */
+			} // end muca check
+		} // end do muca
+
+	} // end site loop
+
+	// if the muca interval did not add up, do a final check here without taking new backups
+	if (do_muca && (max - offset) % w->checks_per_sweep != 0) {
+		accept += muca_check(l, f, p, c, w, parity, 0);
 	}
 
-	// now the global multicanonical step
-	if (do_muca) {
-		double muca_param_new = calc_orderparam(l, f, p, w, parity); // this also updates w->param_value[par]
-		accept = multicanonical_acceptance(l, w, muca_param_old, muca_param_new);
+	return accept; // return is nonzero if at least one muca check was accepted
+}
 
-		if (!accept) {
-			// rejected, undo field changes and w->param_value
-			reset_muca_fields(l, f, w, parity);
-			w->param_value[parity] = muca_param_old - w->param_value[otherparity(parity)];
-		}
+/* */
+int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups) {
 
-		c->accepted_muca += accept;
-		c->total_muca++;
+	// local field updates do not recalculate the muca order parameter, so the old value is still in w->param_value:
+	double orderparam_old = w->param_value[EVEN] + w->param_value[ODD];
+	// recalculate with the new fields; this also updates w->param_value[par]
+	double orderparam_new = calc_orderparam(l, f, p, w, parity);
+
+	int accept = multicanonical_acceptance(l, w, orderparam_old, orderparam_new);
+	if (!accept) {
+		// rejected, undo field changes and w->param_value
+		reset_muca_fields(l, f, w, parity);
+		w->param_value[parity] = orderparam_old - w->param_value[otherparity(parity)];
+	} else if (make_backups) {
+		// accepted, make new field backups
+		store_muca_fields(l, f, w);
 	}
+	c->accepted_muca += accept;
+	c->total_muca++;
 
 	return accept;
-
 }
 
 
 /* Sweep over the lattice in a checkerboard layout and update half of the triplets.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
-* Return value is 1 if the entire sweep was accepted by multicanonical, 0 otherwise.
-*/
+* Return value is 0 if ALL local updates were rejected by multicanonical, nonzero otherwise */
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro) {
 
 	int accept = 1;

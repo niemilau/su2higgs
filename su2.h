@@ -185,6 +185,10 @@ typedef struct {
 		int flow_meas_interval; // how often to measure during flowing (in units of dt)
 	#endif
 
+	#ifdef HB_TRAJECTORY
+		int do_trajectory; // measure realtime trajectories if nonzero, specify in config file
+	#endif
+
 } params;
 
 
@@ -234,24 +238,25 @@ typedef struct {
 
 	/* 1 if muca accept/reject is to be performed after update sweeps, 0 otherwise.
 	* This is used by e.g. realtime trajectory routines to temporarily disable weighting.
-	* Will not update weight either if set to 0. Read in update sweep routines.
-	*/
+	* Will not update weight either if set to 0. Used in update sweep routines. */
 	int do_acceptance;
 
-	long bins;
-	double min, max; // range of orderparam values where weight is to be updated
-	double min_abs, max_abs; // weighting range. can be larger than the range where weight is actually updated
-	long min_bin, max_bin; // indices of the bins containing w.min and w.max
+	// how many times is multicanonical_acceptance() called per update sweep (separately for each field, parity)
+	int checks_per_sweep;
+
+	int bins;
+	double min, max; // weighting range
+	double wrk_min, wrk_max; // range of orderparam values where weight is to be updated
+	//long min_bin, max_bin; // indices of the bins containing w.wrk_min and w.wrk_max
 	double* pos; // weight "position", i.e. values of the order param in the given range
-	double* W; // value of the weight function at each position
-	double increment; // how much the weight is increased after visiting a bin
-	double reduction_factor; // after probing the full order param range, w.increment is multiplied by this number
+	double* W; // value of the weight function at the beginning of each bin
+	double delta; // how much the weight is increased in update_weight()
 
 	int* hits; // keep track of which bins we have visited
-	int update_interval; // how many measurements until weight is updated
-	int m; // current number of measurements (resets after weight update)
+	int muca_count; // how many muca acc/rej steps performed (resets after weight update)
+	int update_interval; // how many muca acc/rej steps until weight is updated
 
- 	int last_max; // 1 if system recently visited the bin containing w.max (keep track of tunneling)
+ 	int last_max; // 1 if system recently visited the bin containing w.wrk_max (keep track of tunneling)
 	char readonly; // 1 if weight is to be updated, 0 otherwise
 	char weightfile[100]; // file name
 } weight;
@@ -261,8 +266,11 @@ typedef struct {
 inline char otherparity(char parity) {
 	if (parity == EVEN)
 		return ODD;
-	else
+	else if (parity == ODD) {
 		return EVEN;
+	} else {
+		printf("Error in function otherparity (su2.h) !!!\n");
+	}
 }
 
 // multiply two complex numbers
@@ -403,6 +411,7 @@ void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, cou
 int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
 void sync_halos(lattice* l, fields* f);
+int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups);
 void shuffle(int *arr, int len);
 
 // init.c
@@ -427,7 +436,7 @@ void check_set(int set, char *name); // helper routine
 void get_parameters(char *filename, lattice* l, params *p);
 void get_weight_parameters(char *filename, lattice const* l, params *p, weight* w);
 void print_parameters(lattice l, params p);
-void read_updated_parameters(char *filename, lattice const* l, params *p);
+void read_updated_parameters(char *filename, lattice const* l, params *p, weight* w);
 
 
 // measure.c
@@ -442,15 +451,16 @@ void print_labels_local(lattice const* l, char* fname);
 void load_weight(lattice const* l, weight *w);
 void save_weight(lattice const* l, weight const* w);
 double get_weight(weight const* w, double val);
-void update_weight(lattice const* l, weight* w);
+void muca_accumulate_hits(weight* w, double val);
+int update_weight(weight* w);
 int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double newval);
-long whichbin(weight const* w, double val);
+int whichbin(weight const* w, double val);
 double calc_orderparam(lattice const* l, fields const* f, params const* p, weight* w, char par);
-void check_tunnel(lattice const* l, weight *w);
 void store_muca_fields(lattice const* l, fields* f, weight* w);
 void reset_muca_fields(lattice const* l, fields* f, weight* w, char par);
 void alloc_backup_arrays(lattice const* l, fields* f, weight const* w);
 void free_muca_arrays(fields* f, weight *w);
+void init_last_max(weight* w);
 
 #ifdef CORRELATORS
 // correlation.c
@@ -517,5 +527,24 @@ void free_muca_arrays(fields* f, weight *w);
 	void test_blocking(lattice* l, lattice* b, int const* block_dir);
 #endif
 
+
+#ifdef HB_TRAJECTORY
+	// realtime trajectories with heatbath algorithm
+
+	typedef struct {
+	  FILE *trajectoryfile;
+	  int n_traj; // how many trajectories to generate from each initial configuration
+	  int interval; // how often to measure in trajectory mode
+	  int mode_interval; // how often to switch to trajectory mode
+	  double min, max; // min and max values of the order parameter before trajectory is considered complete
+	} trajectory;
+
+	// hb_trajectory.c
+	void make_realtime_trajectories(lattice* l, fields const* f, params* p, counters* c,
+		 	weight* w, trajectory* traj, int id);
+	void read_realtime_config(char *filename, trajectory* traj);
+	void print_realtime_params(params p, trajectory traj);
+
+#endif
 
 #endif // end #ifndef SU2_H
