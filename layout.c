@@ -656,8 +656,10 @@ void printf0(lattice l, char *msg, ...) {
   va_list fmtargs;
   va_start(fmtargs, msg);
 
-  if(!l.rank)
+  if(!l.rank) {
     vprintf(msg, fmtargs);
+		fflush(stdout);
+	}
 }
 
 

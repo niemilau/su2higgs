@@ -116,15 +116,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	double weight = 0.0;
 	double muca_param = 0.0;
 	if (p->multicanonical) {
-		/* if w->do_acceptance == 0, order param is likely not up to date
-		* because it is not used/updated in field update sweeps. Recalculate it here.
-		*/
-		if (!w->do_acceptance) {
-			calc_orderparam(l, f, p, w, EVEN); // updates EVEN contribution only
-			muca_param = calc_orderparam(l, f, p, w, ODD); // updates ODD and returns the full value
-		} else {
-			muca_param = w->param_value[EVEN] + w->param_value[ODD];
-		}
+		muca_param = w->param_value[EVEN] + w->param_value[ODD];
 		weight = get_weight(w, muca_param);
 	}
 	// our muca action is S' = S + W, but Kari uses S = S - W.

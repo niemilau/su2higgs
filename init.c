@@ -98,8 +98,7 @@ void setfields(fields f, lattice l, params p) {
 /* Copy all fields from "fields" struct f_old to f_new.
 * Used when e.g. performing Wilson flow for renormalization
 * without wanting to lose the equilibrium configuration.
-* Does not modify the old fields struct
-*/
+* Does not modify the old fields struct */
 void copy_fields(lattice const* l, fields const* f_old, fields* f_new) {
 
 	for (long i=0; i<l->sites_total; i++) {

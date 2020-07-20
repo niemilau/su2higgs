@@ -59,6 +59,10 @@ void get_parameters(char *filename, lattice* l, params *p) {
     int set_flow_meas_interval = 0;
   #endif
 
+  #ifdef HB_TRAJECTORY
+    int set_do_trajectory = 0;
+  #endif
+
   int set_su2alg = 0;
   int set_u1alg = 0;
   int set_su2DBalg = 0;
@@ -340,6 +344,13 @@ void get_parameters(char *filename, lattice* l, params *p) {
       }
     #endif
 
+    #ifdef HB_TRAJECTORY
+      else if(!strcasecmp(key,"do_trajectory")) {
+        p->do_trajectory = strtol(value,NULL,10);
+        set_do_trajectory = 1;
+      }
+    #endif
+
   }
 
 	check_set(set_dim, "dim");
@@ -467,6 +478,10 @@ void get_parameters(char *filename, lattice* l, params *p) {
     check_set(set_blocks, "blocks");
   #endif
 
+  #ifdef HB_TRAJECTORY
+    check_set(set_do_trajectory, "do_trajectory");
+  #endif
+
   fclose(config);
 
 }
@@ -483,8 +498,7 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 		w->min = 0;
 		w->max = 0;
 		w->readonly = 1;
-		w->increment = 0;
-    w->reduction_factor = 1;
+		w->delta = 0;
     w->do_acceptance = 0;
     w->orderparam = -1;
 		strcpy(w->weightfile,"weight");
@@ -493,11 +507,11 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 
 		int set_bins = 0;
 		int set_min = 0, set_max = 0;
-		int set_increment = 0;
+		int set_muca_delta = 0;
 		int set_readonly = 0;
 		int set_weightfile = 0;
     int set_orderparam = 0;
-    int set_reduction_factor = 0;
+    int set_checks_per_sweep = 0;
 
     char key[100];
     char value[100];
@@ -548,15 +562,15 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 			} else if(!strcasecmp(key,"max")) {
 				w->max = strtod(value,NULL);
 				set_max = 1;
-			} else if(!strcasecmp(key,"increment")) {
-				w->increment = strtod(value,NULL);
-				set_increment = 1;
-			} else if(!strcasecmp(key,"reduction_factor")) {
-				w->reduction_factor = strtod(value,NULL);
-				set_reduction_factor = 1;
+			} else if(!strcasecmp(key,"muca_delta")) {
+				w->delta = strtod(value,NULL);
+				set_muca_delta = 1;
 			} else if(!strcasecmp(key,"readonly")) {
 				w->readonly = strtol(value,NULL,10);
 				set_readonly = 1;
+			} else if(!strcasecmp(key,"checks_per_sweep")) {
+				w->checks_per_sweep = strtol(value,NULL,10);
+				set_checks_per_sweep = 1;
 			} else if(!strcasecmp(key,"weightfile")) {
 				strcpy(w->weightfile,value);
 				set_weightfile = 1;
@@ -605,11 +619,10 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 		check_set(set_readonly, "readonly");
 		check_set(set_weightfile, "weightfile");
     check_set(set_orderparam, "orderparam");
-    check_set(set_increment, "increment");
-    check_set(set_reduction_factor, "reduction_factor");
+    check_set(set_muca_delta, "muca_delta");
+    check_set(set_checks_per_sweep, "checks_per_sweep");
 
 		fclose(config);
-
 	}
 
 }
@@ -656,7 +669,7 @@ void print_parameters(lattice l, params p) {
 /* Read config file again and update certain values. This is called at every checkpoint to
 * see if the iterations limit has been changed by the user.
 */
-void read_updated_parameters(char *filename, lattice const* l, params *p) {
+void read_updated_parameters(char *filename, lattice const* l, params *p, weight* w) {
 
 	FILE *config;
 	long new;
@@ -704,6 +717,13 @@ void read_updated_parameters(char *filename, lattice const* l, params *p) {
 				if (p->checkpoint != new) {
 					p->checkpoint = new;
 					printf0(*l, "Updated checkpoint interval to %ld\n", new);
+				}
+			}
+      else if(!strcasecmp(key,"checks_per_sweep") && p->multicanonical) {
+				new = strtol(value,NULL,10);
+				if (w->checks_per_sweep != new) {
+					w->checks_per_sweep = new;
+					printf0(*l, "Updated multicanonical checks per sweep to %ld\n", new);
 				}
 			}
 

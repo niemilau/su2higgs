@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# this script prepares a weightfile for multicanonical simulation
+# this script prepares a weightfile for kari's multicanonical simulation
 
 if [ "$#" -ne 3 ]; then
     echo "Usage: <script name> min max bins"
@@ -23,20 +23,18 @@ fi
 width=`echo "scale=10; ($max - $min)/$bins" | bc`
 
 
-count=0
-## my code: last bin ENDS at $max, so its start value is at $max-$width
-lastbin=`echo "scale=10; ($max-$width)" | bc`
-## while for Kari's code the last bin starts at max
+count=-1 ## for my code, write number of bins in the range; for Kari write bins+1
 
-for i in `seq $min $width $lastbin`
+for i in `seq $min $width $max`
 do
 	echo $i    0 >> temp
 	((count++))
 done
 
-# on the first line write number of bins, increment factor, last_max, min, max, min_abs, max_abs
-sed "1 i$count 0.5 0 $min $max $min $max" temp > weight  
-## for Kari's code write instead number of bins+1 and nothing else
+
+delta=0.5
+last_max=0
+
+sed "1 i$count $delta $last_max $min $max" temp > weight  
 
 rm temp
-

@@ -1,7 +1,6 @@
 
 #include "su2.h"
 #include "comms.h"
-#include "hb_trajectory.h"
 
 int main(int argc, char *argv[]) {
 
@@ -34,7 +33,7 @@ int main(int argc, char *argv[]) {
 
 	MPI_Comm_dup(MPI_COMM_WORLD, &l.comm); // duplicate WORLD, use the duplicate instead
 
-	printf0(l, "Starting %d MPI processes\n", l.size);
+	printf0(l, "\nStarting %d MPI processes\n", l.size);
 
 	#else // no MPI
 	l.rank = 0;
@@ -195,32 +194,21 @@ int main(int argc, char *argv[]) {
 		alloc_backup_arrays(&l, &f, &w);
 		calc_orderparam(&l, &f, &p, &w, EVEN);
 		calc_orderparam(&l, &f, &p, &w, ODD);
-		if (!w.readonly) {
-			printf0(l, "readonly not 0, so multicanonical weight WILL be modified!\n");
-			printf0(l, "Increment reduction factor: %lf\n", w.reduction_factor);
-		} else {
+		if (w.readonly) {
+
 			printf0(l, "Read-only run, will not modify weight. \n");
 		}
 	}
 
 	#ifdef HB_TRAJECTORY
-		if(!p.multicanonical) {
-			 printf0(l, "\nTurn multicanonical on for realtime trajectories! Exiting...\n");
-			 die(-44);
-		} else {
+		if (p.do_trajectory) {
 			printf0(l, "\nReal time simulation: reading file \"realtime_config\"\n");
 			read_realtime_config("realtime_config", &traj);
-			printf0(l, "Heatbath trajectory mode every %ld iterations, %ld trajectories each\n", traj.mode_interval, traj.n_traj);
-			printf0(l, "--- min %lf, %max %lf, measure interval %ld ---\n", traj.min, traj.max, traj.interval);
-
-			if (p.algorithm_su2link != HEATBATH) {
-				printf0(l, "\n--- WARNING: SU(2) update not using heatbath!\n");
+			if (!l.rank) print_realtime_params(p, traj);
+			if (!p.multicanonical) {
+				printf0(l, "\nError: Need multicanonical for heatbath trajectories!! Exiting...\n");
+				die(-44);
 			}
-			#ifdef U1
-			if (p.algorithm_u1link != HEATBATH) {
-				printf0(l, "\n--- WARNING: U(1) update not using heatbath!\n");
-			}
-			#endif
 		}
 	#endif
 
@@ -232,25 +220,20 @@ int main(int argc, char *argv[]) {
 	#endif
 
 	/* if no lattice file was given or if reset=1 in config,
-	* start by thermalizing without updating multicanonical weight
-	*/
+	* start by thermalizing without updating multicanonical weight */
 	long iter = 1;
-	int modify_weight = 0;
+	int readonly = 1;
 	if (p.reset) {
 
 		if (p.multicanonical) {
-			if (!w.readonly) {
-				modify_weight = 1;
-				w.readonly = 1;
-			}
+			readonly = w.readonly;
+			w.readonly = 1;
 		}
-
 
 		printf0(l, "\nThermalizing %ld iterations\n", p.n_thermalize);
 		fflush(stdout);
 		start_time = clock();
 		while (iter <= p.n_thermalize) {
-
 			barrier(l.comm);
 			update_lattice(&l, &f, &p, &c, &w);
 			iter++;
@@ -261,11 +244,12 @@ int main(int argc, char *argv[]) {
 		printf0(l, "Thermalization done, took %lf seconds.\n", timing);
 		Global_total_time += timing;
 
-		// now reset iteration and time counters and turn weight updating back on, if necessary
+		// now reset iteration and time counters and turn weight updating back on if necessary
 		iter = 1;
 		init_counters(&c);
-		if (modify_weight) {
-			w.readonly = 0;
+		w.readonly = readonly;
+		if (p.multicanonical && !w.readonly) {
+			init_last_max(&w);
 		}
 
 		printf0(l, "\nStarting new simulation!\n");
@@ -278,6 +262,9 @@ int main(int argc, char *argv[]) {
 	// should not happen, but just to be sure
 	barrier(l.comm);
 
+	// reset total time before starting the main loop
+	Global_total_time = 0.0;
+	Global_comms_time = 0.0;
 	start_time = clock();
 
 	int flow_id = 1; // only used for gradient flows
@@ -305,9 +292,11 @@ int main(int argc, char *argv[]) {
 		#endif
 
 		#ifdef HB_TRAJECTORY
-			if (iter % traj.mode_interval == 0) {
-				make_realtime_trajectories(&l, &f, &p, &c, &w, &traj);
-				traj_id++;
+			if (p.do_trajectory) {
+				if (iter % traj.mode_interval == 0) {
+					make_realtime_trajectories(&l, &f, &p, &c, &w, &traj, traj_id);
+					traj_id++;
+				}
 			}
 		#endif
 
@@ -354,8 +343,8 @@ int main(int argc, char *argv[]) {
 			}
 
 			save_lattice(&l, f, c, p.latticefile);
-			// update max iterations if the config file has been changed by the user
-			read_updated_parameters(argv[1], &l, &p);
+			// update max iterations etc if the config file has been changed by the user
+			read_updated_parameters(argv[1], &l, &p, &w);
 		} // end checkpoint
 
 		iter++;
