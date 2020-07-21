@@ -17,6 +17,14 @@ void check_set(int set, char *name) {
   }
 }
 
+/* quick function for reading couplings etc into a memory address*/
+int read_double(char* key, char* name, char* value, double* address) {
+  if(!strcasecmp(key, name)) {
+    *address = strtod(value,NULL);
+    return 1;
+  } else return 0;
+}
+
 /** Load parameters into struct from file.
  *
  * Parses parameters from file given by string `filename`.
@@ -86,6 +94,12 @@ void get_parameters(char *filename, lattice* l, params *p) {
 	int set_a2 = 0;
 	int set_b4 = 0;
 	int set_sigma0 = 0;
+
+  #ifdef HIGGS2
+    // too many params to write all out, just count if we set them all or not
+    int higgs2_params = 14 - 2; // lam1 and m1sq are accounted above
+    int set_higgs2_params = 0;
+  #endif
 
   int set_update_links = 0;
   int set_scalar_sweeps = 0;
@@ -198,6 +212,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
       p->phi0 = strtod(value,NULL);
       set_phi0 = 1;
     }
+
 		// triplet parameters
 		else if(!strcasecmp(key,"msq_triplet")) {
       p->msq_triplet = strtod(value,NULL);
@@ -351,6 +366,25 @@ void get_parameters(char *filename, lattice* l, params *p) {
       }
     #endif
 
+
+    #ifdef HIGGS2
+      else {
+        // for two Higgs potential parameters use the shorthand routine
+        set_higgs2_params += read_double(key, "msq_phi2", value, &p->msq_phi2);
+        set_higgs2_params += read_double(key, "m12sq_re", value, &p->m12sq.re);
+        set_higgs2_params += read_double(key, "m12sq_im", value, &p->m12sq.im);
+        set_higgs2_params += read_double(key, "lam2", value, &p->lam2);
+        set_higgs2_params += read_double(key, "lam3", value, &p->lam3);
+        set_higgs2_params += read_double(key, "lam4", value, &p->lam4);
+        set_higgs2_params += read_double(key, "lam5_re", value, &p->lam5.re);
+        set_higgs2_params += read_double(key, "lam5_im", value, &p->lam5.im);
+        set_higgs2_params += read_double(key, "lam6_re", value, &p->lam6.re);
+        set_higgs2_params += read_double(key, "lam6_im", value, &p->lam6.im);
+        set_higgs2_params += read_double(key, "lam7_re", value, &p->lam7.re);
+        set_higgs2_params += read_double(key, "lam7_im", value, &p->lam7.im);
+      }
+    #endif
+
   }
 
 	check_set(set_dim, "dim");
@@ -443,6 +477,14 @@ void get_parameters(char *filename, lattice* l, params *p) {
 	check_set(set_lambda_phi, "lambda");
 	check_set(set_msq_phi, "msq");
 	#endif
+
+  #ifdef HIGGS2
+    if (set_higgs2_params != higgs2_params) {
+      printf("Error setting parameters for second Higgs! Got %d, expected %d\n", set_higgs2_params, higgs2_params);
+      die(-1131);
+    }
+  #endif
+
 	#ifdef TRIPLET
 	check_set(set_su2triplet_alg, "algorithm_su2triplet");
 	check_set(set_update_triplet, "update_triplet");
@@ -649,10 +691,18 @@ void print_parameters(lattice l, params p) {
   #ifdef U1
   printf("U(1) beta %.1lf\n", p.betau1);
   #endif
-	#ifdef HIGGS
+
+  #ifdef HIGGS2
+    printf("msq1 %lf, msq2 %lf, m12sq_re %lf, m12sq_im %lf \n", p.msq_phi, p.msq_phi2, p.m12sq.re, p.m12sq.im);
+    printf("lam1 %lf, lam2 %lf, lam3 %lf, lam4 %lf, lam5_re %lf, lam5_im %lf \n", p.lambda_phi, p.lam2, p.lam3, p.lam4, p.lam5.re, p.lam5.im);
+    printf("lam6_re %lf, lam6_im %lf, lam7_re %lf, lam7_im %lf \n", p.lam6.re, p.lam6.im, p.lam7.re, p.lam7.im);
+    printf("initial phi0 %.2lf, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
+
+  #elif defined (HIGGS)
 	printf("msq (Higgs) %lf, lambda (Higgs) %lf, ", p.msq_phi, p.lambda_phi);
 	printf("initial phi0 %.2lf, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 	#endif
+
 	#ifdef TRIPLET
 	printf("msq (triplet) %lf, b4 %lf, ", p.msq_triplet, p.b4);
     #ifdef HIGGS

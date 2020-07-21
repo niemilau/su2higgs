@@ -194,8 +194,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 
 /* Calculate local action for the system at site i.
-*	The construction is so that a loop over i gives the total action.
-*/
+*	The construction is so that a loop over i gives the total action. */
 double action_local(lattice const* l, fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
@@ -208,6 +207,9 @@ double action_local(lattice const* l, fields const* f, params const* p, long i) 
 	tot += higgspotential(f, p, i); // does nothing if no scalars are present
 	#ifdef HIGGS
 		tot += covariant_doublet(l, f, p, f->su2doublet, i);
+	#endif
+	#ifdef HIGGS2
+		tot += covariant_doublet(l, f, p, f->doublet2, i);
 	#endif
 	#ifdef TRIPLET
 		tot += covariant_triplet(l, f, p, i);

@@ -73,28 +73,21 @@ int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir) 
 
 
 /*
-* Update a single SU(2) scalar doublet using Metropolis.
-* Returns 1 if update was accepted and 0 if rejected.
-*/
-int metro_doublet(lattice const* l, fields* f, params const* p, long i) {
+* Update an SU(2) scalar doublet using Metropolis.
+* Returns 1 if update was accepted and 0 if rejected */
+int metro_doublet(lattice const* l, fields* f, params const* p, double** phi, long i) {
 
 	double oldfield[4];
-	oldfield[0] = f->su2doublet[i][0];
-	oldfield[1] = f->su2doublet[i][1];
-	oldfield[2] = f->su2doublet[i][2];
-	oldfield[3] = f->su2doublet[i][3];
+	memcpy(oldfield, phi[i], SU2DB * sizeof(phi[i][0]));
 
-
-	double act_old = localact_doublet(l, f, p, i);
+	double act_old = localact_doublet(l, f, p, phi, i);
 
 	// modify the old field by random values
-	f->su2doublet[i][0] += 1.0*(drand48() - 0.5);
-	f->su2doublet[i][1] += 1.0*(drand48() - 0.5);
-	f->su2doublet[i][2] += 1.0*(drand48() - 0.5);
-	f->su2doublet[i][3] += 1.0*(drand48() - 0.5);
+	for (int k=0; k<SU2DB; k++) {
+		phi[i][0] += 1.0*(drand48() - 0.5);
+	}
 
-
-	double act_new = localact_doublet(l, f, p, i);
+	double act_new = localact_doublet(l, f, p, phi, i);
 
 	int accept;
 	double diff = act_new - act_old;
@@ -105,10 +98,7 @@ int metro_doublet(lattice const* l, fields* f, params const* p, long i) {
 		accept = 1;
 	}
 	else {
-		f->su2doublet[i][0] = oldfield[0];
-		f->su2doublet[i][1] = oldfield[1];
-		f->su2doublet[i][2] = oldfield[2];
-		f->su2doublet[i][3] = oldfield[3];
+		memcpy(phi[i], oldfield, SU2DB * sizeof(phi[i][0]));
 		accept = 0;
 	}
 

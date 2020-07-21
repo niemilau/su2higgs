@@ -60,7 +60,8 @@ void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, cou
 /* Sweep over the lattice in a checkerboard layout and update half of the doublets.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 0 if ALL local updates were rejected by multicanonical, nonzero otherwise */
-int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro) {
+int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c,
+			weight* w, int parity, int metro, double** phi) {
 
 	int accept = 1;
 	long muca_interval = l->sites_total; // initialize to some large value to avoid bugs
@@ -92,7 +93,7 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 			c->total_overrelax_doublet++;
 
 		} else if (p->algorithm_su2doublet == METROPOLIS || (metro != 0)) {
-			c->accepted_doublet += metro_doublet(l, f, p, i);
+			c->accepted_doublet += metro_doublet(l, f, p, phi, i);
 			c->total_doublet++;
 		}
 
@@ -209,8 +210,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 	/* Sweeps for gauge links. Arrays par_a (parity) and dir_a (directions)
 	* specify the order of updates. These have length 2*dim. Defaults are (with dim=3)
 	* par_a = [0,1,0,1,0,1], dirs_a = [0,0,1,1,2,2], i.e.
-	* first EVEN and ODD links in direction 0, then EVEN/ODD in dir 1 etc.
-	*/
+	* first EVEN and ODD links in direction 0, then EVEN/ODD in dir 1 etc. */
 	for (int k=0; k<p->update_links; k++) { // repeat the whole process p->update_links times
 
 		const int NV = 2*l->dim;
@@ -293,12 +293,16 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 
 			for (int j=0; j<=1; j++) {
 				int par = par_a[j];
-				accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro);
+				accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, f->su2doublet);
 
 				// if the sweep was rejected, no need to sync halos
-				if (accept) {
-					update_halo(l, par, f->su2doublet, SU2DB);
-				}
+				if (accept) update_halo(l, par, f->su2doublet, SU2DB);
+
+
+				#ifdef HIGGS2
+					accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, f->doublet2);
+					if (accept) update_halo(l, par, f->doublet2, SU2DB);
+				#endif
 
 			}
 		}

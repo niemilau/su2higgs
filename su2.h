@@ -18,6 +18,18 @@
 	typedef struct {} MPI_Comm;
 #endif
 
+#if defined (HIGGS2) && !defined (HIGGS)
+	#error "Preprocessor error, using HIGGS2 without HIGGS"
+#endif
+
+// how many Higgs doublets
+#ifdef HIGGS
+	#define NHIGGS 1
+#elif defined (HIGGS2)
+	#define NHIGGS 2
+#else
+	#define NHIGGS 0
+#endif
 
 // degrees of freedom per site for different fields
 #define SU2DB 4
@@ -144,6 +156,8 @@ typedef struct {
 	double b4; // self quartic
 
 	#ifdef HIGGS2
+		/* with 2 Higgs doublets, the couplings are assumed to be in a doublet basis
+		* where the kinetic terms are diagonal and canonically normalized */
 		double msq_phi2;
 		complex m12sq;
 		double lam2, lam3, lam4;
@@ -208,6 +222,7 @@ typedef struct {
 	double **u1link;
 
 	#ifdef HIGGS2
+		// another doublet, behaves just like f.su2doublet
 		double **doublet2;
 		double **backup_doublet2;
 	#endif
@@ -386,6 +401,7 @@ double local_u1wilson(lattice const* l, fields const* f, params const* p, long i
 double localact_u1link(lattice const* l, fields const* f, params const* p, long i, int dir);
 // doublet routines
 double doubletsq(double* a);
+void phiproduct(double* f1, double const* f2, int conj);
 long double avg_doublet2(fields const* f, params const* p);
 long double avg_doublet4(fields const* f, params const* p);
 double hopping_doublet_forward(lattice const* l, fields const* f, params const* p,
@@ -393,7 +409,7 @@ double hopping_doublet_forward(lattice const* l, fields const* f, params const* 
 double hopping_doublet_backward(lattice const* l, fields const* f, params const* p,
 		double** phi, long i, int dir);
 double covariant_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i);
-double localact_doublet(lattice const* l, fields const* f, params const* p, long i);
+double localact_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i);
 double higgspotential(fields const* f, params const* p, long i);
 // triplet routines
 double tripletsq(double* a);
@@ -410,7 +426,7 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
 // metropolis.c
 int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
 int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir);
-int metro_doublet(lattice const* l, fields* f, params const* p, long i);
+int metro_doublet(lattice const* l, fields* f, params const* p, double** phi, long i);
 int metro_triplet(lattice const* l, fields* f, params const* p, long i);
 
 // heatbath.c
@@ -425,7 +441,8 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i);
 void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight* w);
 void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
 void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
-int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
+int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c,
+			weight* w, int parity, int metro, double** phi);
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
 void sync_halos(lattice* l, fields* f);
 int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups);
