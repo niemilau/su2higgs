@@ -56,5 +56,5 @@ mass_ct2 = - 1.0/(16*math.pi**2.0) * ((51.0/16.0 * gsq**2 - 9.0/8.0 * gsq*gpsq \
 
 msq = gsq**2 * y + mass_ct1 + mass_ct2
 
-print('---- Lattice parameters: msq = %g, lam = %g, betau1 = %g ----\n'
+print('---- Lattice parameters: msq = %.12lf, lam = %.12lf, betau1 = %.12lf ----\n'
     % (msq, lam, betau1))
