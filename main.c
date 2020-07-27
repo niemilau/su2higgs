@@ -90,8 +90,7 @@ int main(int argc, char *argv[]) {
 		// alloc and initialize stuff needed for blocking
 		int block_levels = p.blocks; // original lattice + block_levels more
 
-		alloc_comlist(&l.blocklist, l.size);
-		// main lattice will not need recv structures: realloc
+		l.blocklist.sends = 0; l.blocklist.recvs = 0;
 		realloc_comlist(&l.blocklist, RECV);
 		l.standby = 0;
 		l.blocking_level = 0;
@@ -130,7 +129,7 @@ int main(int argc, char *argv[]) {
 				base = &b[k-1];
 			}
 
-			alloc_comlist(&b[k].blocklist, base->size);
+			b[k].blocklist.sends = 0; b[k].blocklist.recvs = 0;
 			block_lattice(base, &b[k], block_dir);
 			alloc_fields(&b[k], &f_block[k]);
 			b[k].blocking_level = k+1;

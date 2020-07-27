@@ -18,6 +18,14 @@
 	typedef struct {} MPI_Comm;
 #endif
 
+/* If using blocking, need larger halos because of link smearing in su2u1.c */
+#ifdef BLOCKING
+	#define HALOWIDTH 2
+
+#else
+ #define HALOWIDTH 1 // no blocking, halo extends just one site in each direction
+
+#endif
 
 // degrees of freedom per site for different fields
 #define SU2DB 4
@@ -384,10 +392,12 @@ double hopping_triplet_forward(lattice const* l, fields const* f, params const* 
 double hopping_triplet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
 double covariant_triplet(lattice const* l, fields const* f, params const* p, long i);
 double localact_triplet(lattice const* l, fields const* f, params const* p, long i);
+#ifdef BLOCKING
 // smearing
 void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
 void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
 void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
+#endif
 
 
 // metropolis.c

@@ -16,11 +16,9 @@
 /* Add a site to the sitelist in comlist.send or comlist.recv.
 * First checks if the given node already has an associated sendrecv structure;
 * if not, allocs sitelist (of size init_max) in a new sendrecv struct and initializes it.
-* Assumes that there is no need to allocate more sendrecv structs!!
 * sendrecv = SEND -> add to send struct,
 * sendrecv = RECV -> add to recv struct.
-* Return 1 if a new node was found, 0 otherwise.
-*/
+* Return 1 if a new node was found, 0 otherwise. */
 int addto_comlist(comlist_struct* comlist, int rank, long i, int sendrecv, char evenodd, long init_max) {
 
   sendrecv_struct* sr;
@@ -58,17 +56,28 @@ int addto_comlist(comlist_struct* comlist, int rank, long i, int sendrecv, char 
     }
   }
 
-  // new node to send/recv, so initialize the sendrecv struct
+  // new node to send/recv, so alloc and initialize the sendrecv struct
   int k = *sr_nodes;
   *sr_nodes = *sr_nodes + 1;
 
   if (sendrecv == SEND) {
+    if (k == 0) {
+      comlist->send_to = malloc(1 * sizeof(*(comlist->send_to))); // alloc just one first
+    } else {
+      // need more, so realloc
+      comlist->send_to = realloc(comlist->send_to, (k+1)* sizeof(*(comlist->send_to)));
+    }
     sr = &comlist->send_to[k];
   } else {
+    if (k == 0) {
+      comlist->recv_from = malloc(1 * sizeof(*(comlist->recv_from)));
+    } else {
+      comlist->recv_from = realloc(comlist->recv_from, (k+1)* sizeof(*(comlist->recv_from)));
+    }
     sr = &comlist->recv_from[k];
   }
 
-  // assume that we have allocated enough sendrecv structs, so just need sitelist
+  // then the sitelist
   sr->sitelist = malloc(init_max * sizeof(*sr->sitelist));
 
 	if (sr->sitelist == NULL) {
@@ -109,9 +118,10 @@ void make_comlists(lattice *l, comlist_struct *comlist) {
 	* However, in some directions the neighbor may be the node itself, due to periodicity (small lattice/few nodes).
 	* Here we assume that these have been dealt with already in layout.c,
 	* (references to "self halos" changed to point to real sites instead),
-	* so we don't have to worry about including the these in comlists.
-	*/
+	* so we don't have to worry about including the these in comlists. */
 	int MAXNODES = l->dim * l->dim * l->dim - 1;
+  // if using larger halos, this may be more complicated (below)
+
 
 	long maxindex = l->sites_total;
 
@@ -120,8 +130,8 @@ void make_comlists(lattice *l, comlist_struct *comlist) {
 		whichnode[i] = coordsToRank(l, l->coords[i]);
 	}
 
-	// allocate enough memory to host all needed sendrecv structs
-	alloc_comlist(comlist, MAXNODES); // also initializes sends,recvs = 0
+	// allocating of send/recv structs is done by addto_comlist, just initialize here
+  comlist->sends = 0; comlist->recvs = 0;
 
 	// message size and tag for sending l->coords
 	long size = maxindex * l->dim;
@@ -143,7 +153,7 @@ void make_comlists(lattice *l, comlist_struct *comlist) {
 	}
 	// receives done and comlist->recvs up to date (together with nn)
 
-	if (nn > MAXNODES) {
+	if (nn > MAXNODES && HALOWIDTH == 1) {
 		printf("Node %d: Failed to count neighbor nodes in layout.c! Found %d, but theoretical max is %d.\n", l->rank, nn, MAXNODES);
 		die(11);
 	}
@@ -213,8 +223,7 @@ void make_comlists(lattice *l, comlist_struct *comlist) {
 					/* Note that since we loop over their l->coords (j loop) in the SAME order as
 					* when we constructed sitelist for THEIR recv_from, we automatically get the
 					* sends in the same order as their receives!
-					* (apart from parity ordering, which does not reorder even/odd sites among themselves).
-					*/
+					* (apart from parity ordering, which does not reorder even/odd sites among themselves). */
 				}
 
 			} // end i
@@ -250,8 +259,7 @@ void make_comlists(lattice *l, comlist_struct *comlist) {
 * Uses nonblocking sends to first send all required data to all neighbors,
 * and then blocking receive to update my own halos.
 * The advantage over blocking sendrecv is that since we just send everything
-* before starting receives, waiting for neighbors to send is significantly reduced.
-*/
+* before starting receives, waiting for neighbors to send is significantly reduced. */
 void update_gaugehalo(lattice* l, char parity, double*** field, int dofs, int dir) {
 
 	double start, end, time = 0.0;
@@ -350,8 +358,7 @@ void send_gaugefield(sendrecv_struct* send, MPI_Comm comm, MPI_Request* req, cha
 
 
 /* Blocking receive from a given neighbor for a gauge link.
-* Receive buffer is both allocated and freed here.
-*/
+* Receive buffer is both allocated and freed here. */
 void recv_gaugefield(sendrecv_struct* recv, MPI_Comm comm, char parity, double*** field, int dofs, int dir) {
 
 	int source = recv->node; // rank of the sending node
@@ -447,8 +454,7 @@ void update_halo(lattice* l, char parity, double** field, int dofs) {
 }
 
 
-/* Same as send_gaugehalo(), but for a normal field with dof components.
-*/
+/* Same as send_gaugehalo(), but for a normal field with dof components. */
 void send_field(sendrecv_struct* send, MPI_Comm comm, MPI_Request* req, char parity, double** field, int dofs) {
 
 	int dest = send->node; // rank of the receiving node
@@ -494,12 +500,10 @@ void send_field(sendrecv_struct* send, MPI_Comm comm, MPI_Request* req, char par
 
 	// nonblocking send
 	MPI_Isend(send->buf, send_count, MPI_DOUBLE, dest, tag, comm, req);
-
 }
 
 
-/* Same as recv_gaugefield, but for a normal field with dofs components.
-*/
+/* Same as recv_gaugefield, but for a normal field with dofs components. */
 void recv_field(sendrecv_struct* recv, MPI_Comm comm, char parity, double** field, int dofs) {
 
 	int source = recv->node; // rank of the sending node
@@ -552,8 +556,7 @@ void recv_field(sendrecv_struct* recv, MPI_Comm comm, char parity, double** fiel
 
 
 /* Quick routine for ordering sitelist in sendrecv_struct
-* so that sites with parity = EVEN come before parity = ODD.
-*/
+* so that sites with parity = EVEN come before parity = ODD. */
 void reorder_sitelist(lattice* l, sendrecv_struct* sr) {
 
 	long* temp = malloc(sr->sites * sizeof(*(sr->sitelist)));
@@ -578,8 +581,7 @@ void reorder_sitelist(lattice* l, sendrecv_struct* sr) {
 }
 
 /* Routine for ordering send/recv structs in comlist
-* by their MPI rank.
-*/
+* by their MPI rank. */
 void reorder_comlist(lattice* l, comlist_struct* comlist) {
 
 	int rank;
@@ -587,47 +589,54 @@ void reorder_comlist(lattice* l, comlist_struct* comlist) {
 	sendrecv_struct* send;
 	sendrecv_struct* recv;
 
-	send = malloc(comlist->sends * sizeof(*send));
-	// copy contents to temp struct. this also copies pointer to address of sitelist, no need to alloc/free it
-	memcpy(send, comlist->send_to, comlist->sends * sizeof(*send));
+  if (comlist->sends > 0) {
+	  send = malloc(comlist->sends * sizeof(*send));
+  	// copy contents to temp struct. this also copies pointer to address of sitelist, no need to alloc/free it
+  	memcpy(send, comlist->send_to, comlist->sends * sizeof(*send));
 
-	int n = 0;
-	for (rank=0; rank<l->size; rank++) {
-		for (int k=0; k<comlist->sends; k++) {
-			if (send[k].node == rank) {
-				comlist->send_to[n].sitelist = send[k].sitelist;
-				comlist->send_to[n].node = rank;
-				comlist->send_to[n].even = send[k].even;
-				comlist->send_to[n].odd = send[k].odd;
-				comlist->send_to[n].sites = send[k].sites;
-				n++;
-				break;
-			}
-		}
-	}
+  	int n = 0;
+  	for (rank=0; rank<l->size; rank++) {
+  		for (int k=0; k<comlist->sends; k++) {
+  			if (send[k].node == rank) {
+  				comlist->send_to[n].sitelist = send[k].sitelist;
+  				comlist->send_to[n].node = rank;
+  				comlist->send_to[n].even = send[k].even;
+  				comlist->send_to[n].odd = send[k].odd;
+  				comlist->send_to[n].sites = send[k].sites;
+  				n++;
+  				break;
+  			}
+  		}
+  	}
 
-	free(send);
+    free(send);
+  }
+
+
 
 	// same for recv_from
-	recv = malloc(comlist->recvs * sizeof(*recv));
-	memcpy(recv, comlist->recv_from, comlist->recvs * sizeof(*recv));
 
-	n = 0;
-	for (rank=0; rank<l->size; rank++) {
-		for (int k=0; k<comlist->recvs; k++) {
-			if (recv[k].node == rank) {
-				comlist->recv_from[n].sitelist = recv[k].sitelist;
-				comlist->recv_from[n].node = rank;
-				comlist->recv_from[n].even = recv[k].even;
-				comlist->recv_from[n].odd = recv[k].odd;
-				comlist->recv_from[n].sites = recv[k].sites;
-				n++;
-				break;
-			}
-		}
-	}
+  if (comlist->recvs > 0) {
+  	recv = malloc(comlist->recvs * sizeof(*recv));
+  	memcpy(recv, comlist->recv_from, comlist->recvs * sizeof(*recv));
 
-	free(recv);
+  	int n = 0;
+  	for (rank=0; rank<l->size; rank++) {
+  		for (int k=0; k<comlist->recvs; k++) {
+  			if (recv[k].node == rank) {
+  				comlist->recv_from[n].sitelist = recv[k].sitelist;
+  				comlist->recv_from[n].node = rank;
+  				comlist->recv_from[n].even = recv[k].even;
+  				comlist->recv_from[n].odd = recv[k].odd;
+  				comlist->recv_from[n].sites = recv[k].sites;
+  				n++;
+  				break;
+  			}
+  		}
+  	}
+
+    free(recv);
+  }
 
 }
 
@@ -637,8 +646,7 @@ void reorder_comlist(lattice* l, comlist_struct* comlist) {
 * do not change sites of the opposite parity,
 * and that all halos are eventually updated while real sites are not.
 *
-* See test_comms_individual() for another test routine.
-*/
+* See test_comms_individual() for another test routine. */
 void test_comms(lattice* l) {
 
 	long i;
@@ -758,8 +766,7 @@ void test_comms(lattice* l) {
 * then y2 = p(x3, y) etc. This gives an unique number for each site that we assign to the field,
 * plus a decimal number for each component. It is then easy to use l->coords to predict what the received value should be.
 *
-* Uses update_field() instead of update_gaugefield() for simplicity.
-*/
+* Uses update_field() instead of update_gaugefield() for simplicity. */
 void test_comms_individual(lattice* l) {
 	long i, x, y;
 	int dir, dof;
@@ -827,8 +834,7 @@ void test_comms_individual(lattice* l) {
 
 /* Add together doubles from each node
 * and collect the result in master node (rank = 0).
-* res is the variable that is to be collected and added.
-*/
+* res is the variable that is to be collected and added. */
 double reduce_sum(double res, MPI_Comm comm) {
 
   double total = 0.0;

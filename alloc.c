@@ -212,31 +212,15 @@ void realloc_lattice_arrays(lattice *l, long oldsites, long newsites) {
 	l->parity = realloc(l->parity, newsites * sizeof(*(l->parity)));
 }
 
-/* Allocate substructures in a comlist.
-* Needs to know how many sendrecv structs to alloc;
-* use realloc_comlist() to reallocate these.
-* Does not alloc sitelists! */
-void alloc_comlist(comlist_struct* comlist, int nodes) {
-
-  comlist->recv_from = malloc(nodes * sizeof(*(comlist->recv_from)));
-  comlist->send_to = malloc(nodes * sizeof(*(comlist->send_to)));
-  comlist->sends = 0;
-  comlist->recvs = 0;
-  /*
-  for (int k=0; k<nodes; k++) {
-    comlist->recv_from[k].sitelist = malloc(sites * sizeof(*(comlist->recv_from[k].sitelist)));
-    comlist->send_to[k].sitelist = malloc(sites * sizeof(*(comlist->send_to[k].sitelist)));
-  }
-  */
-}
-
 /* Realloc all substructures in a comlist to only the needed size
 * Assumes that site lists in sendrecv_structs have not been allocated
 * if there's nothing to send/receive.
 * Does not free sendrecv_structs even if they are not needed,
 * this is left for free_comlist().
 * sendrecv = 0: touch only send_to structs,
-* sendrecv = 1: touch only recv_from structs */
+* sendrecv = 1: touch only recv_from structs.
+*
+* Note that sendrecv_structs and sitelists are originally allocated in addto_comlist() (comms.c) */
 void realloc_comlist(comlist_struct* comlist, int sendrecv) {
 
   int new_size;
@@ -244,30 +228,30 @@ void realloc_comlist(comlist_struct* comlist, int sendrecv) {
 
     if (comlist->sends > 0) {
       new_size = comlist->sends;
+      comlist->send_to = realloc(comlist->send_to, new_size * sizeof(*comlist->send_to));
+      if (comlist->send_to == NULL) {
+        printf("Failed to realloc comlists (send)!\n");
+        die(-9120);
+      }
+
     } else {
-      // nothing to send to anyone. Realloc as small as possible, but don't free
-      new_size = 1;
+      // nothing to send to anyone so the struct shouldn't be allocated
     }
 
-    comlist->send_to = realloc(comlist->send_to, new_size * sizeof(*comlist->send_to));
-    if (comlist->send_to == NULL) {
-      printf("Failed to realloc blocklists (send)!\n");
-      die(-9120);
-    }
+
   }
 
   if (sendrecv == RECV) {
     if (comlist->recvs > 0) {
       new_size = comlist->recvs;
-    } else {
-      // nothing to receive from anyone. Realloc as small as possible, but don't free
-      new_size = 1;
-    }
+      comlist->recv_from = realloc(comlist->recv_from, new_size * sizeof(*comlist->recv_from));
+      if (comlist->recv_from == NULL) {
+        printf("Failed to realloc comlists (recv)!\n");
+        die(-9121);
+      }
 
-    comlist->recv_from = realloc(comlist->recv_from, new_size * sizeof(*comlist->recv_from));
-    if (comlist->recv_from == NULL) {
-      printf("Failed to realloc blocklists (recv)!\n");
-      die(-9121);
+    } else {
+      // nothing to receive from anyone so the struct shouldn't be allocated
     }
   }
 
@@ -280,6 +264,8 @@ void realloc_comlist(comlist_struct* comlist, int sendrecv) {
   } else if (sendrecv == RECV) {
     n = comlist->recvs;
   }
+
+  if (n <= 0) return;
 
   for (int k=0; k<n; k++) {
 
@@ -300,8 +286,7 @@ void realloc_comlist(comlist_struct* comlist, int sendrecv) {
 }
 
 /* Free all memory reserved for layouting, lookup tables
-* and comlists.
-*/
+* and comlists. */
 void free_lattice(lattice *l) {
 
   // comlist
@@ -350,6 +335,6 @@ void free_comlist(comlist_struct* comlist) {
 		free(comlist->recv_from[k].sitelist);
 	}
 
-	free(comlist->recv_from);
-	free(comlist->send_to);
+  if (comlist->sends > 0) free(comlist->send_to);
+  if (comlist->recvs > 0) free(comlist->recv_from);
 }

@@ -12,8 +12,7 @@
 
 /* layout()
 * Perform all required steps to get sites and halos in place,
-* initialize lookup tables and comlists.
-*/
+* initialize lookup tables and comlists. */
 void layout(lattice *l, int do_prints, int run_checks) {
 
 	clock_t start, end;
@@ -115,8 +114,7 @@ void layout(lattice *l, int do_prints, int run_checks) {
 * the tricks for factorization are heavily inspired by respective routines in Kari's code.
 * In fact we should always obtain the same factorization as what Kari has in his susy code.
 * The routine checks that the sites can always be factorized evenly among the nodes, i.e, all nodes
-* get the same amount of sites. This will be assumed in all other routines in the file.
-*/
+* get the same amount of sites. This will be assumed in all other routines in the file. */
 void make_slices(lattice *l, int do_prints) {
 
 	// first check that the total number of lattice sites is possible
@@ -202,9 +200,7 @@ void make_slices(lattice *l, int do_prints) {
 	}
 
 	/* We have now sliced the full lattice into smaller hypercubes with side lengths given by sliceL.
-	*	p.rank is to be understood as the index of the sublattice where the node operates (comparable to lattice site index).
-	* This is implemented in sitemap() below.
-	*/
+	*	l.rank is the index of the sublattice where the node operates. */
 
 
 	// print the obtained processor layout and node sizes
@@ -246,8 +242,7 @@ void make_slices(lattice *l, int do_prints) {
 * Coordinates on the full lattice are stored in l->coords.
 * This is first done using indices in the full haloed node,
 * which are then remapped so that "self halos" are mapped away
-* and real sites come before halos in indexing.
-*/
+* and real sites come before halos in indexing. */
 void sitemap(lattice *l) {
 
 	long maxindex = l->sites + l->halos;
@@ -277,9 +272,8 @@ void sitemap(lattice *l) {
 	/* Find neighbors and l->coords in terms of indices in the haloed node.
 	* For sites in the positive (negative) halo, we only need to know their neighbors
 	* in the negative (positive) directions. Other neighbor indices are set to -1.
-	* If we ever try to access these neighbors the program should crash, but this is
-	* better than getting wrong results.
-	*/
+	* If we try to access these neighbors the program should crash, but this is
+	* better than getting wrong results. */
 
 	// count how many "fake" halo sites we have. these are sites
 	// in the halo that actually live in the same node because of periodicity
@@ -378,8 +372,7 @@ void sitemap(lattice *l) {
 
 	/* Almost done, but in p.next and p.prev some sites can still point to a
 	* neighboring self halo site index instead of the real site. To change these,
-	* search for matching coordinates in l->coords
-	*/
+	* search for matching coordinates in l->coords */
 	for (i=0; i<l->sites_total; i++) {
 		for (dir=0; dir<l->dim; dir++) {
 			// positive dirs
@@ -408,8 +401,7 @@ void sitemap(lattice *l) {
 * which are assumed to be mapped out already).
 * Parity of a site is defined to be EVEN if the sum of
 * its physical coordinates x + y + z + ... is an even number,
-* ODD otherwise. These are chars defined in a header file (where?)
-*/
+* ODD otherwise. These are chars defined in a header file (where?) */
 void set_parity(lattice *l) {
 
 	long tot;
@@ -449,8 +441,7 @@ void set_parity(lattice *l) {
 
 
 /* Quick routine for finding site index from given
-* physical coordinates. Assumes ordered l->coords.
-*/
+* physical coordinates. Assumes ordered l->coords. */
 long findsite(lattice const* l, long* x, int include_halos) {
 
 	long max;
@@ -482,8 +473,7 @@ long findsite(lattice const* l, long* x, int include_halos) {
 
 /* Test that our mapping from site index to physical coordinates makes sense.
 * This checks that basic indexing is OK, but does not check that neighboring sites
-* have adjacent indices (which they should, apart from sites at hypercube sides).
-*/
+* have adjacent indices (which they should, apart from sites at hypercube sides). */
 void test_coords(lattice const* l) {
 
 	long* xnode = malloc(l->dim * sizeof(*xnode));
@@ -542,8 +532,7 @@ void test_coords(lattice const* l) {
 
 /* Perform strong checks on l.next and l.prev, and l.parity.
 * Uses l->coords to check that the physical coordinates of the neighbor sites
-* are what they should for each site and direction, including halos.
-*/
+* are what they should for each site and direction, including halos. */
 void test_neighbors(lattice const* l) {
 
 	int skip_parity = 0;
@@ -710,7 +699,7 @@ void layout(lattice *l, int do_prints, int run_checks) {
 		remap_lattice_arrays(l, newindex, l->sites_total);
 	}
 
-	alloc_comlist(&l->comlist, 1); // empty comlist
+	l->comlist.sends = 0; l->comlist.recvs = 0;
 
 	if (do_prints) {
 		printf("Site lookup tables constructed succesfully.\n");
@@ -1006,8 +995,7 @@ long coordsToIndex(short dim, int* L, long* x) {
 }
 
 /* Convert physical (x, y, z, ...) coordinates on the full lattice
-* to MPI node index (which is the same as MPI rank in this layout).
-*/
+* to MPI node index (which is the same as MPI rank in this layout). */
 int coordsToRank(lattice const* l, long* coords) {
 	// first find the (x, y, z, ...) coordinates of the node
 	long* x = malloc( (l->dim) * sizeof(x));
