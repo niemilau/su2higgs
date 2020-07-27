@@ -669,9 +669,11 @@ double covariant_doublet(lattice const* l, fields const* f, params const* p, dou
 * Used in localact_doublet(), which is used in metropolis update. */
 double higgspotential(fields const* f, params const* p, long i) {
 
+	double pot = 0.0;
+
 	#ifdef HIGGS
 		double mod = doubletsq(f->su2doublet[i]);
-		double pot = p->msq_phi * mod + p->lambda_phi * mod*mod;
+		pot += p->msq_phi * mod + p->lambda_phi * mod*mod;
 
 		#ifdef HIGGS2
 			/* Two-Higgs doublet potential is
