@@ -46,7 +46,7 @@ void layout(lattice *l, int do_prints, int run_checks) {
 	// ordering OK and self halos gone.
 
 	if (do_prints)
-		printf0(*l, "Each node needs %lu additional halo sites.\n", l->halos);
+		printf0(*l, "Each node needs %lu additional halo sites ; using halo of width %d.\n", l->halos, HALOWIDTH);
 
 	// site parity:
 	set_parity(l);
@@ -217,15 +217,14 @@ void make_slices(lattice *l, int do_prints) {
 		}
 	}
 
-
 	// store these.
 	long sites = 1;
-	long halosites = 1; // 2 extra sites in each direction
+	long halosites = 1;
 	for (dir=0; dir<l->dim; dir++) {
 		l->sliceL[dir] = slice[dir];
 		l->nslices[dir] = nslices[dir];
 		sites *= slice[dir];
-		halosites *= (slice[dir]+2);
+		halosites *= (slice[dir] + HALOWIDTH*2); // the halo can be as large as needed
 	}
 	halosites = halosites - sites;
 	if (do_prints)
@@ -262,11 +261,11 @@ void sitemap(lattice *l) {
 		l->offset[dir] = xnode[dir] * l->sliceL[dir];
 	}
 
-	/* now build a halo of thickness 1 around the node. Sites in the halo actually live
+	/* now build a halo of thickness HALOWIDTH around the node (normally 1). Sites in the halo actually live
 	* in other nodes and the first step is to separate these from "real" sites */
 	int haloL[l->dim];
 	for (dir=0; dir<l->dim; dir++) {
-		haloL[dir] = l->sliceL[dir] + 2;
+		haloL[dir] = l->sliceL[dir] + 2*HALOWIDTH;
 	}
 
 	/* Find neighbors and l->coords in terms of indices in the haloed node.
@@ -289,29 +288,35 @@ void sitemap(lattice *l) {
 			int prev_done = 0, next_done = 0;
 
 			// Assuming we did not cross the lattice boundary:
-			l->coords[i][dir] = x[dir] + xnode[dir] * l->sliceL[dir] - 1; // halos OK too
+			l->coords[i][dir] = x[dir] + xnode[dir] * l->sliceL[dir] - HALOWIDTH; // halos OK too
 
 			// figure out if we are in the halo, and check if we actually crossed the boundary
-			if (x[dir] == l->sliceL[dir] + 1) {
+			if (x[dir] >= l->sliceL[dir] + HALOWIDTH) {
+				// we are in the halo, "positive" direction
 				ishalo[i] = 1;
-				// we are in the next node in positive direction.
-				l->next[i][dir] = -1;
-				next_done = 1;
 
-				//Did we go over the lattice boundary?
-				if (xnode[dir]+1 >= l->nslices[dir]) {
-					// went over, force periodicity
-					l->coords[i][dir] = 0;
+				if (x[dir] == haloL[dir] - 1) {
+					// last halo site in this direction, so no need to find next site
+					l->next[i][dir] = -1;
+					next_done = 1;
 				}
-			} else if (x[dir] == 0) {
-				ishalo[i] = 1;
-				// we are in the previous node in this direction
-				l->prev[i][dir] = -1;
-				prev_done = 1;
 
-				if (xnode[dir]-1 < 0) {
-					// went over lattice boundary
-					l->coords[i][dir] = l->L[dir]-1;
+				// force periodicity if needed
+				l->coords[i][dir] = l->coords[i][dir] % l->L[dir];
+
+			} else if (x[dir] < HALOWIDTH) {
+				// we are in the halo, "negative" direction
+				ishalo[i] = 1;
+
+				if (x[dir] == 0) {
+					// 'last' halo in this (negative) direction, so no need to find prev site
+					l->prev[i][dir] = -1;
+					prev_done = 1;
+				}
+
+				// force periodicity if needed
+				if (l->coords[i][dir] < 0) {
+					l->coords[i][dir] = l->L[dir] + l->coords[i][dir];
 				}
 			}
 
@@ -842,8 +847,7 @@ void make_misc_tables(lattice* l) {
 /* Order sites according to their parity.
 * Assumes that self halos have been removed and sites ordered so that
 * real sites come before halos. Does not reorder EVEN (ODD) sites among themselves.
-* Note that the routine overrides newindex table.
-*/
+* Note that the routine overrides newindex table. */
 void paritymap(lattice* l, long* newindex) {
 
 	long even=0, odd=0, evenhalo=0, oddhalo=0;
@@ -872,8 +876,7 @@ void paritymap(lattice* l, long* newindex) {
 }
 
 /* Reorder a given lattice table using the mapping given in newindex.
-* The table should be l.dim * maxindex sized.
-*/
+* The table should be l.dim * maxindex sized. */
 void remap_latticetable(lattice* l, long** arr, long* newindex, long maxindex) {
 	long** temp = alloc_latticetable(l->dim, maxindex);
 
@@ -922,8 +925,7 @@ void remap_neighbor_table(lattice* l, long** arr, long* newindex, long maxindex)
 	free_latticetable(temp);
 }
 
-/* Remap all lattice tables using mapping given in newindex.
-*/
+/* Remap all lattice tables using mapping given in newindex. */
 void remap_lattice_arrays(lattice* l, long* newindex, long maxindex) {
 
 	// backup parity

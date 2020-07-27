@@ -612,10 +612,7 @@ void reorder_comlist(lattice* l, comlist_struct* comlist) {
     free(send);
   }
 
-
-
 	// same for recv_from
-
   if (comlist->recvs > 0) {
   	recv = malloc(comlist->recvs * sizeof(*recv));
   	memcpy(recv, comlist->recv_from, comlist->recvs * sizeof(*recv));
