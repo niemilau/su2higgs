@@ -497,7 +497,7 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 		w->bins = 0;
 		w->min = 0;
 		w->max = 0;
-		w->readonly = 1;
+		w->mode = 0;
 		w->delta = 0;
     w->do_acceptance = 0;
     w->orderparam = -1;
@@ -508,7 +508,7 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 		int set_bins = 0;
 		int set_min = 0, set_max = 0;
 		int set_muca_delta = 0;
-		int set_readonly = 0;
+		int set_mode = 0;
 		int set_weightfile = 0;
     int set_orderparam = 0;
     int set_checks_per_sweep = 0;
@@ -565,9 +565,9 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 			} else if(!strcasecmp(key,"muca_delta")) {
 				w->delta = strtod(value,NULL);
 				set_muca_delta = 1;
-			} else if(!strcasecmp(key,"readonly")) {
-				w->readonly = strtol(value,NULL,10);
-				set_readonly = 1;
+			} else if(!strcasecmp(key,"muca_mode")) {
+				w->mode = strtol(value,NULL,10);
+				set_mode = 1;
 			} else if(!strcasecmp(key,"checks_per_sweep")) {
 				w->checks_per_sweep = strtol(value,NULL,10);
 				set_checks_per_sweep = 1;
@@ -575,6 +575,7 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 				strcpy(w->weightfile,value);
 				set_weightfile = 1;
 			}
+
       // read multicanonical order parameter
       else if(!strcasecmp(key,"orderparam")) {
 				if (!strcasecmp(value,"wilson")) {
@@ -616,11 +617,17 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 		check_set(set_bins, "bins");
 		check_set(set_min, "min");
 		check_set(set_max, "max");
-		check_set(set_readonly, "readonly");
+		check_set(set_mode, "muca_mode");
 		check_set(set_weightfile, "weightfile");
     check_set(set_orderparam, "orderparam");
     check_set(set_muca_delta, "muca_delta");
     check_set(set_checks_per_sweep, "checks_per_sweep");
+
+    if (w->mode != READONLY && w->mode != FAST && w->mode != SLOW) {
+      printf0(*l, "Invalid mode specification for multicanonical!! got mode=%d\n", w->mode);
+      printf0(*l, "%d = read only, %d = fast weight update, %d = slow weight update\n", READONLY, FAST, SLOW);
+      die(551);
+    }
 
 		fclose(config);
 	}

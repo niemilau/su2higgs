@@ -8,15 +8,15 @@
 
 dim 3
 
-L1 32
-L2 32
-L3 32
+L1 12
+L2 12
+L3 12
 
 # start new simulation (initial configuration still read from latticefile)?
 reset 0
 
 # iterations
-iterations 2000000
+iterations 200000
 
 # how many thermalization sweeps before starting measurements/weighting?
 n_thermalize 100
@@ -39,7 +39,7 @@ latticefile lattice
 ### parameters
 ## at T = 122.3, a = 0.008240436430478594
 # gauge couplings
-betasu2 8.0
+betasu2 12.0
 #betau1 8.0
 
 # doublet
@@ -47,8 +47,8 @@ msq -1.2821488473242986
 lambda 0.20270573608868533
 
 # triplet
-msq_triplet -0.741522
-b4 0.175
+msq_triplet -0.5032354703283564
+b4 0.11666666666666665
 a2 2.6953060227675745
 
 # initial values for fields (overwritten by existing lattice file)
@@ -74,26 +74,27 @@ update_doublet 1
 update_triplet 1
 update_links 1
 
-### multicanonical
-multicanonical 0
+## ---- Multicanonical ---- ##
+multicanonical 1
 bins 80
 min 0.418
-max 0.57
+max 3.57
 # where to store the weight?
 weightfile weight
-# set infinite weight outside the binning range? 
-absolute_bounds 0
+
+checks_per_sweep 1
 
 ## order parameter for multicanonical
 # phisq, Sigmasq, phi2minusSigma2
-orderparam Sigmasq
+orderparam phisq
 
-# update weight on the go?
-readonly 1
+## Options for weight updating: 0 = read only, 1 = fast & dirty, 2 = slow & safe
+muca_mode 2
 
 # initial weight update factor (if weight exists, uses the value there instead)
-increment 0.3
+muca_delta 0.3
 
+## ---- Gradient flow ----- ##
 
 do_flow 0
 flow_meas_interval 10
@@ -103,6 +104,8 @@ flow_t_max 10
 
 measure_local 0
 
-do_correlators 1
+## ---- Correlators and blocking ---- ##
+
+do_correlators 0
 correlator_interval 10
 blocks 4

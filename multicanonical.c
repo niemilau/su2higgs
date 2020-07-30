@@ -17,7 +17,7 @@
 *			 based on the weight change. If rejected, ALL updates in the sweep are undone.
 *			 This will create a bias towards non-minimum configurations.
 *
-*	Additional steps for calculating the weight function, if w.readonly != 1:
+*	Additional steps for calculating the weight function, if w.mode == READONLY (== 0)
 *
 *		2. Each time a global muca acc/rej is performed, find the current bin and accumulate
 *			 w.hits in that bin AND its nearby bins (even if update is rejected!). See muca_accumulate_hits().
@@ -65,6 +65,10 @@
 *		2.00 0
 */
 
+/* Update 28.7.2020: implemented a slower but 'safer' method for weight calculation
+* as described in hep-lat/9804019.
+*/
+
 #include "su2.h"
 
 /* Save the current weight into file.
@@ -76,8 +80,8 @@
 * Note that w.hits is NOT stored! */
 void save_weight(lattice const* l, weight const* w) {
 
-	// for readonly run, do nothing
-	if (w->readonly)
+	// for read only run, do nothing
+	if (w->mode == READONLY)
 		return;
 
 	if(!l->rank) {
@@ -90,8 +94,20 @@ void save_weight(lattice const* l, weight const* w) {
 		}
 
 		fclose(wfile);
-
 	}
+
+ if (w->mode == SLOW && !l->rank) {
+	 // store arrays needed for 'slow' updating in a separate file
+	 FILE *file = fopen("weight_params", "w");
+	 fprintf(file, "%d \n", w->bins);
+
+	 // extra bins not written
+	 for(long i=1; i<w->bins+1; i++) {
+		 fprintf(file, "%ld %ld\n", w->gsum[i], w->nsum[i]);
+	 }
+	 fclose(file);
+ }
+
 }
 
 /* Load multicanonical weight from weightfile.
@@ -108,17 +124,27 @@ void load_weight(lattice const* l, weight *w) {
   w->W = malloc((w->bins+2) * sizeof(*(w->W)));
 	w->hits = malloc((w->bins+2) * sizeof(*(w->hits)));
 
-	w->update_interval = 8; // how often to update the weight
+	// how often to update the weight?
+	if (w->mode != SLOW) w->update_interval = 8;
+	else w->update_interval = 2000;
 
 	w->do_acceptance = 1;
 
+	if (w->mode == SLOW) {
+		// slow but safer weight calculation, affects only runs with mode = SLOW
+		w->hgram = malloc((w->bins+2) * sizeof(*w->hgram));
+		w->gsum = malloc((w->bins+2) * sizeof(*w->gsum));
+		w->nsum = malloc((w->bins+2) * sizeof(*w->nsum));
+	}
+
   long i;
 
-  if(access(w->weightfile, R_OK) != 0) {
+	int read_ok = access(w->weightfile, R_OK); // 0 if OK, -1 otherwise
+  if( read_ok != 0) {
 
 		// no weight found; initialize a flat weight according to config file
     printf0(*l, "Unable to access weightfile!!\n");
-		if (w->readonly) {
+		if (w->mode == READONLY) {
 			printf0(*l, "No multicanonical weight given for a read-only run! Exiting...\n");
 			die(20);
 		}
@@ -131,7 +157,7 @@ void load_weight(lattice const* l, weight *w) {
       w->pos[i+1] = w->min + ((double) i) * dbin;
       w->W[i+1] = 0.0;
     }
-		w->last_max = 0; // assume starting from min
+		w->last_max = 0; // assume starting from min (but see init_last_max())
 
 		/* Assume that weight update range is the same as weighting range, but to avoid
 		* complications shift w.max just a little bit, so that w.wrk_max is never inside
@@ -140,6 +166,13 @@ void load_weight(lattice const* l, weight *w) {
 		w->wrk_min = w->min;
 		w->max += 0.001 * dbin;
 		w->pos[w->bins + 1] = w->max;
+
+		if (w->mode == SLOW) {
+			for (i=0; i<w->bins+2; i++) {
+				w->gsum[i] = 5; // cannot be 0!!
+				w->nsum[i] = 0;
+			}
+		}
 
 		printf0(*l, "Initialized new weight \n");
 		save_weight(l, w);
@@ -168,6 +201,12 @@ void load_weight(lattice const* l, weight *w) {
 		w->W = realloc(w->W, (w->bins+2) * sizeof(*(w->W)));
 		w->hits = realloc(w->hits, (w->bins+2) * sizeof(*(w->hits)));
 
+		if (w->mode == SLOW) {
+			w->hgram = realloc(w->hgram, (w->bins+2) * sizeof(*(w->hgram)));
+			w->gsum = realloc(w->gsum, (w->bins+2) * sizeof(*(w->gsum)));
+			w->nsum = realloc(w->nsum, (w->bins+2) * sizeof(*(w->nsum)));
+		}
+
 		// read bins
     for(i=1; i<w->bins+2; i++) {
       read = fscanf(wfile, "%lf %lf", &(w->pos[i]), &(w->W[i]));
@@ -182,14 +221,14 @@ void load_weight(lattice const* l, weight *w) {
 		w->min = w->pos[1];
 		w->max = w->pos[w->bins+1];
 
-		if (!w->readonly && (w->wrk_min < w->min || w->wrk_max > w->max)) {
+		if (!w->mode != READONLY && (w->wrk_min < w->min || w->wrk_max > w->max)) {
 			printf0(*l, "\n!!! Multicanonical error: weight update range [%lf, %lf] larger than binning range [%lf, %lf] !!!\n\n",
 			 		w->wrk_min, w->wrk_max, w->min, w->max);
 			die(233);
 		}
 		/* again, avoid complications by shifting the last bin so that w.wrk_max is
 		* never inside the extra bin */
-		if (!w->readonly && fabs(w->wrk_max - w->max) < 1e-10) {
+		if (!w->mode != READONLY && fabs(w->wrk_max - w->max) < 1e-10) {
 			double dbin = w->max - w->pos[w->bins];
 			w->max += 0.001 * dbin;
 			w->pos[w->bins+1] = w->max;
@@ -204,15 +243,51 @@ void load_weight(lattice const* l, weight *w) {
 
 	printf0(*l, "Using weight function with %d bins in range %lf, %lf\n", w->bins, w->min, w->max);
 	printf0(*l, "Global multicanonical check %d times per even/odd update sweep\n", w->checks_per_sweep);
-	if (!w->readonly) {
-		printf0(*l, "Will modify weight in range %lf, %lf\n", w->wrk_min, w->wrk_max);
-		printf0(*l, "starting with delta %.12lf, last_max %d\n", w->delta, w->last_max);
-	}
+
+	int mode = w->mode;
+	if (mode != READONLY) printf0(*l, "Will modify weight in range %lf, %lf\n", w->wrk_min, w->wrk_max);
+	if (mode == FAST) printf0(*l, "Fast weight update: starting with delta %.12lf, last_max %d\n", w->delta, w->last_max);
+	if (mode == SLOW) printf0(*l, "Using slow but safe weight updating: parameter file 'weight_params'\n");
+
+
+	if (mode == SLOW) {
+		// read in work arrays from separate file
+		if(access("weight_params", R_OK) != 0) {
+			printf0(*l, "Unable to access parameter file!! initializing new\n");
+			for (i=0; i<w->bins+2; i++) {
+				w->gsum[i] = 5; // cannot be 0!!
+				w->nsum[i] = 0;
+			}
+
+		} else {
+			int bins_read = 0;
+
+			FILE *file = fopen("weight_params", "r");
+			int read = fscanf(file, "%d", &bins_read);
+			if (bins_read != w->bins) {
+				// mismatch!
+				printf0(*l, "Error reading parameter file!! Expected %d bins, got %d\n\n", w->bins, bins_read);
+				die(991);
+			}
+
+			// do not read extra bins
+			for(i=1; i<w->bins+1; i++) {
+	      read = fscanf(file, "%ld %ld", &(w->gsum[i]), &(w->nsum[i]));
+	      if(read != 2) {
+					printf0(*l, "Error reading 'weight_params'!! Got %d values at line %ld\n\n", read, i+1);
+					die(992);
+	      }
+	    }
+
+			fclose(file);
+		}
+	} // arrays for slow weight updating OK
 
 	// restart accumulation of muca hits even if existing weight is loaded
 	w->muca_count = 0;
 	for (i=0; i<w->bins+2; i++) {
 		w->hits[i] = 0;
+		if (w->mode == SLOW) w->hgram[i] = exp(w->W[i]);
 	}
 
 }
@@ -280,7 +355,7 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 
 	// update hits and call update_weight() if necessary.
 	// do this even if the update was rejected
-	if (!w->readonly) {
+	if (w->mode != READONLY) {
 
 		if (!accept) {
 			newval = oldval;
@@ -291,15 +366,23 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 
 		/* update weight if necessary */
 		if (w->muca_count % w->update_interval == 0) {
-			int tunnel = update_weight(w);
-			save_weight(l, w);
-			if (tunnel) {
-				printf0(*l, "\nReducing weight update factor! Now %.12lf \n", w->delta);
-			}
-			w->muca_count = 0;
 
+			if (w->mode == FAST) {
+				int tunnel = update_weight(w);
+				save_weight(l, w);
+				if (tunnel) {
+					printf0(*l, "\nReducing weight update factor! Now %.12lf \n", w->delta);
+				}
+
+			} else if (w->mode == SLOW) {
+				update_weight_slow(w);
+				save_weight(l, w);
+				w->muca_count = 0;
+			}
+
+			w->muca_count = 0;
 		}
-	}
+	} // end !readonly
 
 	return accept;
 }
@@ -307,7 +390,7 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 /* Update w.hits array. This is done in a "Gaussian" fashion:
 * if the order parameter has value 'val' corresponding to bin 'i',
 * then we update w.hits[i] by a lot but also nearby bins for a smaller amount.
-* The logic here is adapted form Kari's susy code (multican_generic.c) */
+* The logic here is adapted from Kari's susy code (multican_generic.c) */
 void muca_accumulate_hits(weight* w, double val) {
 
 	int bin = whichbin(w, val);
@@ -322,12 +405,21 @@ void muca_accumulate_hits(weight* w, double val) {
 		}
 	}
 
-	w->hits[bin] += 5;
-	// nearby bins, but don't accumulate hits in extra bins
-	if (bin > 1) w->hits[bin-1] += 3;
-	if (bin > 2) w->hits[bin-2] += 1;
-	if (bin < w->bins) w->hits[bin+1] += 3;
-	if (bin < w->bins-1) w->hits[bin+2] += 1;
+	if (w->mode == FAST) {
+		// fast weight update
+		w->hits[bin] += 5;
+		// nearby bins, but don't accumulate hits in extra bins
+		if (bin > 1) w->hits[bin-1] += 3;
+		if (bin > 2) w->hits[bin-2] += 1;
+		if (bin < w->bins) w->hits[bin+1] += 3;
+		if (bin < w->bins-1) w->hits[bin+2] += 1;
+
+	} else if (w->mode == SLOW) {
+		// slow update, calculate histogram estimate
+		w->hits[bin]++;
+		double weight = get_weight(w, val);
+		w->hgram[bin] += exp(weight); // no minus sign with my weight convention
+	}
 
 	/* Note that any hits in bins outside the work range
 	* are actually not used by update_weight(), including those in the extra bins */
@@ -339,7 +431,7 @@ void muca_accumulate_hits(weight* w, double val) {
 * w->delta should be decreased for the next loop */
 int update_weight(weight* w) {
 
-	if (w->readonly) {
+	if (w->mode == READONLY) {
 		return 0;
 	}
 
@@ -384,10 +476,79 @@ int update_weight(weight* w) {
 	}
 
 	// reset hit accumulation
-	for (long i=0; i<w->bins+2; i++) {
+	for (int i=0; i<w->bins+2; i++) {
 		w->hits[i] = 0;
 	}
 	return tunnel;
+}
+
+/* Weight update according to the recipe in hep-lat/9804019 */
+void update_weight_slow(weight* w) {
+
+	double w_old[w->bins+2];
+	memcpy(w_old, w->W, (w->bins+2) * sizeof(w_old[0]));
+
+	// calculate the weight relative to the first bin in the update range
+	int firstbin = -1;
+	int lastbin = -1;
+
+	// minimum number of 'hits' in a bin before taking it into account
+	int hits_min = 8;
+
+	for (int i=1; i<w->bins+2; i++) {
+		if (w->pos[i] >= w->wrk_min && w->wrk_max >= w->pos[i]) {
+
+			// do not update the first bin in work range, or bins before that
+			if (firstbin < 0) {
+				firstbin = i;
+				continue;
+			}
+
+			w->nsum[i] += w->hits[i];
+
+			int g = 0;
+			if (w->hits[i] >= hits_min && w->hits[i-1] >= hits_min) {
+				g = w->hits[i] + w->hits[i-1];
+			} else {
+				// less than minimum number of hits, this run does not contribute
+				w->W[i] = w_old[i] - w_old[i-1] + w->W[i-1];
+				continue;
+			}
+
+			long gsum_new = w->gsum[i] + g; // w->gsum[i] = sum of all g factors from earlier runs
+			double ln = w->hgram[i-1] / ((double) w->hgram[i]);
+			ln = -1.0*g*log(ln); // minus sign with my weight convention
+
+			w->W[i] = w->W[i-1] + ((w_old[i]-w_old[i-1]) * w->gsum[i] + ln) / ((double) gsum_new);
+
+			w->gsum[i] = gsum_new;
+
+		} else if (w->wrk_max < w->pos[i]) {
+			// outside work range, preserve weight relative to the last bin in work range
+			if (lastbin < 0) lastbin = i-1;
+			double diff = w->W[lastbin] - w_old[lastbin];
+			w->W[i] += diff;
+		}
+
+	} // end i
+
+	// reset hits
+	for (int i=0; i<w->bins+2; i++) {
+		w->hits[i] = 0;
+		w->hgram[i] = 0.0;
+	}
+	// sync extra bins, although this should be automatic in the above
+	w->W[0] = w->W[1];
+	w->W[w->bins+1] = w->W[w->bins];
+
+/*
+	// overcorrect: make less visited bins more likely (but preserve relative weight outside update range)
+	double C = 0.5;
+	for (int i=firstbin+1; i<w->bins+2; i++) {
+		w->W[i] += C * log(w->nsum[i]);
+	}
+*/
+
 }
 
 
@@ -561,6 +722,11 @@ void free_muca_arrays(fields* f, weight *w) {
 	free(w->pos);
   free(w->W);
 	free(w->hits);
+	if (w->mode == SLOW) {
+		free(w->hgram);
+		free(w->gsum);
+		free(w->nsum);
+	}
 
 	// free backup arrays
 	switch(w->orderparam) {

@@ -48,6 +48,11 @@
 #define PHI2MINUSSIGMA2 3
 #define PHI2SIGMA2 4
 
+// different modes for updating the multicanonical weight function
+#define READONLY 0
+#define FAST 1
+#define SLOW 2 // these are protected by the SLOW_MUCA flag
+
 // nasty globals for keeping track of evaluation time
 double waittime;
 double Global_comms_time, Global_total_time;
@@ -259,14 +264,18 @@ typedef struct {
 	double* pos; // weight "position", i.e. values of the order param in the given range
 	double* W; // value of the weight function at the beginning of each bin
 	double delta; // how much the weight is increased in update_weight()
-
 	int* hits; // keep track of which bins we have visited
 	int muca_count; // how many muca acc/rej steps performed (resets after weight update)
 	int update_interval; // how many muca acc/rej steps until weight is updated
 
  	int last_max; // 1 if system recently visited the bin containing w.wrk_max (keep track of tunneling)
-	char readonly; // 1 if weight is to be updated, 0 otherwise
+	int mode; // one of the multicanonical "modes" defined above, affects weight recursion
 	char weightfile[100]; // file name
+
+	// additional data arrays used in slow update mode only
+	long* gsum;
+	long* nsum;
+	double* hgram;
 } weight;
 
 
@@ -471,6 +480,7 @@ void reset_muca_fields(lattice const* l, fields* f, weight* w, char par);
 void alloc_backup_arrays(lattice const* l, fields* f, weight const* w);
 void free_muca_arrays(fields* f, weight *w);
 void init_last_max(weight* w);
+void update_weight_slow(weight* w);
 
 #ifdef CORRELATORS
 // correlation.c
