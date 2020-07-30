@@ -71,6 +71,7 @@
 
 #include "su2.h"
 
+
 /* Save the current weight into file.
 * There will be w.bins + 1 lines, the first one being:
 * 	w.bins w.delta w.last_max w.wrk_min w.wrk_max
@@ -123,6 +124,8 @@ void load_weight(lattice const* l, weight *w) {
   w->pos = malloc( (w->bins+2)* sizeof(*(w->pos)));
   w->W = malloc((w->bins+2) * sizeof(*(w->W)));
 	w->hits = malloc((w->bins+2) * sizeof(*(w->hits)));
+	w->slope = malloc((w->bins+2) * sizeof(*(w->slope)));
+	w->b = malloc((w->bins+2) * sizeof(*(w->b)));
 
 	// how often to update the weight?
 	if (w->mode != SLOW) w->update_interval = 8;
@@ -200,6 +203,8 @@ void load_weight(lattice const* l, weight *w) {
 		w->pos = realloc(w->pos, (w->bins+2) * sizeof(*(w->pos)));
 		w->W = realloc(w->W, (w->bins+2) * sizeof(*(w->W)));
 		w->hits = realloc(w->hits, (w->bins+2) * sizeof(*(w->hits)));
+		w->slope = realloc(w->slope, (w->bins+2) * sizeof(*(w->slope)));
+		w->b = realloc(w->b, (w->bins+2) * sizeof(*(w->b)));
 
 		if (w->mode == SLOW) {
 			w->hgram = realloc(w->hgram, (w->bins+2) * sizeof(*(w->hgram)));
@@ -240,6 +245,9 @@ void load_weight(lattice const* l, weight *w) {
 	w->pos[0] = w->min - 1000.0 * (w->max - w->min); // "-infinity"
 	w->W[0] = w->W[1];
 	w->W[w->bins+1] = w->W[w->bins]; // position set to w.max
+
+	// prepare w->b and w->slope
+	linearize_weight(w);
 
 	printf0(*l, "Using weight function with %d bins in range %lf, %lf\n", w->bins, w->min, w->max);
 	printf0(*l, "Global multicanonical check %d times per even/odd update sweep\n", w->checks_per_sweep);
@@ -292,24 +300,40 @@ void load_weight(lattice const* l, weight *w) {
 
 }
 
+// Make arrays 'slope' and 'b' such that W(R) = b + R*slope in each bin
+void linearize_weight(weight* w) {
+	// extra bins: constant weight
+	w->slope[0] = 0; w->slope[w->bins+1] = 0;
+	w->b[0] = w->W[0]; w->b[w->bins+1] = w->W[w->bins+1];
+
+	for (int i=1; i<w->bins+1; i++) {
+		w->slope[i] = (w->W[i+1] - w->W[i]) / (w->pos[i+1] - w->pos[i]);
+		w->b[i] = w->W[i] - w->slope[i] * w->pos[i];
+	}
+}
+
 /* Get linearized weight corresponding to order
 * parameter value val. */
 double get_weight(weight const* w, double val) {
 
 	// no need to linearize if outside the binning range
 	if (val >= w->max) {
-		return w->W[w->bins+1];
+		return w->b[w->bins+1];
 	} else if (val < w->min) {
-		return w->W[0];
+		return w->b[0];
 	}
 
 	int bin = whichbin(w, val);
 	// should not return 0 or w.bins+1 because these correspond to checks above
 	if (bin >= w->bins+1) {
 		printf("Error in get_weight (multicanonical.c) !!!\n");
-		return w->W[w->bins+1];
+		return w->b[w->bins+1];
 	}
 
+	// W(R) = b + slope*R
+	return w->b[bin] + w->slope[bin] * val;
+
+	/*
 	// linearize the weight function in this bin
 	double val_prev = w->pos[bin];
 	double nextW, val_next;
@@ -318,6 +342,7 @@ double get_weight(weight const* w, double val) {
 	val_next = w->pos[bin+1];
 
 	return w->W[bin] + (val - val_prev) * (nextW - w->W[bin]) / (val_next - val_prev);
+	*/
 }
 
 
@@ -377,7 +402,6 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 			} else if (w->mode == SLOW) {
 				update_weight_slow(w);
 				save_weight(l, w);
-				w->muca_count = 0;
 			}
 
 			w->muca_count = 0;
@@ -461,6 +485,8 @@ int update_weight(weight* w) {
 	w->W[0] = w->W[1];
 	w->W[w->bins+1] = w->W[w->bins];
 
+	linearize_weight(w);
+
 	/* Reduce w->delta if we tunneled from one end of the work range to the other */
 	int tunnel = 0;
 	if (w->last_max && w->hits[1] > 0) {
@@ -487,6 +513,9 @@ void update_weight_slow(weight* w) {
 
 	double w_old[w->bins+2];
 	memcpy(w_old, w->W, (w->bins+2) * sizeof(w_old[0]));
+
+	// if the bins are of unequal sizes, 'normalize' the histogram accordingly
+	for (int i=2; i<w->bins+1; i++) w->hgram[i] /= (w->pos[i+1] - w->pos[i-1]);
 
 	// calculate the weight relative to the first bin in the update range
 	int firstbin = -1;
@@ -541,14 +570,35 @@ void update_weight_slow(weight* w) {
 	w->W[0] = w->W[1];
 	w->W[w->bins+1] = w->W[w->bins];
 
-/*
 	// overcorrect: make less visited bins more likely (but preserve relative weight outside update range)
-	double C = 0.5;
-	for (int i=firstbin+1; i<w->bins+2; i++) {
-		w->W[i] += C * log(w->nsum[i]);
-	}
-*/
+	double c = 2.0;
+	/* will first modify w->W, then use those to calculate w->b, w->slope,
+	* then finally undo the overcorrection to w->W but not to w->b, w->slope
+	* => simulation uses the corrected weight but afterwards updates the original w->W */
+	memcpy(w_old, w->W, (w->bins+2) * sizeof(w_old[0]));
 
+	firstbin += 1;
+	double corr = 0.0;
+	for (int i=firstbin; i<w->bins+1; i++) {
+
+		if (i <= lastbin) {
+			double diff0 = w->pos[firstbin+1] - w->pos[firstbin-1];
+			double diff1 = w->pos[i+1] - w->pos[i-1];
+			corr = c * log( (diff0/diff1) *  w->gsum[i] / w->gsum[firstbin]);
+
+			w->W[i] += corr;
+		} else {
+			// outside update range, add corr calculated in the last update bin
+			w->W[i] += corr;
+		}
+	}
+
+	w->W[0] = w->W[1];
+	w->W[w->bins+1] = w->W[w->bins];
+	linearize_weight(w);
+
+	// w->slope and w->b done, restore the uncorrected weight
+	memcpy(w->W, w_old, (w->bins+2) * sizeof(w_old[0]));
 }
 
 
@@ -722,6 +772,8 @@ void free_muca_arrays(fields* f, weight *w) {
 	free(w->pos);
   free(w->W);
 	free(w->hits);
+	free(w->slope);
+	free(w->b);
 	if (w->mode == SLOW) {
 		free(w->hgram);
 		free(w->gsum);

@@ -263,6 +263,8 @@ typedef struct {
 	//long min_bin, max_bin; // indices of the bins containing w.wrk_min and w.wrk_max
 	double* pos; // weight "position", i.e. values of the order param in the given range
 	double* W; // value of the weight function at the beginning of each bin
+	double* slope; double* b; // linearized weight: W(R) = w_i + (R - R_i)*slope[i] = b + slope*R
+
 	double delta; // how much the weight is increased in update_weight()
 	int* hits; // keep track of which bins we have visited
 	int muca_count; // how many muca acc/rej steps performed (resets after weight update)
@@ -469,6 +471,7 @@ void print_labels_local(lattice const* l, char* fname);
 // multicanonical.c
 void load_weight(lattice const* l, weight *w);
 void save_weight(lattice const* l, weight const* w);
+void linearize_weight(weight* w);
 double get_weight(weight const* w, double val);
 void muca_accumulate_hits(weight* w, double val);
 int update_weight(weight* w);
