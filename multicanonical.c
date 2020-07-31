@@ -25,7 +25,7 @@
 *			 don't matter that much here), increase weight in each bin by value proportional to w.hits[bin],
 *			 but relative to the weight in first bin which is kept constant (see update_weight()).
 *
-*		4. Once the system has visited both the first and last bin, decrease w.delta to make the
+*		4. Once the simulation has visited both the first and last bin, decrease w.delta to make the
 *			 iteration converge. This is necessary because at first the system prefers the canonical
 *			 minima, so those obtain large weight very quickly. Afterwards, the mixed-phase configurations are
 *		   preferred and the system spends most of the time there, so smaller weight updates are
@@ -152,6 +152,10 @@ void load_weight(lattice const* l, weight *w) {
 			die(20);
 		}
 
+		if (w->bins <= 0) {
+			printf0(*l, "\n!!!!! Multicanonical error: bins <= 0\n");
+			die(-1141);
+		}
 		// create equally sized bins. last (extra) bin in weight file STARTS at w.max:
 		double dbin = (w->max - w->min)/((double) (w->bins));
 
@@ -199,6 +203,11 @@ void load_weight(lattice const* l, weight *w) {
 
 		// override initial options with the values read from the actual weightfile
 		w->bins = bins_read;
+		if (w->bins <= 0) {
+			printf0(*l, "\n!!!!! Multicanonical error: bins <= 0\n");
+			die(-1141);
+		}
+
 		// realloc accounting for the 2 virtual bins
 		w->pos = realloc(w->pos, (w->bins+2) * sizeof(*(w->pos)));
 		w->W = realloc(w->W, (w->bins+2) * sizeof(*(w->W)));
@@ -419,14 +428,29 @@ void muca_accumulate_hits(weight* w, double val) {
 
 	int bin = whichbin(w, val);
 
-	/* Kari updates either bin or bin+1, depending on whose start value is closer to 'val'.
-	* Do the same here, unless 'val' is in the last extra bin: */
-	if (bin < w->bins+1) {
+	/* Update bin based on condition R_{i-1/2} <= R < R_{i+1/2}, so that the effective
+	* bin width is (pos[i+1] - pos[i-1]) / 2 ; R is the order parameter.
+	* Exception: first bin (i=1) and the last extra bin. I take these bins to have size d_min = R_2 - R_1
+	* and d_max = R_imax - R_{imax-1}, where the weight range ends at R_imax.
+	* If R >= R_imax + 0.5*d_max or R < R_1 - 0.5*d_min, do nothing,
+	* but if R_{imax-1/2} <= R < R_imax update the last extra bin (sync later)
+	* but also its neighbors by a smaller amount */
+
+	if (bin == 0) {
+		double dmin = (w->pos[2] - w->pos[1]);
+		if (val < w->pos[1] - 0.5*dmin) return;
+ 		else bin += 1;
+
+	} else if (bin < w->bins+1) {
 		double diff1 = val - w->pos[bin];
 		double diff2 = w->pos[bin+1] - val;
 		if (diff1 > diff2) {
 			bin = bin + 1;
 		}
+	} else {
+		// extra bin
+		double dmax = w->pos[w->bins+1] - w->pos[w->bins];
+		if (val > w->pos[w->bins+1] + 0.5*dmax) return;
 	}
 
 	if (w->mode == FAST) {
@@ -514,7 +538,12 @@ void update_weight_slow(weight* w) {
 	double w_old[w->bins+2];
 	memcpy(w_old, w->W, (w->bins+2) * sizeof(w_old[0]));
 
-	// if the bins are of unequal sizes, 'normalize' the histogram accordingly
+	/* Calculate canonical probabilities per unit 'length' (necessary if bins have diff sizes).
+	* Here the first and last bins get the same treatment as in accumulate_hits() */
+	double dmin = w->pos[2] - w->pos[1];
+	//double dmax = w->pos[w->bins+1] - w->pos[w->bins];
+
+	w->hgram[1] /= dmin;
 	for (int i=2; i<w->bins+1; i++) w->hgram[i] /= (w->pos[i+1] - w->pos[i-1]);
 
 	// calculate the weight relative to the first bin in the update range
@@ -524,7 +553,7 @@ void update_weight_slow(weight* w) {
 	// minimum number of 'hits' in a bin before taking it into account
 	int hits_min = 8;
 
-	for (int i=1; i<w->bins+2; i++) {
+	for (int i=1; i<w->bins+1; i++) {
 		if (w->pos[i] >= w->wrk_min && w->wrk_max >= w->pos[i]) {
 
 			// do not update the first bin in work range, or bins before that
@@ -545,7 +574,7 @@ void update_weight_slow(weight* w) {
 			}
 
 			long gsum_new = w->gsum[i] + g; // w->gsum[i] = sum of all g factors from earlier runs
-			double ln = w->hgram[i-1] / ((double) w->hgram[i]);
+			double ln = w->hgram[i-1] / w->hgram[i];
 			ln = -1.0*g*log(ln); // minus sign with my weight convention
 
 			w->W[i] = w->W[i-1] + ((w_old[i]-w_old[i-1]) * w->gsum[i] + ln) / ((double) gsum_new);
@@ -566,7 +595,7 @@ void update_weight_slow(weight* w) {
 		w->hits[i] = 0;
 		w->hgram[i] = 0.0;
 	}
-	// sync extra bins, although this should be automatic in the above
+	// sync extra bins
 	w->W[0] = w->W[1];
 	w->W[w->bins+1] = w->W[w->bins];
 
@@ -582,9 +611,9 @@ void update_weight_slow(weight* w) {
 	for (int i=firstbin; i<w->bins+1; i++) {
 
 		if (i <= lastbin) {
-			double diff0 = w->pos[firstbin+1] - w->pos[firstbin-1];
+			// again, calculate probability per unit 'length'
 			double diff1 = w->pos[i+1] - w->pos[i-1];
-			corr = c * log( (diff0/diff1) *  w->gsum[i] / w->gsum[firstbin]);
+			corr = c * log( (dmin / diff1) *  w->gsum[i] / w->gsum[firstbin]);
 
 			w->W[i] += corr;
 		} else {
