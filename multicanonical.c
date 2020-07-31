@@ -607,7 +607,7 @@ void update_weight_slow(weight* w) {
 	memcpy(w_old, w->W, (w->bins+2) * sizeof(w_old[0]));
 
 	double corr = 0.0;
-	for (int i=firstbin; i<w->bins+1; i++) {
+	for (int i=firstbin+1; i<w->bins+1; i++) {
 
 		if (i <= lastbin) {
 			// again, calculate probability per unit 'length'
