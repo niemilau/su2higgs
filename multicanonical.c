@@ -606,7 +606,6 @@ void update_weight_slow(weight* w) {
 	* => simulation uses the corrected weight but afterwards updates the original w->W */
 	memcpy(w_old, w->W, (w->bins+2) * sizeof(w_old[0]));
 
-	firstbin += 1;
 	double corr = 0.0;
 	for (int i=firstbin; i<w->bins+1; i++) {
 
