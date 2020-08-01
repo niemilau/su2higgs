@@ -72,22 +72,23 @@ int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir) 
 }
 
 
-/*
-* Update an SU(2) scalar doublet using Metropolis.
+#if (NHIGGS > 0)
+/* Update an SU(2) scalar doublet using Metropolis.
 * Returns 1 if update was accepted and 0 if rejected */
-int metro_doublet(lattice const* l, fields* f, params const* p, double** phi, long i) {
+int metro_doublet(lattice const* l, fields* f, params const* p, long i, int higgs_id) {
 
+	double **phi = f->su2doublet[higgs_id];
 	double oldfield[4];
 	memcpy(oldfield, phi[i], SU2DB * sizeof(phi[i][0]));
 
-	double act_old = localact_doublet(l, f, p, phi, i);
+	double act_old = localact_doublet(l, f, p, i, higgs_id);
 
 	// modify the old field by random values
 	for (int k=0; k<SU2DB; k++) {
 		phi[i][0] += 1.0*(drand48() - 0.5);
 	}
 
-	double act_new = localact_doublet(l, f, p, phi, i);
+	double act_new = localact_doublet(l, f, p, i, higgs_id);
 
 	int accept;
 	double diff = act_new - act_old;
@@ -105,11 +106,11 @@ int metro_doublet(lattice const* l, fields* f, params const* p, double** phi, lo
 	return accept;
 }
 
+#endif // if (NHIGGS > 0)
 
-/*
-* Update a single SU(2) scalar triplet using Metropolis.
-* Returns 1 if update was accepted and 0 if rejected.
-*/
+
+/* Update a single SU(2) scalar triplet using Metropolis.
+* Returns 1 if update was accepted and 0 if rejected. */
 int metro_triplet(lattice const* l, fields* f, params const* p, long i) {
 
 	double oldfield[3];

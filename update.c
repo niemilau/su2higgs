@@ -34,8 +34,7 @@ void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, co
 
 }
 
-/* Same as checkerboard_sweep_su2link(), but for U(1) links instead.
-*/
+/* Same as checkerboard_sweep_su2link(), but for U(1) links instead. */
 void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
@@ -57,11 +56,12 @@ void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, cou
 }
 
 
+#if (NHIGGS > 0)
 /* Sweep over the lattice in a checkerboard layout and update half of the doublets.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 0 if ALL local updates were rejected by multicanonical, nonzero otherwise */
 int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c,
-			weight* w, int parity, int metro, double** phi) {
+			weight* w, int parity, int metro, int higgs_id) {
 
 	int accept = 1;
 	long muca_interval = l->sites_total; // initialize to some large value to avoid bugs
@@ -89,12 +89,12 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 	for (long i=offset; i<max; i++) {
 
 		if (p->algorithm_su2doublet == OVERRELAX && (metro == 0)) {
-			c->acc_overrelax_doublet += overrelax_doublet(l, f, p, i);
-			c->total_overrelax_doublet++;
+			c->acc_overrelax_doublet[higgs_id] += overrelax_doublet(l, f, p, i);
+			c->total_overrelax_doublet[higgs_id]++;
 
 		} else if (p->algorithm_su2doublet == METROPOLIS || (metro != 0)) {
-			c->accepted_doublet += metro_doublet(l, f, p, phi, i);
-			c->total_doublet++;
+			c->accepted_doublet[higgs_id] += metro_doublet(l, f, p, i, higgs_id);
+			c->total_doublet[higgs_id]++;
 		}
 
 		if (do_muca) {
@@ -116,6 +116,8 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 
 	return accept; // return is nonzero if at least one muca check was accepted
 }
+
+#endif // if (NHIGGS > 0)
 
 /* */
 int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups) {
@@ -280,7 +282,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 			par_a[0] = EVEN; par_a[1] = ODD;
 		}
 
-		#ifdef HIGGS
+		#if (NHIGGS > 0)
 		for (int k=0; k<p->update_su2doublet; k++) {
 
 			if (c->higgs_sweeps >= metro_interval-1) {
@@ -293,16 +295,11 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 
 			for (int j=0; j<=1; j++) {
 				int par = par_a[j];
-				accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, f->su2doublet);
 
-				// if the sweep was rejected, no need to sync halos
-				if (accept) update_halo(l, par, f->su2doublet, SU2DB);
-
-
-				#ifdef HIGGS2
-					accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, f->doublet2);
-					if (accept) update_halo(l, par, f->doublet2, SU2DB);
-				#endif
+				for (int db=0; db<NHIGGS; db++) {
+					accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, db);
+					if (accept) update_halo(l, par, f->su2doublet[db], SU2DB);
+				}
 
 			}
 		}
@@ -334,9 +331,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 }
 
 
-/* Routine sync_halos()
-* This syncs all halo fields. Should be called before starting the simulation.
-*/
+/* Routine sync_halos(): just syncs all halo fields. */
 void sync_halos(lattice* l, fields* f) {
 
 	for (int parity=0; parity<=1; parity++) {
@@ -348,12 +343,8 @@ void sync_halos(lattice* l, fields* f) {
 			#endif
 		}
 
-		#ifdef HIGGS
-			update_halo(l, parity, f->su2doublet, SU2DB);
-		#endif
-
-		#ifdef HIGGS2
-			update_halo(l, parity, f->doublet2, SU2DB);
+		#if (NHIGGS > 0)
+			for (int db=0; db < NHIGGS; db++) update_halo(l, parity, f->su2doublet[db], SU2DB);
 		#endif
 
 		#ifdef TRIPLET

@@ -26,8 +26,7 @@ double *make_singletfield(long sites) {
 
 
 /* Allocates contiguous memory for a field with dofs degrees of freedom.
-* It can be accessed as field[x][dof], where x is the lattice site.
-*/
+* It can be accessed as field[x][dof], where x is the lattice site. */
 double **make_field(long sites, int dofs) {
 
 	double **field = malloc(sites * sizeof(**field));
@@ -106,12 +105,10 @@ void alloc_fields(lattice const* l, fields *f) {
 	long sites = l->sites_total;
 	f->su2link = make_gaugefield(sites, l->dim, SU2LINK);
 
-	#ifdef HIGGS
-		f->su2doublet = make_field(sites, SU2DB);
+	#if (NHIGGS > 0)
+    for (int db=0; db<NHIGGS; db++) f->su2doublet[db] = make_field(sites, SU2DB);
 	#endif
-  #ifdef HIGGS2
-    f->doublet2 = make_field(sites, SU2DB);
-  #endif
+
 	#ifdef TRIPLET
 		f->su2triplet = make_field(sites, SU2TRIP);
 	#endif
@@ -128,12 +125,10 @@ void free_fields(lattice const* l, fields *f) {
 
 	long sites = l->sites_total;
 	free_gaugefield(sites, f->su2link);
-	#ifdef HIGGS
-		free_field(f->su2doublet);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) free_field(f->su2doublet[db]);
 	#endif
-  #ifdef HIGGS2
-    free_field(f->doublet2);
-  #endif
+
 	#ifdef TRIPLET
 		free_field(f->su2triplet);
 	#endif

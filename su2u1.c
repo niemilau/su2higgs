@@ -264,31 +264,25 @@ void su2link_staple(lattice const* l, fields const* f, params const* p, long i, 
 		V[k] *= -0.5 * p->betasu2;
 	}
 
-	#ifdef HIGGS
+	#if (NHIGGS > 0)
 
 		// Higgs doublet hopping terms: -Tr U_j Phi(x+j) exp(-i a_j(x) sigma_3) Phi(x)^+,
 		// a_j(x) = 0 if hypercharge is neglected.
-		double** higgs;
+		double** phi;
 		long nextsite = l->next[i][dir];
-		double nextphi[4];
-		double currentphi[4];
+		double nextphi[SU2DB];
+		double currentphi[SU2DB];
 
 		for (int db=0; db<NHIGGS; db++) {
 
-			// 1 or 2 doublets
-			if (db == 0) higgs = f->su2doublet;
-			#ifdef HIGGS2
-			else if (db == 1) higgs = f->doublet2;
-			#endif
-			else return;
-
+			phi = f->su2doublet[db];
 			// we want Hermitian conjugate of Phi(x):
 			for (int d=0; d<SU2DB; d++) {
-				currentphi[d] = higgs[i][d];
+				currentphi[d] = phi[i][d];
 				if (d > 0) currentphi[d] *= -1.0;
 			}
 
-			memcpy(nextphi, higgs[i], SU2DB * sizeof(*nextphi));
+			memcpy(nextphi, phi[nextsite], SU2DB * sizeof(*nextphi));
 
 			#ifdef U1
 				// the U(1) contribution can be written as
@@ -298,9 +292,8 @@ void su2link_staple(lattice const* l, fields const* f, params const* p, long i, 
 				double s = sin(f->u1link[i][dir]);
 				double c = cos(f->u1link[i][dir]);
 				double b[4];
-				for (int k=0; k<4; k++) {
-					b[k] = nextphi[k];
-				}
+				for (int k=0; k<SU2DB; k++) b[k] = nextphi[k];
+
 				// calculate Phi(x+j) times the hypercharge bit
 				nextphi[0] = c*b[0] + s*b[3];
 				nextphi[1] = c*b[1] + s*b[2];
@@ -315,7 +308,7 @@ void su2link_staple(lattice const* l, fields const* f, params const* p, long i, 
 			 link staple, so overall we add to the Wilson staple
 			 -0.5 times what su2rot() of two doublets gives us. */
 			su2rot(nextphi, currentphi);
-			for (int k=0; k<4; k++) {
+			for (int k=0; k<SU2LINK; k++) {
 				V[k] -= 0.5 * nextphi[k];
 			}
 		} // doublet hoppings done
@@ -374,12 +367,10 @@ double localact_su2link(lattice const* l, fields const* f, params const* p, long
 	*/
 
 	// hopping terms:
-	#ifdef HIGGS
-		tot += hopping_doublet_forward(l, f, p, f->su2doublet, i, dir);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) tot += hopping_doublet_forward(l, f, i, dir, db);
 	#endif
-	#ifdef HIGGS2
-	 	tot += hopping_doublet_forward(l, f, p, f->doublet2, i, dir);
-	#endif
+
 	#ifdef TRIPLET
 		tot += hopping_triplet_forward(l, f, p, i, dir);
 	#endif
@@ -524,11 +515,8 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 	tot *= p->betau1;
 
 	// hopping terms:
-	#ifdef HIGGS
-		tot += hopping_doublet_forward(l, f, p, f->su2doublet, i, dir);
-	#endif
-	#ifdef HIGGS2
-		tot += hopping_doublet_forward(l, f, p, f->doublet2, i, dir);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) tot += hopping_doublet_forward(l, f, i, dir, db);
 	#endif
 
 	return tot;
@@ -596,25 +584,26 @@ double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 
 }
 
+/* Routines below access f->su2doublet directly, so protect with preprocessor if */
+#if (NHIGGS > 0 )
+
 /* Calculate the hopping term for a SU(2) doublet 'phi' at site i,
 * in the "forward" direction. Specifically, calculates
 *		-Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3)
 * for j = dir and \alpha_j(x) = 0 if hypercharge is neglected. */
-double hopping_doublet_forward(lattice const* l, fields const* f, params const* p,
-			double** phi, long i, int dir) {
-	double *phi1 = phi[i];
-	double *phi2 = NULL;
-	double *U = NULL;
+double hopping_doublet_forward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
+
+	double **higgs = f->su2doublet[higgs_id];
+
+	double *phi1 = higgs[i];
+	double *phi2 = higgs[l->next[i][dir]];
+	double *U = f->su2link[i][dir];
+
 	double tot = 0.0;
 
-	phi2 = phi[l->next[i][dir]];
-	U = f->su2link[i][dir];
-
 	#ifndef U1
-		// no U(1)
 		tot -= hopping_trace(phi1, U, phi2);
 	#else
-		// include U(1)
 		tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[i][dir]);
 	#endif
 
@@ -625,44 +614,76 @@ double hopping_doublet_forward(lattice const* l, fields const* f, params const* 
 * in the "backwards" direction. Specifically, calculates
 *		- Tr \Phi(x-j)^+ U_j(x-j) \Phi(x) exp(-i \alpha_j(x-j) \sigma_3)
 * for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected. */
-double hopping_doublet_backward(lattice const* l, fields const* f, params const* p,
-		double** phi, long i, int dir) {
+double hopping_doublet_backward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
 
-	double *phi1 = NULL;
-	double *phi2 = phi[i];
-	double *U = NULL;
+	double **higgs = f->su2doublet[higgs_id];
+
+	long prev = l->prev[i][dir];
+
+	double *phi1 = higgs[prev];
+	double *phi2 = higgs[i];
+	double *U = f->su2link[prev][dir];
 	double tot = 0.0;
-
-	long previous = l->prev[i][dir];
-
-	phi1 = phi[previous];
-	U = f->su2link[previous][dir];
 
 	#ifndef U1
 		// no U(1)
 		tot -= hopping_trace(phi1, U, phi2);
 	#else
 		// include U(1)
-		tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[previous][dir]);
+		tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[prev][dir]);
 	#endif
 
 	return tot;
+
 }
 
-/* Calculate the full covariant derivative for an SU(2) doublet 'phi' at site i,
+/* Calculate the full covariant derivative for an SU(2) doublet at site i,
 * in the "forward" directions. Specifically, calculates
 *		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ] */
-double covariant_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i) {
+double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id) {
 	double tot = 0.0;
+	double **phi = f->su2doublet[higgs_id];
 	double mod = doubletsq(phi[i]);
 	for (int dir=0; dir<l->dim; dir++){
 		// multiply by 2 here because doubletsq gives 0.5 Tr Phi^+ Phi
-		tot += 2.0 * mod + hopping_doublet_forward(l, f, p, phi, i, dir);
+		tot += 2.0 * mod + hopping_doublet_forward(l, f, i, dir, higgs_id);
 	}
 
 	return tot;
 }
 
+#endif // if (NHIGGS > 0)
+
+/* Calculate the action due to single su2doublet field at site i.
+* This includes the potential, as well as hopping terms
+* in "forward" and "backwards" directions.
+* Used in metropolis update. */
+double localact_doublet(lattice const* l, fields const* f, params const* p, long i, int higgs_id) {
+
+	double tot = 0.0;
+	// Full covariant derivative with the local Tr Phi^+ Phi included,
+	// and summed over directions:
+	tot += covariant_doublet(l, f, i, higgs_id);
+
+	for (int dir=0; dir<l->dim; dir++) {
+		// contribution from backwards hopping terms:
+		tot += hopping_doublet_backward(l, f, i, dir, higgs_id);
+	}
+
+	tot += higgspotential(f, p, i);
+
+	return tot;
+}
+
+/* Calculate phi_{12} = phi1^+ phi2, where the fields are now in vector parametrization */
+complex get_phi12(double const* h1, double const* h2) {
+	complex res;
+	/* R = Re phi12, I = Im phi12 = -0.5 i Tr \Phi_1 \sigma_3 \he\Phi_2 */
+	res.re = 0.5*(h1[0]*h2[0] + h1[1]*h2[1] + h1[2]*h2[2] + h1[3]*h2[3]);
+	res.im = 0.5*(h1[3]*h2[0] + h1[2]*h2[1] - h1[1]*h2[2] - h1[0]*h2[3]);
+
+	return res;
+}
 
 /* Calculate the full scalar potential at site i, including all scalar fields.
 * Specifically: V = 0.5 m^2 Tr(\Phi^+ \Phi) + 0.25 * \lambda (Tr(\Phi^+ \Phi))^2 in the SM.
@@ -671,25 +692,24 @@ double higgspotential(fields const* f, params const* p, long i) {
 
 	double pot = 0.0;
 
-	#ifdef HIGGS
-		double mod = doubletsq(f->su2doublet[i]);
+	#if (NHIGGS > 0)
+		double *h1 = f->su2doublet[0][i];
+		double mod = doubletsq(h1);
 		pot += p->msq_phi * mod + p->lambda_phi * mod*mod;
 
-		#ifdef HIGGS2
+		#if (NHIGGS == 2)
 			/* Two-Higgs doublet potential is
 			* 	V = m1^2 f11 + m2^2 f22 + 0.5(m12^2 f12 + h.c.)
 			*			 + lam1 f11^2 + lam2 f22^2 + lam3 f11 f22 + lam4 f12 f21
 			*  		 + 0.5(lam5 f12^2 + lam6 f11 f12 + lam7 f22 f21 + h.c. )
 			* where f11 = phi1^+.phi1 etc. see documentation for the alternative form used below */
 
+			double *h2 = f->su2doublet[1][i];
 			double f11 = mod;
-			double f22 = doubletsq(f->doublet2[i]);
-			double* h1 = f->su2doublet[i];
-			double* h2 = f->doublet2[i];
+			double f22 = doubletsq(h2);
 
-			/* R = Re f12, I = Im f12 = -0.5 i Tr \Phi_1 \sigma_3 \he\Phi_2 */
-			double R = 0.5*(h1[0]*h2[0] + h1[1]*h2[1] + h1[2]*h2[2] + h1[3]*h2[3]);
-			double I = 0.5*(h1[3]*h2[0] + h1[2]*h2[1] - h1[1]*h2[2] - h1[0]*h2[3]);
+			complex f12 = get_phi12(h1, h2);
+			double R = f12.re; double I = f12.im;
 
 			pot += p->msq_phi2 * f22 + p->m12sq.re * R - p->m12sq.im * I + p->lam2 * f22*f22
 					  + p->lam3 * f11*f22 + p->lam4 * (R*R + I*I) + p->lam5.re*(R*R - I*I) - 2.0*p->lam5.im*R*I
@@ -702,33 +722,12 @@ double higgspotential(fields const* f, params const* p, long i) {
 		// add 0.5 m^2 Tr Sigma^2 + b4 (0.5 Tr Sigma^2)^2, plus couplings to other scalars
 		double mod_trip = tripletsq(f->su2triplet[i]); // 0.5 Tr Sigma^2
 		pot += p->msq_triplet * mod_trip + p->b4 * mod_trip * mod_trip;
-		#ifdef HIGGS
+		#if (NHIGGS > 0)
 			pot += p->a2 * mod * mod_trip;
 		#endif
 	#endif
 
 	return pot;
-}
-
-/* Calculate the action due to single su2doublet field at site i.
-* This includes the potential, as well as hopping terms
-* in "forward" and "backwards" directions.
-* Used in metropolis update. */
-double localact_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i) {
-
-	double tot = 0.0;
-	// Full covariant derivative with the local Tr Phi^+ Phi included,
-	// and summed over directions:
-	tot += covariant_doublet(l, f, p, phi, i);
-
-	for (int dir=0; dir<l->dim; dir++) {
-		// contribution from backwards hopping terms:
-		tot += hopping_doublet_backward(l, f, p, phi, i, dir);
-	}
-
-	tot += higgspotential(f, p, i);
-
-	return tot;
 }
 
 /**********************************
@@ -834,9 +833,9 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 	double mod = tripletsq(f->su2triplet[i]);
 
 	tot += p->msq_triplet * mod + p->b4 * mod * mod;
-	#ifdef HIGGS
+	#if (NHIGGS > 0)
 		// add term 0.5 Tr Phi^+ Phi Tr A^2
-		tot += p->a2 * doubletsq(f->su2doublet[i]) * mod;
+		tot += p->a2 * doubletsq(f->su2doublet[0][i]) * mod;
 	#endif
 
 	return tot;
@@ -1048,7 +1047,7 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
       } // end dir
 
       // scalars
-      #ifdef HIGGS
+      #if (NHIGGS > 0)
 
       #endif
       #ifdef TRIPLET

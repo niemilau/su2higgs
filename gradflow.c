@@ -101,7 +101,7 @@ void grad_flow(lattice* l, fields const* f, params* p,
      * because the force is known already. */
     flow_gauge(l, &flow, &forces, dt); // SU(2) gauge links
 
-    #ifdef HIGGS
+    #if (NHIGGS > 0)
 
     #endif
 
@@ -315,8 +315,8 @@ void grad_force_triplet(lattice const* l, fields const* f, params const* p, doub
 
     res[a] += (2.0*l->dim + p->msq_triplet + 2.0*p->b4 * trSigsq) * trip[a];
 
-    #ifdef HIGGS
-      double higgsmod = doubletsq(f->su2doublet[i]);
+    #if (NHIGGS > 0)
+      double higgsmod = doubletsq(f->su2doublet[0][i]);
       res[a] += p->a2 * higgsmod * trip[a];
     #endif
 
@@ -342,7 +342,7 @@ void calc_gradient(lattice const* l, fields const* f, params const* p, fields* f
       grad_force_link(l, f, p, forces->su2link[i][dir], i, dir);
     }
 
-  #ifdef HIGGS
+  #if (NHIGGS > 0)
 
   #endif
 

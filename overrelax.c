@@ -9,6 +9,16 @@
 
 #include "su2.h"
 
+/*
+if (id_higgs == 1) phi = f->su2doublet[i];
+#ifdef HIGGS2
+	else if (id_higgs == 2) phi = f->doublet2[i];
+#endif
+else {
+	printf("!!! localact_doublet() error!! in su2u1.c\n");
+	die(-666);
+}
+*/
 
 // Find real root to the equation x^3 + b*x^2 + c*x + d = 0
 double polysolve3(long double a, long double b, long double c, long double d) {
@@ -33,7 +43,7 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 	return x;
 }
 
-
+#if (NHIGGS > 0)
 /* Higgs overrelaxation as described in hep-lat/9510020 and hep-lat/9804019 (more recent).
 * The doublet is Phi(x) = 1/sqrt(2) (phi_0 I + i sig_i phi_i), i = 1,2,3,
 * and the local Higgs action is written as
@@ -46,7 +56,6 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 * and new X' is solved from S(X') - S(X) = 0 that is accepted with probability
 * p(X') = min(p0, 1), p0 = (dS(X)/dX) / (dS(X')/dX'). If new X is accepted,
 * the Y overrelaxation reads: phi'_a = -phi_a + f_a (X' + X).
-*
 */
 int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
@@ -54,7 +63,7 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 	double u[4];
 	double b[4];
 
-	// calculate hopping staple s_a (denote. s_a = F_a)
+	// calculate hopping staple s_a (denote s_a = F_a)
 	for (int dir=0; dir<l->dim; dir++) {
 
 		for (int k=0; k<SU2LINK; k++) {
@@ -63,7 +72,7 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 		long next = l->next[i][dir];
 		// Phi at next site
 		for (int k=0; k<SU2DB; k++) {
-			b[k] = f->su2doublet[next][k];
+			b[k] = f->su2doublet[0][next][k];
 		}
 		// these were obtained in Mathematica:
 		#ifndef U1
@@ -90,7 +99,7 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 		}
 		// Phi at previous site
 		for (int k=0; k<SU2DB; k++) {
-			b[k] = f->su2doublet[prev][k];
+			b[k] = f->su2doublet[0][prev][k];
 		}
 
 		#ifndef U1
@@ -121,12 +130,12 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 	// Cartesian X and Y coordinates for the Higgs.
 	double X = 0.0;
 	for (int k=0; k<SU2DB; k++) {
-		X += f->su2doublet[i][k] * s[k];
+		X += f->su2doublet[0][i][k] * s[k];
 	}
 	X /= F;
 	double Y[4], Ysq = 0.0;
 	for (int k=0; k<SU2DB; k++) {
-		Y[k] = f->su2doublet[i][k] - X * s[k] / F;
+		Y[k] = f->su2doublet[0][i][k] - X * s[k] / F;
 		Ysq += Y[k] * Y[k];
 	}
 
@@ -161,7 +170,7 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 		// this should agree with what Kari has in XORsu2Higgs.c; he probably has
 		// his y variable with a different sign
 		for (int k=0; k<SU2DB; k++) {
-			f->su2doublet[i][k] = -1.0*f->su2doublet[i][k] + (newX + X) * s[k] / F;
+			f->su2doublet[0][i][k] = -1.0*f->su2doublet[0][i][k] + (newX + X) * s[k] / F;
 		}
 		return 1;
 	} else {
@@ -170,6 +179,104 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 	}
 
 }
+
+#ifdef USEOLD
+
+/* OLD overrelaxation for the doublet.
+*
+*	The doublet is Phi(x) = 1/sqrt(2) sig_i phi_i , i = 0,1,2,3,
+*	and we perform the update for phi(x)_a following Kari's simple recipe:
+* Write the action in the form
+* 	S = phi_a s_a + B phi_a phi_a + C (phi_a phi_a)^2,
+* where s_a is a staple from the hopping terms. Completing the square gives:
+* 	S = B (phi_a + s_a /(2B))^2 + C (phi_a phi_a)^2 - s_a^2 /(4B),
+*	where the last term is constant in phi_a.
+* phi_a is overrelaxed by choosing new p_a so that
+*		(p_a + s_a / (2B) ) = -(phi_a + s_a/(2B)), i.e.
+* 	p_a = -phi_a - s_a / B
+*
+*	Finally we apply a accept/reject step with the quartic term C as in metropolis.
+* The acceptance rate should be high if C is small.
+* Returns 1 if update was accepted and 0 if rejected. */
+int overrelax_doublet_old(lattice const* l, fields f, params p, long i) {
+
+	double oldfield[SU2DB];
+	for (int k=0; k<SU2DB; k++) {
+		oldfield[k] = f.su2doublet[0][i][k];
+	}
+	double sa[4] = {0.0, 0.0, 0.0, 0.0};
+	double u[4];
+	double b[4];
+	// calculate hopping staple s_a
+	for (int dir=0; dir<l->dim; dir++) {
+		u[0] = f.su2link[i][dir][0];
+		u[1] = f.su2link[i][dir][1];
+		u[2] = f.su2link[i][dir][2];
+		u[3] = f.su2link[i][dir][3];
+		long next = l->next[i][dir];
+		// Phi at next site
+		memcpy(b, f.su2doublet[0][next], SU2DB*sizeof(b[0]));
+		sa[0] += -(b[0]*u[0]) + b[1]*u[1] + b[2]*u[2] + b[3]*u[3];
+		sa[1] += -(b[1]*u[0]) - b[0]*u[1] + b[3]*u[2] - b[2]*u[3];
+		sa[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
+		sa[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
+		// same for backwards directions
+		long prev = l->prev[i][dir];
+		u[0] = f.su2link[prev][dir][0];
+		u[1] = f.su2link[prev][dir][1];
+		u[2] = f.su2link[prev][dir][2];
+		u[3] = f.su2link[prev][dir][3];
+		// Phi at previous site
+		memcpy(b, f.su2doublet[0][prev], SU2DB*sizeof(b[0]));
+		sa[0] += -(b[0]*u[0]) - b[1]*u[1] - b[2]*u[2] - b[3]*u[3];
+		sa[1] += -(b[1]*u[0]) + b[0]*u[1] - b[3]*u[2] + b[2]*u[3];
+		sa[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
+		sa[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
+	}
+
+	// calculate coefficient of quadratic terms, B.
+	// B = mass term + local term from covariant derivative + extra from other fields
+	double B = 0.5 * p.msq_phi + 1.0 * l->dim;
+	#ifdef TRIPLET
+		B += 0.5 * p.a2 * tripletsq(f.su2triplet[i]);
+	#endif
+	// add check for B != 0?
+
+	// calculate quartic term before update
+	double mod = doubletsq(oldfield);
+	double oldquartic = p.lambda_phi * mod * mod;
+
+	// Overrelax all the components and then apply a accept/reject based on the quartic term.
+	// This should be OK since overrelaxation for phi_a is independent of the other components
+	for (int dof=0; dof<4; dof++) {
+		f.su2doublet[0][i][dof] = -1.0*f.su2doublet[0][i][dof] - sa[dof] / B;
+	}
+	mod = doubletsq(f.su2doublet[0][i]);
+	double newquartic = p.lambda_phi * mod * mod;
+
+	double diff = newquartic - oldquartic;
+
+	int accept;
+
+	if (diff < 0) {
+		accept = 1;
+	}
+	else if (diff >= 0 && ( exp(-(diff)) > drand48() )) {
+		accept = 1;
+	}
+	else {
+		accept = 0;
+		for (int dof=0; dof<SU2DB; dof++) {
+			f.su2doublet[0][i][dof] = oldfield[dof];
+		}
+	}
+
+	return accept;
+}
+
+#endif // ifdef USEOLD
+
+#endif // if (NHIGGS > 0)
 
 
 /* Same Cartesian overrelax as overrelax_doublet(), but for adjoint scalar.
@@ -239,8 +346,9 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i) {
 
 	// remaining terms in the local action
 	double B = 0.5 * p->msq_triplet + 1.0 * l->dim;
-	#ifdef HIGGS
-		B += 0.5 * p->a2 * doubletsq(f->su2doublet[i]);
+
+	#if (NHIGGS > 0)
+		B += 0.5 * p->a2 * doubletsq(f->su2doublet[0][i]); // does not work with multiple doublets!!
 	#endif
 	double C = 0.25 * p->b4;
 
@@ -275,104 +383,6 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i) {
 
 }
 
-/* OLD overrelaxation for the doublet.
-*
-*	The doublet is Phi(x) = 1/sqrt(2) sig_i phi_i , i = 0,1,2,3,
-*	and we perform the update for phi(x)_a following Kari's simple recipe:
-* Write the action in the form
-* 	S = phi_a s_a + B phi_a phi_a + C (phi_a phi_a)^2,
-* where s_a is a staple from the hopping terms. Completing the square gives:
-* 	S = B (phi_a + s_a /(2B))^2 + C (phi_a phi_a)^2 - s_a^2 /(4B),
-*	where the last term is constant in phi_a.
-* phi_a is overrelaxed by choosing new p_a so that
-*		(p_a + s_a / (2B) ) = -(phi_a + s_a/(2B)), i.e.
-* 	p_a = -phi_a - s_a / B
-*
-*	Finally we apply a accept/reject step with the quartic term C as in metropolis.
-* The acceptance rate should be high if C is small.
-* Returns 1 if update was accepted and 0 if rejected.
-*/
-int overrelax_doublet_old(lattice const* l, fields f, params p, long i) {
-
-	double oldfield[SU2DB];
-	for (int k=0; k<SU2DB; k++) {
-		oldfield[k] = f.su2doublet[i][k];
-	}
-	double sa[4] = {0.0, 0.0, 0.0, 0.0};
-	double u[4];
-	double b[4];
-	// calculate hopping staple s_a
-	for (int dir=0; dir<l->dim; dir++) {
-		u[0] = f.su2link[i][dir][0];
-		u[1] = f.su2link[i][dir][1];
-		u[2] = f.su2link[i][dir][2];
-		u[3] = f.su2link[i][dir][3];
-		long next = l->next[i][dir];
-		// Phi at next site
-		b[0] = f.su2doublet[next][0];
-		b[1] = f.su2doublet[next][1];
-		b[2] = f.su2doublet[next][2];
-		b[3] = f.su2doublet[next][3];
-		sa[0] += -(b[0]*u[0]) + b[1]*u[1] + b[2]*u[2] + b[3]*u[3];
-		sa[1] += -(b[1]*u[0]) - b[0]*u[1] + b[3]*u[2] - b[2]*u[3];
-		sa[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
-		sa[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
-		// same for backwards directions
-		long prev = l->prev[i][dir];
-		u[0] = f.su2link[prev][dir][0];
-		u[1] = f.su2link[prev][dir][1];
-		u[2] = f.su2link[prev][dir][2];
-		u[3] = f.su2link[prev][dir][3];
-		// Phi at previous site
-		b[0] = f.su2doublet[prev][0];
-		b[1] = f.su2doublet[prev][1];
-		b[2] = f.su2doublet[prev][2];
-		b[3] = f.su2doublet[prev][3];
-		sa[0] += -(b[0]*u[0]) - b[1]*u[1] - b[2]*u[2] - b[3]*u[3];
-		sa[1] += -(b[1]*u[0]) + b[0]*u[1] - b[3]*u[2] + b[2]*u[3];
-		sa[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
-		sa[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
-	}
-
-	// calculate coefficient of quadratic terms, B.
-	// B = mass term + local term from covariant derivative + extra from other fields
-	double B = 0.5 * p.msq_phi + 1.0 * l->dim;
-	#ifdef TRIPLET
-		B += 0.5 * p.a2 * tripletsq(f.su2triplet[i]);
-	#endif
-	// add check for B != 0?
-
-	// calculate quartic term before update
-	double mod = doubletsq(oldfield);
-	double oldquartic = p.lambda_phi * mod * mod;
-
-	// Overrelax all the components and then apply a accept/reject based on the quartic term.
-	// This should be OK since overrelaxation for phi_a is independent of the other components
-	for (int dof=0; dof<4; dof++) {
-		f.su2doublet[i][dof] = -1.0*f.su2doublet[i][dof] - sa[dof] / B;
-	}
-	mod = doubletsq(f.su2doublet[i]);
-	double newquartic = p.lambda_phi * mod * mod;
-
-	double diff = newquartic - oldquartic;
-
-	int accept;
-
-	if (diff < 0) {
-		accept = 1;
-	}
-	else if (diff >= 0 && ( exp(-(diff)) > drand48() )) {
-		accept = 1;
-	}
-	else {
-		accept = 0;
-		for (int dof=0; dof<SU2DB; dof++) {
-			f.su2doublet[i][dof] = oldfield[dof];
-		}
-	}
-
-	return accept;
-}
 
 
 /* Same as overrelax_doublet_old() but for the real triplet.
@@ -426,8 +436,8 @@ int overrelax_triplet_old(lattice const* l, fields f, params p, long i) {
 	// calculate coefficient of quadratic terms, B.
 	// B = mass term + local term from covariant derivative + extra from other fields
 	double B = 0.5 * p.msq_triplet + 1.0 * l->dim;
-	#ifdef HIGGS
-		B += 0.5 * p.a2 * doubletsq(f.su2doublet[i]);
+	#if (NHIGGS > 0)
+		B += 0.5 * p.a2 * doubletsq(f.su2doublet[0][i]);
 	#endif
 	// add check for B != 0?
 

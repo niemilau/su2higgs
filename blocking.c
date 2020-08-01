@@ -576,8 +576,9 @@ void make_blocked_fields(lattice* l, lattice* b, fields const* f_smeared, fields
       transfer_blocked_field(l, b, f_smeared->u1link, f_blocked->u1link, l->dim);
     #endif
 
-    #ifdef HIGGS
-      transfer_blocked_field(l, b, f_smeared->su2doublet, f_blocked->su2doublet, SU2DB);
+    #if (NHIGGS > 0)
+      for (int db=0; db<NHIGGS; db++)
+        transfer_blocked_field(l, b, f_smeared->su2doublet[db], f_blocked->su2doublet[db], SU2DB);
     #endif
     #ifdef TRIPLET
       transfer_blocked_field(l, b, f_smeared->su2triplet, f_blocked->su2triplet, SU2TRIP);

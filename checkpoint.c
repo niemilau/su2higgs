@@ -32,27 +32,18 @@ void print_acceptance(params p, counters c) {
 		}
 	#endif
 
-	#ifdef HIGGS
-		if (p.algorithm_su2doublet == METROPOLIS) {
-			printf("Higgs %.2lf%%, ",
-				100.0*c.accepted_doublet/c.total_doublet);
+	#if (NHIGGS > 0)
 
-		} else if (p.algorithm_su2doublet == OVERRELAX) {
-			printf("Higgs overrelax %.2lf%%, Higgs Metropolis %.2lf%%, ",
-				100.0*c.acc_overrelax_doublet/c.total_overrelax_doublet,
-				100.0*c.accepted_doublet/c.total_doublet);
-		}
-	#endif
+		for (int db=0; db<NHIGGS; db++) {
+			if (p.algorithm_su2doublet == METROPOLIS) {
+				printf("Higgs #%d %.2lf%%, ", db+1,
+					100.0*c.accepted_doublet[db]/c.total_doublet[db]);
 
-	#ifdef HIGGS2
-		if (p.algorithm_su2doublet == METROPOLIS) {
-			printf("Higgs2 %.2lf%%, ",
-				100.0*c.accepted_doublet2/c.total_doublet2);
-
-		} else if (p.algorithm_su2doublet == OVERRELAX) {
-			printf("Higgs2 overrelax %.2lf%%, Higgs2 Metropolis %.2lf%%, ",
-				100.0*c.acc_overrelax_doublet2/c.total_overrelax_doublet2,
-				100.0*c.accepted_doublet2/c.total_doublet2);
+			} else if (p.algorithm_su2doublet == OVERRELAX) {
+				printf("Higgs #%d overrelax %.2lf%%, Higgs #%d Metropolis %.2lf%%, ",
+					db+1, 100.0*c.acc_overrelax_doublet[db]/c.total_overrelax_doublet[db],
+					db+1, 100.0*c.accepted_doublet[db]/c.total_doublet[db]);
+			}
 		}
 	#endif
 
@@ -100,12 +91,10 @@ void save_lattice(lattice const* l, fields f, counters c, char* fname) {
 	#ifdef U1
 		write_field(l, file, &f.u1link[0][0], l->dim);
 	#endif
-	#ifdef HIGGS
-		write_field(l, file, &f.su2doublet[0][0], SU2DB);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) write_field(l, file, &f.su2doublet[db][0][0], SU2DB);
 	#endif
-	#ifdef HIGGS2
-		write_field(l, file, &f.doublet2[0][0], SU2DB);
-	#endif
+
 	#ifdef TRIPLET
 		write_field(l, file, &f.su2triplet[0][0], SU2TRIP);
 	#endif
@@ -189,12 +178,10 @@ void load_lattice(lattice* l, fields* f, counters* c, char* fname) {
 	#ifdef U1
 		read_field(l, file, &f->u1link[0][0], l->dim);
 	#endif
-	#ifdef HIGGS
-		read_field(l, file, &f->su2doublet[0][0], SU2DB);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) read_field(l, file, &f->su2doublet[db][0][0], SU2DB);
 	#endif
-	#ifdef HIGGS2
-		read_field(l, file, &f->doublet2[0][0], SU2DB);
-	#endif
+
 	#ifdef TRIPLET
 		read_field(l, file, &f->su2triplet[0][0], SU2TRIP);
 	#endif

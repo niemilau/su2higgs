@@ -20,17 +20,24 @@ void print_labels() {
 	fprintf(f, "%d muca param\n", k); k++; // multicanonical order parameter value
 	fprintf(f, "%d action\n", k); k++;
 	fprintf(f, "%d SU(2) Wilson\n", k); k++;
-	#ifdef HIGGS
+	#if (NHIGGS > 0)
 		fprintf(f, "%d hopping_phi (avg over directions)\n", k); k++;
 		fprintf(f, "%d phi^2\n", k); k++;
 		fprintf(f, "%d phi^4\n", k); k++;
+	#endif
+	#if (NHIGGS == 2)
+		fprintf(f, "%d hopping_phi2 (avg over directions)\n", k); k++;
+		fprintf(f, "%d phi2^2\n", k); k++;
+		fprintf(f, "%d phi2^4\n", k); k++;
+		fprintf(f, "%d R = Re phi1^+ phi2\n", k); k++;
+		fprintf(f, "%d I = Im phi1^+ phi2\n", k); k++;
 	#endif
 	#ifdef TRIPLET
 		fprintf(f, "%d hopping_Sigma (avg over directions)\n", k); k++;
 		fprintf(f, "%d Sigma^2\n", k); k++;
 		fprintf(f, "%d Sigma^4\n", k); k++;
 	#endif
-	#if defined HIGGS && defined TRIPLET
+	#if (NHIGGS > 0) && defined TRIPLET
 		fprintf(f, "%d phi^2 Sigma^2\n", k); k++;
 	#endif
 	#ifdef U1
@@ -58,10 +65,17 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	double wilson = 0.0;
 	double u1wilson = 0.0;
 
-	// Higgs doublet:
-	double hopping_phi = 0.0;
-	double phi2 = 0.0;
-	double phi4 = 0.0;
+	#if (NHIGGS > 0)
+		// Higgs doublets:
+		double hopping_phi[NHIGGS] = {0.0};
+		double phi2[NHIGGS] = {0.0};
+		double phi4[NHIGGS] = {0.0};
+	#endif
+
+	#if (NHIGGS == 2)
+		complex phi12;
+		phi12.re = 0.0; phi12.im = 0.0;
+	#endif
 
 	// Triplet
 	double phi2Sigma2 = 0.0;
@@ -82,16 +96,30 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			u1wilson += local_u1wilson(l, f, p, i);
 		#endif
 
-		#ifdef HIGGS
-			for (int dir=0; dir<l->dim; dir++) {
-				hopping_phi += hopping_doublet_forward(l, f, p, f->su2doublet, i, dir) / l->dim;
+		#if (NHIGGS > 0)
+
+			for (int db=0; db<NHIGGS; db++) {
+
+				double mod = doubletsq(f->su2doublet[db][i]);
+				for (int dir=0; dir<l->dim; dir++) {
+					hopping_phi[db] += hopping_doublet_forward(l, f, i, dir, db) / l->dim;
+				}
+				phi2[db] += mod;
+				phi4[db] += mod*mod;
 			}
-			mod = doubletsq(f->su2doublet[i]);
-			phi2 += mod;
-			phi4 += mod*mod;
-			#ifdef TRIPLET
+
+			#ifdef TRIPLET // only implemented for one Higgs!!
+				mod = doubletsq(f->su2doublet[0][i]);
 				phi2Sigma2 += mod * tripletsq(f->su2triplet[i]);
 			#endif
+
+		#endif
+
+		// some specific operators for 2 Higgs potential
+		#if (NHIGGS == 2)
+			complex f12 = get_phi12(f->su2doublet[0][i], f->su2doublet[1][i]);
+			phi12.re += f12.re;
+			phi12.im += f12.im;
 		#endif
 
 		#ifdef TRIPLET
@@ -129,11 +157,20 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	#ifdef U1
 	u1wilson = reduce_sum(u1wilson, l->comm);
 	#endif
-	#ifdef HIGGS
-	hopping_phi = reduce_sum(hopping_phi, l->comm);
-	phi2 = reduce_sum(phi2, l->comm);
-	phi4 = reduce_sum(phi4, l->comm);
+
+	#if (NHIGGS > 0)
+	for (int db=0; db<NHIGGS; db++) {
+		hopping_phi[db] = reduce_sum(hopping_phi[db], l->comm);
+		phi2[db] = reduce_sum(phi2[db], l->comm);
+		phi4[db] = reduce_sum(phi4[db], l->comm);
+	}
 	#endif
+
+	#if (NHIGGS == 2)
+		phi12.re = reduce_sum(phi12.re, l->comm);
+		phi12.im = reduce_sum(phi12.im, l->comm);
+	#endif
+
 	#ifdef TRIPLET
 	hopping_Sigma = reduce_sum(hopping_Sigma, l->comm);
 	Sigma2 = reduce_sum(Sigma2, l->comm);
@@ -142,7 +179,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	mag_charge_abs = reduce_sum(mag_charge_abs, l->comm);
 	// magnetic charge should be quantized in units of 4pi/g
 	mag_charge_abs /= (2.0*M_PI*sqrt(p->betasu2)); // this is now the total number of monopoles
-		#ifdef HIGGS
+		#if (NHIGGS > 0)
 		phi2Sigma2 = reduce_sum(phi2Sigma2, l->comm);
 		#endif
 	#endif
@@ -163,16 +200,26 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 		fprintf(file, "%g %g ", weight, muca_param);
 		fprintf(file, "%g %g ",
 			action, wilson/((double)l->vol) );
-		#ifdef HIGGS
+
+		#if (NHIGGS > 0 )
+		for (int db=0; db<NHIGGS; db++) {
 			fprintf(file, "%g %g %g ",
-				hopping_phi/((double)l->vol), phi2/((double)l->vol), phi4/((double)l->vol)
+				hopping_phi[db]/((double)l->vol), phi2[db]/((double)l->vol), phi4[db]/((double)l->vol)
 			);
+		}
 		#endif
+
+		#if (NHIGGS == 2)
+		fprintf(file, "%g %g ",
+			phi12.re/((double)l->vol), phi12.im/((double)l->vol)
+		);
+		#endif
+
 		#ifdef TRIPLET
 			fprintf(file, "%g %g %g ",
 				hopping_Sigma/((double)l->vol), Sigma2/((double)l->vol), Sigma4/((double)l->vol)
 			);
-			#ifdef HIGGS
+			#if (NHIGGS > 0)
 			fprintf(file, "%g ",
 				phi2Sigma2/((double)l->vol)
 			);
@@ -205,12 +252,10 @@ double action_local(lattice const* l, fields const* f, params const* p, long i) 
 	#endif
 
 	tot += higgspotential(f, p, i); // does nothing if no scalars are present
-	#ifdef HIGGS
-		tot += covariant_doublet(l, f, p, f->su2doublet, i);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) tot += covariant_doublet(l, f, i, db);
 	#endif
-	#ifdef HIGGS2
-		tot += covariant_doublet(l, f, p, f->doublet2, i);
-	#endif
+
 	#ifdef TRIPLET
 		tot += covariant_triplet(l, f, p, i);
 	#endif

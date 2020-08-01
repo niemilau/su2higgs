@@ -57,21 +57,16 @@ void random_su2link(double *su2) {
 
 // Initialize SU(2) doublets to unity * 1/sqrt(2).
 void setdoublets(fields* f, lattice const* l, params const* p) {
-	#ifdef HIGGS
+
+	#if (NHIGGS > 0)
+
+	for (int db=0; db<NHIGGS; db++) {
 		for (long i=0; i<l->sites_total; i++) {
-			f->su2doublet[i][0] = p->phi0;
-			f->su2doublet[i][1] = 0.0;
-			f->su2doublet[i][2] = 0.0;
-			f->su2doublet[i][3] = 0.0;
+			f->su2doublet[db][i][0] = p->phi0;
+			for (int dof=1; dof<SU2DB; dof++) f->su2doublet[db][i][dof] = 0.0;
 		}
-	#endif
-	#ifdef HIGGS2
-		for (long i=0; i<l->sites; i++) {
-			f->doublet2[i][0] = p->phi0;
-			f->doublet2[i][1] = 0.0;
-			f->doublet2[i][2] = 0.0;
-			f->doublet2[i][3] = 0.0;
-		}
+	}
+
 	#endif
 }
 
@@ -94,7 +89,9 @@ void setfields(fields* f, lattice* l, params const* p) {
 		setu1(f, l);
 	#endif
 
-	setdoublets(f, l, p); // does nothing unless HIGGS or HIGGS2 is defined
+	#if (NHIGGS > 0)
+		setdoublets(f, l, p);
+	#endif
 
 	#ifdef TRIPLET
 		settriplets(f, l, p);
@@ -122,12 +119,12 @@ void copy_fields(lattice const* l, fields const* f_old, fields* f_new) {
 		}
 
 		// scalars
-		#ifdef HIGGS
-			memcpy(f_new->su2doublet[i], f_old->su2doublet[i], SU2DB*sizeof(f_old->su2doublet[i][0]));
+		#if (NHIGGS > 0 )
+			for (int db=0; db<NHIGGS; db++) {
+				 memcpy(f_new->su2doublet[db][i], f_old->su2doublet[db][i], SU2DB*sizeof(f_old->su2doublet[db][i][0]));
+			 }
 		#endif
-		#ifdef HIGGS2
-			memcpy(f_new->doublet2[i], f_old->doublet2[i], SU2DB*sizeof(f_old->doublet2[i][0]));
-		#endif
+
 		#ifdef TRIPLET
 			memcpy(f_new->su2triplet[i], f_old->su2triplet[i], SU2TRIP*sizeof(f_old->su2triplet[i][0]));
 		#endif
@@ -146,23 +143,23 @@ void init_counters(counters* c) {
 	c->triplet_sweeps = 0;
 	c->accepted_su2link = 0;
 	c->accepted_u1link = 0;
-	c->accepted_doublet = 0;
+
 	c->accepted_triplet = 0;
-	c->acc_overrelax_doublet = 0;
 	c->acc_overrelax_triplet = 0;
 
-	#ifdef HIGGS2
-		c->accepted_doublet2 = 0;
-		c->acc_overrelax_doublet2 = 0;
-		c->total_doublet2 = 0;
-		c->total_overrelax_doublet2 = 0;
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) {
+			c->accepted_doublet[db] = 0;
+			c->acc_overrelax_doublet[db] = 0;
+			c->total_overrelax_doublet[db] = 0;
+			c->total_doublet[db] = 0;
+		}
 	#endif
+
 
 	c->total_su2link = 0;
 	c->total_u1link = 0;
-	c->total_doublet = 0;
 	c->total_triplet = 0;
-	c->total_overrelax_doublet = 0;
 	c->total_overrelax_triplet = 0;
 	c->accepted_muca = 0;
 	c->total_muca = 0;

@@ -449,17 +449,17 @@ double calc_orderparam(lattice const* l, fields const* f, params const* p, weigh
 			break;
 		case PHI2SIGMA2 :
 			for (long i=offset; i<max; i++) {
-				tot += doubletsq(f->su2doublet[i]) * tripletsq(f->su2triplet[i]);
+				tot += doubletsq(f->su2doublet[0][i]) * tripletsq(f->su2triplet[i]);
 			}
 			break;
     case PHI2MINUSSIGMA2 :
       for (long i=offset; i<max; i++) {
-				tot += doubletsq(f->su2doublet[i]) - tripletsq(f->su2triplet[i]);
+				tot += doubletsq(f->su2doublet[0][i]) - tripletsq(f->su2triplet[i]);
       }
       break;
 		case PHISQ :
 			for (long i=offset; i<max; i++) {
-				tot += doubletsq(f->su2doublet[i]);
+				tot += doubletsq(f->su2doublet[0][i]);
 			}
 			break;
 	}
@@ -496,7 +496,7 @@ void store_muca_fields(lattice const* l, fields* f, weight* w) {
 		case PHISQ :
 			for (long i=0; i<l->sites; i++) {
 				for (int dof=0; dof<SU2DB; dof++) {
-					f->backup_doublet[i][dof] = f->su2doublet[i][dof];
+					f->backup_doublet[0][i][dof] = f->su2doublet[0][i][dof];
 				}
 			}
 			break;
@@ -533,7 +533,7 @@ void reset_muca_fields(lattice const* l, fields* f, weight* w, char par) {
 		case PHISQ :
 			for (long i=offset; i<max; i++) {
 				for (int dof=0; dof<SU2DB; dof++) {
-					f->su2doublet[i][dof] = f->backup_doublet[i][dof];
+					f->su2doublet[0][i][dof] = f->backup_doublet[0][i][dof];
 				}
 			}
 			break;
@@ -551,7 +551,7 @@ void alloc_backup_arrays(lattice const* l, fields* f, weight const* w) {
     case PHI2MINUSSIGMA2 :
 			f->backup_triplet = make_field(l->sites, SU2TRIP);
 		case PHISQ :
-			f->backup_doublet = make_field(l->sites, SU2DB);
+			f->backup_doublet[0] = make_field(l->sites, SU2DB);
 			break;
 	}
 }
@@ -571,7 +571,7 @@ void free_muca_arrays(fields* f, weight *w) {
     case PHI2MINUSSIGMA2 :
 			free_field(f->backup_triplet);
 		case PHISQ :
-			free_field(f->backup_doublet);
+			free_field(f->backup_doublet[0]);
 			break;
 	}
 }

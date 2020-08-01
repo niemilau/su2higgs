@@ -1,65 +1,12 @@
 #ifndef SU2_H
 #define SU2_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
-#include <string.h>
-#include <stdarg.h>
-#include <time.h>
-
 #include "comms.h"
+#include "stddefs.h"
 
-#ifdef MPI
-	#include <mpi.h>
-#else
-	// No MPI, define dummy communicator (not actually used in serial)
-	typedef struct {} MPI_Comm;
-#endif
-
-#if defined (HIGGS2) && !defined (HIGGS)
-	#error "Preprocessor error, using HIGGS2 without HIGGS"
-#endif
-
-// how many Higgs doublets
-#ifdef HIGGS
-	#define NHIGGS 1
-#elif defined (HIGGS2)
-	#define NHIGGS 2
-#else
+#ifndef NHIGGS // specify in makefile, otherwise assume no Higgs doublets
 	#define NHIGGS 0
 #endif
-
-// degrees of freedom per site for different fields
-#define SU2DB 4
-#define SU2LINK 4
-#define SU2TRIP 3
-
-// update algorithms
-#define METROPOLIS 1 // Metropolis
-#define HEATBATH 2 // Heatbath
-#define OVERRELAX 3 // Overrelaxation
-
-// parity identifiers
-#define EVEN 0
-#define ODD 1
-#define EVENODD 2
-
-// multicanonical order parameters
-#define PHISQ 1
-#define SIGMASQ 2
-#define PHI2MINUSSIGMA2 3
-#define PHI2SIGMA2 4
-
-// nasty globals for keeping track of evaluation time
-double waittime;
-double Global_comms_time, Global_total_time;
-double Global_current_action; // for debugging gradient flows etc
-
-typedef struct {
-	double re, im;
-}	complex;
 
 /* Struct "lattice": contains info on lattice dimensions, lookup tables for
 * sites and everything related to parallelization. */
@@ -155,7 +102,7 @@ typedef struct {
 	double a2; // Higgs portal
 	double b4; // self quartic
 
-	#ifdef HIGGS2
+	#if (NHIGGS == 2)
 		/* with 2 Higgs doublets, the couplings are assumed to be in a doublet basis
 		* where the kinetic terms are diagonal and canonically normalized */
 		double msq_phi2;
@@ -217,18 +164,16 @@ typedef struct {
 
 	//double *su2singlet;
 	double ***su2link;
-	double **su2doublet;
 	double **su2triplet;
 	double **u1link;
 
-	#ifdef HIGGS2
-		// another doublet, behaves just like f.su2doublet
-		double **doublet2;
-		double **backup_doublet2;
+	// NHIGGS copies of Higgs doublets, accessed as su2doublet[id][site][component]
+	#if (NHIGGS > 0)
+		double** su2doublet[NHIGGS];
+		double** backup_doublet[NHIGGS];
 	#endif
 
 	// backup arrays. these are used in global multicanonical steps in case the update sweep needs to be undone
-	double **backup_doublet;
 	double **backup_triplet;
 } fields;
 
@@ -242,16 +187,13 @@ typedef struct {
 	// count metropolis updates
 	long total_su2link, accepted_su2link;
 	long total_u1link, accepted_u1link;
-	long total_doublet, accepted_doublet;
-	long total_triplet, accepted_triplet;
-	// count overrelax updates
-	long total_overrelax_doublet, acc_overrelax_doublet;
-	long total_overrelax_triplet, acc_overrelax_triplet;
-
-	#ifdef HIGGS2
-		long accepted_doublet2, total_doublet2;
-		long acc_overrelax_doublet2, total_overrelax_doublet2;
+	#if (NHIGGS > 0)
+		long total_doublet[NHIGGS], accepted_doublet[NHIGGS];
+		long total_overrelax_doublet[NHIGGS], acc_overrelax_doublet[NHIGGS];
 	#endif
+
+	long total_triplet, accepted_triplet;
+	long total_overrelax_triplet, acc_overrelax_triplet;
 
 	long total_muca, accepted_muca;
 } counters;
@@ -291,25 +233,6 @@ typedef struct {
 	char weightfile[100]; // file name
 } weight;
 
-
-/* inlines */
-inline char otherparity(char parity) {
-	if (parity == EVEN)
-		return ODD;
-	else if (parity == ODD) {
-		return EVEN;
-	} else {
-		printf("Error in function otherparity (su2.h) !!!\n");
-	}
-}
-
-// multiply two complex numbers
-inline complex cmult(complex z1, complex z2) {
-	complex res;
-	res.re = z1.re*z2.re - z1.im*z2.im;
-	res.im = z2.re*z1.im + z1.re*z2.im;
-	return res;
-}
 
 // comms.c
 void make_comlists(lattice *l, comlist_struct *comlist);
@@ -402,14 +325,11 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 // doublet routines
 double doubletsq(double* a);
 void phiproduct(double* f1, double const* f2, int conj);
-long double avg_doublet2(fields const* f, params const* p);
-long double avg_doublet4(fields const* f, params const* p);
-double hopping_doublet_forward(lattice const* l, fields const* f, params const* p,
-		double** phi, long i, int dir);
-double hopping_doublet_backward(lattice const* l, fields const* f, params const* p,
-		double** phi, long i, int dir);
-double covariant_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i);
-double localact_doublet(lattice const* l, fields const* f, params const* p, double** phi, long i);
+complex get_phi12(double const* h1, double const* h2);
+double hopping_doublet_forward(lattice const* l, fields const* f, long i, int dir, int higgs_id);
+double hopping_doublet_backward(lattice const* l, fields const* f, long i, int dir, int higgs_id);
+double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id);
+double localact_doublet(lattice const* l, fields const* f, params const* p, long i, int higgs_id);
 double higgspotential(fields const* f, params const* p, long i);
 // triplet routines
 double tripletsq(double* a);
@@ -426,7 +346,7 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
 // metropolis.c
 int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
 int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir);
-int metro_doublet(lattice const* l, fields* f, params const* p, double** phi, long i);
+int metro_doublet(lattice const* l, fields* f, params const* p, long i, int higgs_id);
 int metro_triplet(lattice const* l, fields* f, params const* p, long i);
 
 // heatbath.c
@@ -442,7 +362,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
 void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
 int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c,
-			weight* w, int parity, int metro, double** phi);
+			weight* w, int parity, int metro, int higgs_id);
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
 void sync_halos(lattice* l, fields* f);
 int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups);
@@ -498,7 +418,9 @@ void init_last_max(weight* w);
 
 #ifdef CORRELATORS
 // correlation.c
-	double higgs_correlator(lattice* l, fields const* f, int x, int dir);
+	#if (NHIGGS > 0)
+		double higgs_correlator(lattice* l, fields const* f, int x, int dir, int higgs_id);
+	#endif
 	#ifdef TRIPLET
 		double triplet_correlator(lattice* l, fields const* f, int d, int dir);
 		complex projected_photon_operator(lattice* l, fields const* f, int z, int dir, int* mom);
