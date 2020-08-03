@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
 			// write header
 			if (!l.rank) {
 				traj.trajectoryfile = fopen("trajectory", "a");
-				fprintf(traj.trajectoryfile, "===== Realtime trajectories: min=%g, max=%g, n_traj=%g ===== \n",
+				fprintf(traj.trajectoryfile, "===== Realtime trajectories: min=%g, max=%g, n_traj=%d ===== \n",
 				 		traj.min, traj.max, traj.n_traj);
 				fclose(traj.trajectoryfile);
 			}
