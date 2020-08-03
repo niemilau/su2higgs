@@ -129,7 +129,7 @@ void load_weight(lattice const* l, weight *w) {
 
 	// how often to update the weight?
 	if (w->mode != SLOW) w->update_interval = 8;
-	else w->update_interval = 2000;
+	else w->update_interval = 20000;
 
 	w->do_acceptance = 1;
 

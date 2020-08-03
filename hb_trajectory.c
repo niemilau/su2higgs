@@ -49,7 +49,7 @@ void make_realtime_trajectories(lattice* l, fields const* f, params* p, counters
 
       /* 'iter' counts the time: one full update on the gauge fields per update_lattice() call */
       if (!l->rank) {
-        fprintf(traj->trajectoryfile, "%d %.8lf\n", iter, muca_param);
+        fprintf(traj->trajectoryfile, "%d %.8lf\n", iter-1, muca_param);
       }
 
       if (muca_param > traj->max || muca_param < traj->min) {

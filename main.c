@@ -207,6 +207,13 @@ int main(int argc, char *argv[]) {
 				printf0(l, "\nError: Need multicanonical for heatbath trajectories!! Exiting...\n");
 				die(-44);
 			}
+			// write header
+			if (!l.rank) {
+				traj.trajectoryfile = fopen("trajectory", "a");
+				fprintf(traj.trajectoryfile, "===== Realtime trajectories: min=%g, max=%g, n_traj=%g ===== \n",
+				 		traj.min, traj.max, traj.n_traj);
+				fclose(traj.trajectoryfile);
+			}
 		}
 	#endif
 
