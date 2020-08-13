@@ -308,12 +308,7 @@ void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2,
 double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
 long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i);
 double localact_su2link(lattice const* l, fields const* f, params const* p, long i, int dir);
-void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V);
-void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res);
-void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
 double su2trace4(double *u1, double *u2, double *u3, double *u4);
-void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
-void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
 void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, double* clover);
 double hopping_trace(double* phi1, double* u, double* phi2);
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a);
@@ -343,6 +338,15 @@ void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, doub
 void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
 
 
+// staples.c
+void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
+void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
+void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V);
+void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res);
+void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
+void staple_doublet(double* res, lattice const* l, fields const* f, params const* p, long i, int higgs_id);
+
+
 // metropolis.c
 int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
 int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir);
@@ -354,8 +358,12 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 
 // overrelax.c
 double polysolve3(long double a, long double b, long double c, long double d);
-int overrelax_doublet(lattice const* l, fields* f, params const* p, long i);
+#if (NHIGGS > 0)
+int overrelax_doublet(lattice const* l, fields* f, params const* p, long i); // for N=1 Higgs potentials
+int overrelax_higgs2(lattice const* l, fields* f, params const* p, long i, int higgs_id); // for N>1 Higgs potentials
+#endif
 int overrelax_triplet(lattice const* l, fields* f, params const* p, long i);
+
 
 // update.c
 void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight* w);

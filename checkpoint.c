@@ -36,11 +36,11 @@ void print_acceptance(params p, counters c) {
 
 		for (int db=0; db<NHIGGS; db++) {
 			if (p.algorithm_su2doublet == METROPOLIS) {
-				printf("Higgs #%d %.2lf%%, ", db+1,
+				printf("Higgs#%d %.2lf%%, ", db+1,
 					100.0*c.accepted_doublet[db]/c.total_doublet[db]);
 
 			} else if (p.algorithm_su2doublet == OVERRELAX) {
-				printf("Higgs #%d overrelax %.2lf%%, Higgs #%d Metropolis %.2lf%%, ",
+				printf("Higgs#%d overrelax %.2lf%%, Higgs#%d Metropolis %.2lf%%, ",
 					db+1, 100.0*c.acc_overrelax_doublet[db]/c.total_overrelax_doublet[db],
 					db+1, 100.0*c.accepted_doublet[db]/c.total_doublet[db]);
 			}
@@ -101,7 +101,7 @@ void save_lattice(lattice const* l, fields f, counters c, char* fname) {
 
 	if (l->rank == 0) {
 		fclose(file);
-		printf("Written fields to %s.\n", fname);
+		printf("Wrote fields to %s.\n", fname);
 	}
 
 }

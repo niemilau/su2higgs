@@ -9,16 +9,6 @@
 
 #include "su2.h"
 
-/*
-if (id_higgs == 1) phi = f->su2doublet[i];
-#ifdef HIGGS2
-	else if (id_higgs == 2) phi = f->doublet2[i];
-#endif
-else {
-	printf("!!! localact_doublet() error!! in su2u1.c\n");
-	die(-666);
-}
-*/
 
 // Find real root to the equation x^3 + b*x^2 + c*x + d = 0
 double polysolve3(long double a, long double b, long double c, long double d) {
@@ -43,83 +33,33 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 	return x;
 }
 
-#if (NHIGGS > 0)
+
 /* Higgs overrelaxation as described in hep-lat/9510020 and hep-lat/9804019 (more recent).
 * The doublet is Phi(x) = 1/sqrt(2) (phi_0 I + i sig_i phi_i), i = 1,2,3,
 * and the local Higgs action is written as
-* 	S = phi_a F_a + B phi_a phi_a + C (phi_a phi_a)^2.
+* 	S = phi_a F_a + B phi_a phi_a + C (phi_a phi_a)^2. (note sign of F_a! Kari has diff.)
 * Then define:
-*		F = sqrt(F_a F_a), f_a = F_a/F, X = phi_a f_a, Y = phi_a - X f_a
+*		F = sqrt(F_a F_a), f_a = F_a/F, X = -phi_a f_a, Y = phi_a + X f_a (note signs again)
 *	The action becomes:
 *		S = X F + B (Y^2 + X^2) + C (Y^4 + X^4 + 2 X^2 Y^2).
 *	We then overrelax X,Y individually: Y -> -Y
 * and new X' is solved from S(X') - S(X) = 0 that is accepted with probability
 * p(X') = min(p0, 1), p0 = (dS(X)/dX) / (dS(X')/dX'). If new X is accepted,
-* the Y overrelaxation reads: phi'_a = -phi_a + f_a (X' + X).
+* the Y overrelaxation reads: phi'_a = -phi_a - f_a (X' + X).
+* Note however that the Y overrelaxation is not necessary at all, X update is enough.
+* So if the action is not invariant under Y -> -Y, can choose to keep Y constant instead.
 */
 int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
-	double s[4] = {0.0, 0.0, 0.0, 0.0};
-	double u[4];
-	double b[4];
+	// 1 Higgs doublet only!! For 2 Higgses see overrelax_higgs2()
+	double s[SU2DB] = {0.0};
+	int higgs_id = 0;
+
+	double** higgs = f->su2doublet[higgs_id];
+	double mod = doubletsq(higgs[i]);
 
 	// calculate hopping staple s_a (denote s_a = F_a)
-	for (int dir=0; dir<l->dim; dir++) {
-
-		for (int k=0; k<SU2LINK; k++) {
-			u[k] = f->su2link[i][dir][k];
-		}
-		long next = l->next[i][dir];
-		// Phi at next site
-		for (int k=0; k<SU2DB; k++) {
-			b[k] = f->su2doublet[0][next][k];
-		}
-		// these were obtained in Mathematica:
-		#ifndef U1
-			s[0] += -(b[0]*u[0]) + b[1]*u[1] + b[2]*u[2] + b[3]*u[3];
-			s[1] += -(b[1]*u[0]) - b[0]*u[1] + b[3]*u[2] - b[2]*u[3];
-			s[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
-			s[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
-		#else
-			double ss = sin(f->u1link[i][dir]);
-			double cc = cos(f->u1link[i][dir]);
-			s[0] += -(cc*b[0]*u[0]) - ss*b[3]*u[0] + cc*b[1]*u[1] + ss*b[2]*u[1]
-							- ss*b[1]*u[2] + cc*b[2]*u[2] - ss*b[0]*u[3] + cc*b[3]*u[3];
-			s[1] += -(cc*b[1]*u[0]) - ss*b[2]*u[0] - cc*b[0]*u[1] - ss*b[3]*u[1]
-							- ss*b[0]*u[2] + cc*b[3]*u[2] + ss*b[1]*u[3] - cc*b[2]*u[3];
-			s[2] += ss*b[1]*u[0] - cc*b[2]*u[0] + ss*b[0]*u[1] - cc*b[3]*u[1]
-							- cc*b[0]*u[2] - ss*b[3]*u[2] + cc*b[1]*u[3] + ss*b[2]*u[3];
-			s[3] += ss*b[0]*u[0] - cc*b[3]*u[0] - ss*b[1]*u[1] + cc*b[2]*u[1]
-							- cc*b[1]*u[2] - ss*b[2]*u[2] - cc*b[0]*u[3] - ss*b[3]*u[3];
-		#endif
-		// same for backwards directions
-		long prev = l->prev[i][dir];
-		for (int k=0; k<SU2LINK; k++) {
-			u[k] = f->su2link[prev][dir][k];
-		}
-		// Phi at previous site
-		for (int k=0; k<SU2DB; k++) {
-			b[k] = f->su2doublet[0][prev][k];
-		}
-
-		#ifndef U1
-			s[0] += -(b[0]*u[0]) - b[1]*u[1] - b[2]*u[2] - b[3]*u[3];
-			s[1] += -(b[1]*u[0]) + b[0]*u[1] - b[3]*u[2] + b[2]*u[3];
-			s[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
-			s[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
-		#else
-			ss = sin(f->u1link[prev][dir]);
-			cc = cos(f->u1link[prev][dir]);
-			s[0] += -(cc*b[0]*u[0]) + ss*b[3]*u[0] - cc*b[1]*u[1] + ss*b[2]*u[1]
-			 				- ss*b[1]*u[2] - cc*b[2]*u[2] - ss*b[0]*u[3] - cc*b[3]*u[3];
-			s[1] += -(cc*b[1]*u[0]) + ss*b[2]*u[0] + cc*b[0]*u[1] - ss*b[3]*u[1]
-							- ss*b[0]*u[2] - cc*b[3]*u[2] + ss*b[1]*u[3] + cc*b[2]*u[3];
-			s[2] += -(ss*b[1]*u[0]) - cc*b[2]*u[0] + ss*b[0]*u[1] + cc*b[3]*u[1]
-							+ cc*b[0]*u[2] - ss*b[3]*u[2] - cc*b[1]*u[3] + ss*b[2]*u[3];
-			s[3] += -(ss*b[0]*u[0]) - cc*b[3]*u[0] - ss*b[1]*u[1] - cc*b[2]*u[1]
-							+ cc*b[1]*u[2] - ss*b[2]*u[2] + cc*b[0]*u[3] - ss*b[3]*u[3];
-		#endif
-	}
+	staple_doublet(s, l, f, p, i, higgs_id);
 	// staple normalization
 	double F = 0.0;
 	for (int k=0; k<SU2DB; k++) {
@@ -130,12 +70,12 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 	// Cartesian X and Y coordinates for the Higgs.
 	double X = 0.0;
 	for (int k=0; k<SU2DB; k++) {
-		X += f->su2doublet[0][i][k] * s[k];
+		X += higgs[i][k] * s[k]; // this "contains" a minus sign
 	}
 	X /= F;
 	double Y[4], Ysq = 0.0;
 	for (int k=0; k<SU2DB; k++) {
-		Y[k] = f->su2doublet[0][i][k] - X * s[k] / F;
+		Y[k] = higgs[i][k] - X * s[k] / F;
 		Ysq += Y[k] * Y[k];
 	}
 
@@ -166,11 +106,10 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
 	if (beta >= drand48()) {
 		// accept, so overrelax Y' = -Y using the new X
-		// phi'_a = Y' + X' f_a = -phi_a + (X' + X) f_a
-		// this should agree with what Kari has in XORsu2Higgs.c; he probably has
-		// his y variable with a different sign
+		// phi'_a = Y' - X' f_a = -phi_a - (X' + X) f_a,
+		// but my X calculated above has diff sign already. */
 		for (int k=0; k<SU2DB; k++) {
-			f->su2doublet[0][i][k] = -1.0*f->su2doublet[0][i][k] + (newX + X) * s[k] / F;
+			f->su2doublet[0][i][k] = -1.0*higgs[i][k] + (newX + X) * s[k] / F;
 		}
 		return 1;
 	} else {
@@ -179,104 +118,6 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 	}
 
 }
-
-#ifdef USEOLD
-
-/* OLD overrelaxation for the doublet.
-*
-*	The doublet is Phi(x) = 1/sqrt(2) sig_i phi_i , i = 0,1,2,3,
-*	and we perform the update for phi(x)_a following Kari's simple recipe:
-* Write the action in the form
-* 	S = phi_a s_a + B phi_a phi_a + C (phi_a phi_a)^2,
-* where s_a is a staple from the hopping terms. Completing the square gives:
-* 	S = B (phi_a + s_a /(2B))^2 + C (phi_a phi_a)^2 - s_a^2 /(4B),
-*	where the last term is constant in phi_a.
-* phi_a is overrelaxed by choosing new p_a so that
-*		(p_a + s_a / (2B) ) = -(phi_a + s_a/(2B)), i.e.
-* 	p_a = -phi_a - s_a / B
-*
-*	Finally we apply a accept/reject step with the quartic term C as in metropolis.
-* The acceptance rate should be high if C is small.
-* Returns 1 if update was accepted and 0 if rejected. */
-int overrelax_doublet_old(lattice const* l, fields f, params p, long i) {
-
-	double oldfield[SU2DB];
-	for (int k=0; k<SU2DB; k++) {
-		oldfield[k] = f.su2doublet[0][i][k];
-	}
-	double sa[4] = {0.0, 0.0, 0.0, 0.0};
-	double u[4];
-	double b[4];
-	// calculate hopping staple s_a
-	for (int dir=0; dir<l->dim; dir++) {
-		u[0] = f.su2link[i][dir][0];
-		u[1] = f.su2link[i][dir][1];
-		u[2] = f.su2link[i][dir][2];
-		u[3] = f.su2link[i][dir][3];
-		long next = l->next[i][dir];
-		// Phi at next site
-		memcpy(b, f.su2doublet[0][next], SU2DB*sizeof(b[0]));
-		sa[0] += -(b[0]*u[0]) + b[1]*u[1] + b[2]*u[2] + b[3]*u[3];
-		sa[1] += -(b[1]*u[0]) - b[0]*u[1] + b[3]*u[2] - b[2]*u[3];
-		sa[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
-		sa[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
-		// same for backwards directions
-		long prev = l->prev[i][dir];
-		u[0] = f.su2link[prev][dir][0];
-		u[1] = f.su2link[prev][dir][1];
-		u[2] = f.su2link[prev][dir][2];
-		u[3] = f.su2link[prev][dir][3];
-		// Phi at previous site
-		memcpy(b, f.su2doublet[0][prev], SU2DB*sizeof(b[0]));
-		sa[0] += -(b[0]*u[0]) - b[1]*u[1] - b[2]*u[2] - b[3]*u[3];
-		sa[1] += -(b[1]*u[0]) + b[0]*u[1] - b[3]*u[2] + b[2]*u[3];
-		sa[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
-		sa[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
-	}
-
-	// calculate coefficient of quadratic terms, B.
-	// B = mass term + local term from covariant derivative + extra from other fields
-	double B = 0.5 * p.msq_phi + 1.0 * l->dim;
-	#ifdef TRIPLET
-		B += 0.5 * p.a2 * tripletsq(f.su2triplet[i]);
-	#endif
-	// add check for B != 0?
-
-	// calculate quartic term before update
-	double mod = doubletsq(oldfield);
-	double oldquartic = p.lambda_phi * mod * mod;
-
-	// Overrelax all the components and then apply a accept/reject based on the quartic term.
-	// This should be OK since overrelaxation for phi_a is independent of the other components
-	for (int dof=0; dof<4; dof++) {
-		f.su2doublet[0][i][dof] = -1.0*f.su2doublet[0][i][dof] - sa[dof] / B;
-	}
-	mod = doubletsq(f.su2doublet[0][i]);
-	double newquartic = p.lambda_phi * mod * mod;
-
-	double diff = newquartic - oldquartic;
-
-	int accept;
-
-	if (diff < 0) {
-		accept = 1;
-	}
-	else if (diff >= 0 && ( exp(-(diff)) > drand48() )) {
-		accept = 1;
-	}
-	else {
-		accept = 0;
-		for (int dof=0; dof<SU2DB; dof++) {
-			f.su2doublet[0][i][dof] = oldfield[dof];
-		}
-	}
-
-	return accept;
-}
-
-#endif // ifdef USEOLD
-
-#endif // if (NHIGGS > 0)
 
 
 /* Same Cartesian overrelax as overrelax_doublet(), but for adjoint scalar.
@@ -346,9 +187,8 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i) {
 
 	// remaining terms in the local action
 	double B = 0.5 * p->msq_triplet + 1.0 * l->dim;
-
-	#if (NHIGGS > 0)
-		B += 0.5 * p->a2 * doubletsq(f->su2doublet[0][i]); // does not work with multiple doublets!!
+	#ifdef HIGGS
+		B += 0.5 * p->a2 * doubletsq(f->su2doublet[i]);
 	#endif
 	double C = 0.25 * p->b4;
 
@@ -383,88 +223,133 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i) {
 
 }
 
+#if (NHIGGS == 2)
 
+/* XY-overrelax for multiple Higgs doublets. higgs_id specifies which doublet
+* is updated. Here I am more consistent with signs and take the local action to be
+* V[phi] ~ -F_a phi_a + others. Also, Y is not changed at all here, so the update works
+* even for potentials that are not invariant under Y -> -Y. */
+int overrelax_higgs2(lattice const* l, fields* f, params const* p, long i, int higgs_id) {
 
-/* Same as overrelax_doublet_old() but for the real triplet.
-* Logic is the same: reflect the Gaussian part, acc/rej on the quartic part.
-*/
-int overrelax_triplet_old(lattice const* l, fields f, params p, long i) {
+	double s[SU2DB] = {0.0};
 
-	double oldfield[3];
-	oldfield[0] = f.su2triplet[i][0];
-	oldfield[1] = f.su2triplet[i][1];
-	oldfield[2] = f.su2triplet[i][2];
+	double** higgs = f->su2doublet[higgs_id];
+	double mod = doubletsq(higgs[i]);
 
-	double sa[3] = {0.0, 0.0, 0.0};
-	double u[4];
-	double b[3];
-	// calculate hopping staple s_a
-	for (int dir=0; dir<l->dim; dir++) {
-		u[0] = f.su2link[i][dir][0];
-		u[1] = f.su2link[i][dir][1];
-		u[2] = f.su2link[i][dir][2];
-		u[3] = f.su2link[i][dir][3];
-		long next = l->next[i][dir];
-		// triplet at next site
-		b[0] = f.su2triplet[next][0];
-		b[1] = f.su2triplet[next][1];
-		b[2] = f.su2triplet[next][2];
-		sa[0] += -(b[0]*(u[0]*u[0])) - b[0]*(u[1]*u[1]) + 2*b[2]*u[0]*u[2] - 2*b[1]*u[1]*u[2] +
-							b[0]*(u[2]*u[2]) - 2*b[1]*u[0]*u[3] - 2*b[2]*u[1]*u[3] + b[0]*(u[3]*u[3]);
-		sa[1] += -(b[1]*(u[0]*u[0])) - 2*b[2]*u[0]*u[1] + b[1]*(u[1]*u[1]) - 2*b[0]*u[1]*u[2] -
-   						b[1]*(u[2]*u[2]) + 2*b[0]*u[0]*u[3] - 2*b[2]*u[2]*u[3] + b[1]*(u[3]*u[3]);
-		sa[2] += -(b[2]*(u[0]*u[0])) + 2*b[1]*u[0]*u[1] + b[2]*(u[1]*u[1]) - 2*b[0]*u[0]*u[2] +
-   						b[2]*(u[2]*u[2]) - 2*b[0]*u[1]*u[3] - 2*b[1]*u[2]*u[3] - b[2]*(u[3]*u[3]);
-		// same for backwards directions
-		long prev = l->prev[i][dir];
-		u[0] = f.su2link[prev][dir][0];
-		u[1] = f.su2link[prev][dir][1];
-		u[2] = f.su2link[prev][dir][2];
-		u[3] = f.su2link[prev][dir][3];
-		// Phi at previous site
-		b[0] = f.su2triplet[prev][0];
-		b[1] = f.su2triplet[prev][1];
-		b[2] = f.su2triplet[prev][2];
-		sa[0] += -(b[0]*(u[0]*u[0])) - b[0]*(u[1]*u[1]) - 2*b[2]*u[0]*u[2] - 2*b[1]*u[1]*u[2] +
-   						b[0]*(u[2]*u[2]) + 2*b[1]*u[0]*u[3] - 2*b[2]*u[1]*u[3] + b[0]*(u[3]*u[3]);
-		sa[1] += -(b[1]*(u[0]*u[0])) + 2*b[2]*u[0]*u[1] + b[1]*(u[1]*u[1]) - 2*b[0]*u[1]*u[2] -
-   						b[1]*(u[2]*u[2]) - 2*b[0]*u[0]*u[3] - 2*b[2]*u[2]*u[3] + b[1]*(u[3]*u[3]);
-		sa[2] += -(b[2]*(u[0]*u[0])) - 2*b[1]*u[0]*u[1] + b[2]*(u[1]*u[1]) + 2*b[0]*u[0]*u[2] +
-   						b[2]*(u[2]*u[2]) - 2*b[0]*u[1]*u[3] - 2*b[1]*u[2]*u[3] - b[2]*(u[3]*u[3]);
+	// calculate hopping staple s_a (denote s_a = F_a)
+	staple_doublet(s, l, f, p, i, higgs_id); // now S ~ f[a] s[a], does not include minus sign
+
+	/* Now there is f12 = phi1^+ phi2 etc in the potential, add these to the "staple".
+	* There are also f1[a] * f1^2 etc, but these do NOT contribute to F_a which should
+	* remain constant in the local f1[a] -> f_new[a] update.
+	* Here R = Re f12, I = Im f12, H = phi_other (4-vec), G = +/- i sig_2 H (4-dimensional Pauli matrix),
+	* so in terms of f1[a] vectors: f11 = 0.5 * f1.f1, R = 0.5 * f1.f2, I = 0.5 * f1.G.
+	* The sign in G is - if updating phi1 (so H = phi2) and + if updating phi2. */
+	double* H;
+	double G[SU2DB];
+	int sign = -1; // sign of G
+
+	// full staple is s[a] = s_hop[a] + A H + B G. m12^2 term and either lam6 or lam7 contribute
+	complex lam67, lam67other;
+	double lam12, msq;
+	if (higgs_id == 0) {
+
+		H = f->su2doublet[1][i];
+
+		lam12 = p->lambda_phi;
+		msq = p->msq_phi;
+		lam67 = p->lam7;
+		lam67other = p->lam6;
+		lam67other.im *= -1.0;
+	} else {
+
+		H = f->su2doublet[0][i];
+		sign = 1;
+
+		lam12 = p->lam2;
+		msq = p->msq_phi2;
+		lam67 = p->lam6;
+		lam67.im *= -1.0;
+		lam67other = p->lam7;
 	}
 
-	// calculate coefficient of quadratic terms, B.
-	// B = mass term + local term from covariant derivative + extra from other fields
-	double B = 0.5 * p.msq_triplet + 1.0 * l->dim;
-	#if (NHIGGS > 0)
-		B += 0.5 * p.a2 * doubletsq(f.su2doublet[0][i]);
-	#endif
-	// add check for B != 0?
+	G[0] = sign*H[3]; G[1] = sign*H[2];
+	G[2] = -1.0*sign*H[1]; G[3] = -1.0*sign*H[0];
 
-	// calculate quartic term before update
-	double mod = tripletsq(oldfield);
-	double oldquartic = p.b4 * mod * mod;
+	double Hsq = doubletsq(H);
 
-	// Overrelax all the components and then apply a accept/reject based on the quartic term.
-	// This should be OK since overrelaxation for A_a is independent of the other components
-	for (int dof=0; dof<3; dof++) {
-		f.su2triplet[i][dof] = -1.0*f.su2triplet[i][dof] - sa[dof] / B;
+	for (int k=0; k<SU2DB; k++) {
+		s[k] += 0.5*(p->m12sq.re + Hsq * lam67.re) * H[k];
+		s[k] += 0.5*(-1.0*p->m12sq.im + Hsq * lam67.im) * G[k];
+		s[k] = -1.0*s[k]; // change staple sign to match F_a
 	}
-	mod = tripletsq(f.su2triplet[i]);
-	double newquartic = p.b4 * mod * mod;
 
-	double diff = newquartic - oldquartic;
+	// staple normalization
+	double F = 0.0;
+	for (int k=0; k<SU2DB; k++) F += s[k] * s[k];
+	F = sqrt(F);
 
-	if (diff < 0) {
+	// Cartesian X and Y coordinates for the Higgs
+	double X = 0.0;
+	for (int k=0; k<SU2DB; k++) {
+		s[k] /= F; // s <- s/F = f_a
+		X += higgs[i][k] * s[k];
+	}
+
+	double Y[SU2DB], Ysq = 0.0;
+	for (int k=0; k<SU2DB; k++) {
+		Y[k] = higgs[i][k] - X * s[k];
+		Ysq += Y[k] * Y[k];
+	}
+
+	/* Write local action as V(X) = b4 X^4 + b3 X^3 + b2 X^2 + b1 X + b0.
+	* See Mathematica notebook overrelax.c for the expressions */
+
+	// some dot products
+	double Hf = 0.0, Gf = 0.0, HY = 0.0, GY = 0.0;
+	for (int k=0; k<SU2DB; k++) {
+		Hf += H[k] * s[k];
+		Gf += G[k] * s[k];
+		HY += H[k] * Y[k];
+		GY += G[k] * Y[k];
+	}
+
+	// terms that differ for phi1 and phi2 (b2 includes term from covariant der.)
+	double b4 = 0.25 * lam12;
+	double b3 = 0.25 * (Hf * lam67other.re + Gf * lam67other.im);
+	double b2 = 0.5 * msq + 1.0*l->dim + 0.5*Ysq*lam12 + 0.25*(HY*lam67other.re + GY*lam67other.im);
+	double b1 = -1.0*F + 0.25*Ysq*(Hf*lam67other.re + Gf*lam67other.im); // F contains terms from the "staple"
+
+	// then mutual terms for both phi1,2
+	b2 += 0.5*Hsq * p->lam3 + 0.25*p->lam4 * (Hf*Hf + Gf*Gf)
+			+ 0.25*p->lam5.re * (Hf*Hf - Gf*Gf) - 0.5*p->lam5.im * Gf*Hf;
+
+	b1 += 0.5*Hf * (HY*p->lam4 + HY*p->lam5.re - GY*p->lam5.im)
+			+ 0.5*Gf * (GY*p->lam4 - GY*p->lam5.re - HY*p->lam5.im);
+
+	/* Solve V(X') - V(X) = 0: write this as (x - X) (ax^3 + bx^2 + cx + d) = 0
+	*  and find the real root of the 3rd degree polynomial */
+	long double aa = b4;
+	long double bb = b3 + b4*X;
+	long double cc = b2 + b3*X + b4*X*X;
+	long double dd = b1 + b2*X + b3*X*X + b4*X*X*X;
+
+	double Xn = polysolve3(aa, bb, cc, dd);
+	/* now accept/reject based on the change in measure */
+	double dV = 4.0*b4*X*X*X + 3.0*b3*X*X + 2.0*b2*X + b1;
+	double dV_new = 4.0*b4*Xn*Xn*Xn + 3.0*b3*Xn*Xn + 2.0*b2*Xn + b1;
+
+	b4 = fabs(dV/dV_new);
+	if (b4 >= drand48()) {
+		// accept, so change phi_a so that Y is unchanged.
+		for (int k=0; k<SU2DB; k++) {
+			higgs[i][k] = higgs[i][k] + s[k] * (Xn - X);
+		}
 		return 1;
-	}
-	else if (diff >= 0 && ( exp(-(diff)) > drand48() )) {
-		return 1;
-	}
-	else {
-		f.su2triplet[i][0] = oldfield[0];
-		f.su2triplet[i][1] = oldfield[1];
-		f.su2triplet[i][2] = oldfield[2];
+	} else {
+		// reject, no changes to the field
 		return 0;
 	}
+
 }
+#endif // NHIGGS == 2

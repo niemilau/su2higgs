@@ -19,7 +19,9 @@
 
 /* Check compatibility of makefile flags */
 
-#if (NHIGGS > 1) && defined (TRIPLET)
+#if (NHIGGS > 2)
+	#warning !!! Higgs potential not implemented for N>2 doublets !!!
+#elif (NHIGGS > 1) && defined (TRIPLET)
 	#warning !!! TRIPLET with multiple Higgs doublets not implemented !!!
 #elif (NHIGGS > 0) && defined (GRADFLOW)
 	#warning !!! Gradient flow with Higgs not implemented !!!

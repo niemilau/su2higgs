@@ -85,7 +85,7 @@ int metro_doublet(lattice const* l, fields* f, params const* p, long i, int higg
 
 	// modify the old field by random values
 	for (int k=0; k<SU2DB; k++) {
-		phi[i][0] += 1.0*(drand48() - 0.5);
+		phi[i][k] += 1.0*(drand48() - 0.5);
 	}
 
 	double act_new = localact_doublet(l, f, p, i, higgs_id);

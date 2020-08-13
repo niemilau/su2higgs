@@ -10,10 +10,7 @@
 
 
 /* Sweep over the lattice in a checkerboard layout and update half of the links.
-* Gauge links are updated only in direction specified by dir.
-* Parity of a site is assumed to be stored in params.
-*
-*/
+* Gauge links are updated only in direction specified by dir. */
 void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
@@ -89,7 +86,12 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 	for (long i=offset; i<max; i++) {
 
 		if (p->algorithm_su2doublet == OVERRELAX && (metro == 0)) {
-			c->acc_overrelax_doublet[higgs_id] += overrelax_doublet(l, f, p, i);
+
+			#if (NHIGGS == 2)
+				c->acc_overrelax_doublet[higgs_id] += overrelax_higgs2(l, f, p, i, higgs_id);
+			#else
+				c->acc_overrelax_doublet[higgs_id] += overrelax_doublet(l, f, p, i);
+			#endif
 			c->total_overrelax_doublet[higgs_id]++;
 
 		} else if (p->algorithm_su2doublet == METROPOLIS || (metro != 0)) {
@@ -320,9 +322,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 				int par = par_a[j];
 				accept = checkerboard_sweep_su2triplet(l, f, p, c, w, par, metro);
 				// if the sweep was rejected, no need to sync halos
-				if (accept) {
-					update_halo(l, par, f->su2triplet, SU2TRIP);
-				}
+				if (accept) update_halo(l, par, f->su2triplet, SU2TRIP);
 
 			}
 		}

@@ -697,8 +697,8 @@ void print_parameters(lattice l, params p) {
     printf("lam6_re %g, lam6_im %g, lam7_re %g, lam7_im %g \n", p.lam6.re, p.lam6.im, p.lam7.re, p.lam7.im);
     printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 
-  #elif (NHIGGS > 0)
-	printf("msq (Higgs) %g, lambda (Higgs) %d, ", p.msq_phi, p.lambda_phi);
+  #elif (NHIGGS == 1)
+	printf("msq (Higgs) %g, lambda (Higgs) %g, ", p.msq_phi, p.lambda_phi);
 	printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 	#endif
 
