@@ -634,10 +634,6 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
   	       w->orderparam = SIGMASQ;
            printf0(*l, "Multicanonical order parameter: Tr Sigma^2 \n");
         }
-				else if (!strcasecmp(value,"phi2Sigma2")) {
-  	       w->orderparam = PHI2SIGMA2;
-           printf0(*l, "Multicanonical order parameter: phi^2 Tr Sigma^2 \n");
-        }
           #if (NHIGGS > 0)
           else if (!strcasecmp(value,"phi2minusSigma2")) {
     	       w->orderparam = PHI2MINUSSIGMA2;

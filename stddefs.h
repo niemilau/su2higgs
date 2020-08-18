@@ -29,6 +29,14 @@
 	#warning !!! Blocking not implemented for the Higgs !!!
 #endif
 
+/* If using blocking, need larger halos because of link smearing in su2u1.c */
+#ifdef BLOCKING
+	#define HALOWIDTH 2
+
+#else
+ #define HALOWIDTH 1 // no blocking, halo extends just one site in each direction
+
+#endif
 
 // degrees of freedom per site for different fields
 #define SU2DB 4
@@ -49,7 +57,12 @@
 #define PHISQ 1
 #define SIGMASQ 2
 #define PHI2MINUSSIGMA2 3
-#define PHI2SIGMA2 4
+#define PHI2SQ 4
+
+// different modes for updating the multicanonical weight function
+#define READONLY 0
+#define FAST 1
+#define SLOW 2 // these are protected by the SLOW_MUCA flag
 
 // nasty globals for keeping track of evaluation time
 double waittime;

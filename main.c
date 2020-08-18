@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
 	if (p.multicanonical) {
 		// initialize multicanonical. Needs to come after field initializations
 		load_weight(&l, &w);
-		alloc_backup_arrays(&l, &f, &w);
+		alloc_muca_backups(&l, &w);
 		calc_orderparam(&l, &f, &p, &w, EVEN);
 		calc_orderparam(&l, &f, &p, &w, ODD);
 		if (w.mode == READONLY) {

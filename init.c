@@ -133,6 +133,20 @@ void copy_fields(lattice const* l, fields const* f_old, fields* f_new) {
 
 }
 
+/* Copy an individual field with 'dofs' components per site (does not copy halos) */
+void cp_field(lattice const* l, double** field, double** new, int dofs, int parity) {
+
+	long max, offset = 0;
+	if (parity == EVENODD) max = l->sites;
+	else if (parity == EVEN) max = l->evensites;
+	else if (parity == ODD) {
+		max = l->sites;
+		offset = l->evensites;
+	}
+
+	for (long i=offset; i<max; i++) memcpy(new[i], field[i], dofs * sizeof(double));
+}
+
 
 // Initialize accept/reject counters and time
 void init_counters(counters* c) {

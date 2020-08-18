@@ -8,49 +8,6 @@
 	#define NHIGGS 0
 #endif
 
-/* If using blocking, need larger halos because of link smearing in su2u1.c */
-#ifdef BLOCKING
-	#define HALOWIDTH 2
-
-#else
- #define HALOWIDTH 1 // no blocking, halo extends just one site in each direction
-
-#endif
-
-// degrees of freedom per site for different fields
-#define SU2DB 4
-#define SU2LINK 4
-#define SU2TRIP 3
-
-// update algorithms
-#define METROPOLIS 1 // Metropolis
-#define HEATBATH 2 // Heatbath
-#define OVERRELAX 3 // Overrelaxation
-
-// parity identifiers
-#define EVEN 0
-#define ODD 1
-#define EVENODD 2
-
-// multicanonical order parameters
-#define PHISQ 1
-#define SIGMASQ 2
-#define PHI2MINUSSIGMA2 3
-#define PHI2SIGMA2 4
-
-// different modes for updating the multicanonical weight function
-#define READONLY 0
-#define FAST 1
-#define SLOW 2 // these are protected by the SLOW_MUCA flag
-
-// nasty globals for keeping track of evaluation time
-double waittime;
-double Global_comms_time, Global_total_time;
-double Global_current_action; // for debugging gradient flows etc
-
-typedef struct {
-	double re, im;
-}	complex;
 
 /* Struct "lattice": contains info on lattice dimensions, lookup tables for
 * sites and everything related to parallelization. */
@@ -214,12 +171,10 @@ typedef struct {
 	// NHIGGS copies of Higgs doublets, accessed as su2doublet[id][site][component]
 	#if (NHIGGS > 0)
 		double** su2doublet[NHIGGS];
-		double** backup_doublet[NHIGGS];
 	#endif
 
-	// backup arrays. these are used in global multicanonical steps in case the update sweep needs to be undone
-	double **backup_triplet;
 } fields;
+
 
 typedef struct {
 
@@ -276,6 +231,8 @@ typedef struct {
  	int last_max; // 1 if system recently visited the bin containing w.wrk_max (keep track of tunneling)
 	int mode; // one of the multicanonical "modes" defined above, affects weight recursion
 	char weightfile[100]; // file name
+
+	fields fbu; // backup fields for undoing a rejected multicanonical update sweep
 
 	// additional data arrays used in slow update mode only
 	long* gsum;
@@ -425,7 +382,7 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 			weight* w, int parity, int metro, int higgs_id);
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
 void sync_halos(lattice* l, fields* f);
-int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups);
+int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity);
 void shuffle(int *arr, int len);
 
 // init.c
@@ -435,6 +392,7 @@ void setu1(fields* f, lattice const* l);
 void setfields(fields* f, lattice* l, params const* p);
 void setdoublets(fields* f, lattice const* l, params const* p);
 void settriplets(fields* f, lattice const* l, params const* p);
+void cp_field(lattice const* l, double** field, double** new, int dofs, int parity);
 void copy_fields(lattice const* l, fields const* f_old, fields* f_new);
 void init_counters(counters* c);
 
@@ -471,9 +429,7 @@ int update_weight(weight* w);
 int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double newval);
 int whichbin(weight const* w, double val);
 double calc_orderparam(lattice const* l, fields const* f, params const* p, weight* w, char par);
-void store_muca_fields(lattice const* l, fields* f, weight* w);
-void reset_muca_fields(lattice const* l, fields* f, weight* w, char par);
-void alloc_backup_arrays(lattice const* l, fields* f, weight const* w);
+void alloc_muca_backups(lattice const* l, weight* w);
 void free_muca_arrays(fields* f, weight *w);
 void init_last_max(weight* w);
 void update_weight_slow(weight* w);

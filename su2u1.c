@@ -435,11 +435,6 @@ double hopping_doublet_forward(lattice const* l, fields const* f, long i, int di
 * for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected. */
 double hopping_doublet_backward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
 
-	double *phi1 = NULL;
-	double *phi2 = f->su2doublet[i];
-	double *U = NULL;
-	double tot = 0.0;
-
 	double **higgs = f->su2doublet[higgs_id];
 
 	long prev = l->prev[i][dir];
@@ -662,50 +657,6 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 	#endif
 
 	return tot;
-}
-
-
-
-/* Same as su2staple_wilson(), but only does the staple for U_mu(x) in one direction = nu.
-* If dagger = 1, also takes the Hermitian conjugate of both forward and backward staples */
-void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res) {
-	if (mu == nu) {
-		res[0] = 1.0;
-		for(int k=1; k<SU2LINK; k++) {
-			res[k] = 0.0;
-		}
-		return;
-	}
-
-	double tot[SU2LINK] = { 0.0 };
-	double* u1 = NULL;
-	double* u2 = NULL;
-	double* u3 = NULL;
-
-	// "upper" staple U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
-	u1 = f->su2link[ l->next[i][mu] ][nu];
-	u2 = f->su2link[ l->next[i][nu] ][mu];
-	u3 = f->su2link[i][nu];
-	su2staple_counterwise(tot, u1, u2, u3);
-	for(int k=0; k<SU2LINK; k++) {
-		// take conjugate if needed
-		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
-		res[k] = tot[k];
-	}
-
-	// "lower" staple U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu)
-	long site = l->next[i][mu];
-	site = l->prev[site][nu];
-	u1 = f->su2link[site][nu];
-	u2 = f->su2link[ l->prev[i][nu] ][mu];
-	u3 = f->su2link[ l->prev[i][nu] ][nu];
-	su2staple_clockwise(tot, u1, u2, u3);;
-	for(int k=0; k<SU2LINK; k++) {
-		// take conjugate if needed
-		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
-		res[k] += tot[k];
-	}
-
 }
 
 
