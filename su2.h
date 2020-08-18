@@ -8,6 +8,50 @@
 	#define NHIGGS 0
 #endif
 
+/* If using blocking, need larger halos because of link smearing in su2u1.c */
+#ifdef BLOCKING
+	#define HALOWIDTH 2
+
+#else
+ #define HALOWIDTH 1 // no blocking, halo extends just one site in each direction
+
+#endif
+
+// degrees of freedom per site for different fields
+#define SU2DB 4
+#define SU2LINK 4
+#define SU2TRIP 3
+
+// update algorithms
+#define METROPOLIS 1 // Metropolis
+#define HEATBATH 2 // Heatbath
+#define OVERRELAX 3 // Overrelaxation
+
+// parity identifiers
+#define EVEN 0
+#define ODD 1
+#define EVENODD 2
+
+// multicanonical order parameters
+#define PHISQ 1
+#define SIGMASQ 2
+#define PHI2MINUSSIGMA2 3
+#define PHI2SIGMA2 4
+
+// different modes for updating the multicanonical weight function
+#define READONLY 0
+#define FAST 1
+#define SLOW 2 // these are protected by the SLOW_MUCA flag
+
+// nasty globals for keeping track of evaluation time
+double waittime;
+double Global_comms_time, Global_total_time;
+double Global_current_action; // for debugging gradient flows etc
+
+typedef struct {
+	double re, im;
+}	complex;
+
 /* Struct "lattice": contains info on lattice dimensions, lookup tables for
 * sites and everything related to parallelization. */
 typedef struct {
@@ -222,15 +266,21 @@ typedef struct {
 	//long min_bin, max_bin; // indices of the bins containing w.wrk_min and w.wrk_max
 	double* pos; // weight "position", i.e. values of the order param in the given range
 	double* W; // value of the weight function at the beginning of each bin
-	double delta; // how much the weight is increased in update_weight()
+	double* slope; double* b; // linearized weight: W(R) = w_i + (R - R_i)*slope[i] = b + slope*R
 
+	double delta; // how much the weight is increased in update_weight()
 	int* hits; // keep track of which bins we have visited
 	int muca_count; // how many muca acc/rej steps performed (resets after weight update)
 	int update_interval; // how many muca acc/rej steps until weight is updated
 
  	int last_max; // 1 if system recently visited the bin containing w.wrk_max (keep track of tunneling)
-	char readonly; // 1 if weight is to be updated, 0 otherwise
+	int mode; // one of the multicanonical "modes" defined above, affects weight recursion
 	char weightfile[100]; // file name
+
+	// additional data arrays used in slow update mode only
+	long* gsum;
+	long* nsum;
+	double* hgram;
 } weight;
 
 
@@ -332,10 +382,12 @@ double hopping_triplet_forward(lattice const* l, fields const* f, params const* 
 double hopping_triplet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
 double covariant_triplet(lattice const* l, fields const* f, params const* p, long i);
 double localact_triplet(lattice const* l, fields const* f, params const* p, long i);
+#ifdef BLOCKING
 // smearing
 void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
 void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
 void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
+#endif
 
 
 // staples.c
@@ -412,6 +464,7 @@ void print_labels_local(lattice const* l, char* fname);
 // multicanonical.c
 void load_weight(lattice const* l, weight *w);
 void save_weight(lattice const* l, weight const* w);
+void linearize_weight(weight* w);
 double get_weight(weight const* w, double val);
 void muca_accumulate_hits(weight* w, double val);
 int update_weight(weight* w);
@@ -423,6 +476,7 @@ void reset_muca_fields(lattice const* l, fields* f, weight* w, char par);
 void alloc_backup_arrays(lattice const* l, fields* f, weight const* w);
 void free_muca_arrays(fields* f, weight *w);
 void init_last_max(weight* w);
+void update_weight_slow(weight* w);
 
 #ifdef CORRELATORS
 // correlation.c

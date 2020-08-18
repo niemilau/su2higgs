@@ -90,8 +90,7 @@ int main(int argc, char *argv[]) {
 		// alloc and initialize stuff needed for blocking
 		int block_levels = p.blocks; // original lattice + block_levels more
 
-		alloc_comlist(&l.blocklist, l.size);
-		// main lattice will not need recv structures: realloc
+		l.blocklist.sends = 0; l.blocklist.recvs = 0;
 		realloc_comlist(&l.blocklist, RECV);
 		l.standby = 0;
 		l.blocking_level = 0;
@@ -130,7 +129,7 @@ int main(int argc, char *argv[]) {
 				base = &b[k-1];
 			}
 
-			alloc_comlist(&b[k].blocklist, base->size);
+			b[k].blocklist.sends = 0; b[k].blocklist.recvs = 0;
 			block_lattice(base, &b[k], block_dir);
 			alloc_fields(&b[k], &f_block[k]);
 			b[k].blocking_level = k+1;
@@ -194,8 +193,7 @@ int main(int argc, char *argv[]) {
 		alloc_backup_arrays(&l, &f, &w);
 		calc_orderparam(&l, &f, &p, &w, EVEN);
 		calc_orderparam(&l, &f, &p, &w, ODD);
-		if (w.readonly) {
-
+		if (w.mode == READONLY) {
 			printf0(l, "Read-only run, will not modify weight. \n");
 		}
 	}
@@ -222,12 +220,12 @@ int main(int argc, char *argv[]) {
 	/* if no lattice file was given or if reset=1 in config,
 	* start by thermalizing without updating multicanonical weight */
 	long iter = 1;
-	int readonly = 1;
+	int mode;
 	if (p.reset) {
 
 		if (p.multicanonical) {
-			readonly = w.readonly;
-			w.readonly = 1;
+			mode = w.mode;
+			w.mode = READONLY;
 		}
 
 		printf0(l, "\nThermalizing %ld iterations\n", p.n_thermalize);
@@ -247,8 +245,8 @@ int main(int argc, char *argv[]) {
 		// now reset iteration and time counters and turn weight updating back on if necessary
 		iter = 1;
 		init_counters(&c);
-		w.readonly = readonly;
-		if (p.multicanonical && !w.readonly) {
+		w.mode = mode;
+		if (p.multicanonical && w.mode != READONLY) {
 			init_last_max(&w);
 		}
 

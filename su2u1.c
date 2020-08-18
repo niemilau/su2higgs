@@ -435,6 +435,11 @@ double hopping_doublet_forward(lattice const* l, fields const* f, long i, int di
 * for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected. */
 double hopping_doublet_backward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
 
+	double *phi1 = NULL;
+	double *phi2 = f->su2doublet[i];
+	double *U = NULL;
+	double tot = 0.0;
+
 	double **higgs = f->su2doublet[higgs_id];
 
 	long prev = l->prev[i][dir];
@@ -460,6 +465,7 @@ double hopping_doublet_backward(lattice const* l, fields const* f, long i, int d
 * in the "forward" directions. Specifically, calculates
 *		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ] */
 double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id) {
+
 	double tot = 0.0;
 	double **phi = f->su2doublet[higgs_id];
 	double mod = doubletsq(phi[i]);
@@ -473,11 +479,13 @@ double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id
 
 #endif // if (NHIGGS > 0)
 
+
 /* Calculate the action due to single su2doublet field at site i.
 * This includes the potential, as well as hopping terms
 * in "forward" and "backwards" directions.
 * Used in metropolis update. */
 double localact_doublet(lattice const* l, fields const* f, params const* p, long i, int higgs_id) {
+
 
 	double tot = 0.0;
 	// Full covariant derivative with the local Tr Phi^+ Phi included,
@@ -579,8 +587,7 @@ double hopping_trace_triplet(double* a1, double* u, double* a2) {
 /* Calculate the hopping term for a SU(2) triplet at site i,
 * in the "forward" direction. Specifically, calculates
 *		-2 Tr A(x) U_j(x) A(x+j) U_j(x)^+
-* for j = dir.
-*/
+* for j = dir. */
 double hopping_triplet_forward(lattice const* l, fields const* f, params const* p, long i, int dir) {
 	double *a1 = f->su2triplet[i];
 	double *a2 = NULL;
@@ -598,8 +605,7 @@ double hopping_triplet_forward(lattice const* l, fields const* f, params const* 
 /* Calculate the hopping term for a SU(2) triplet at site i,
 * in the "backwards" direction. Specifically, calculates
 *		-2 Tr A(x-j) U_j(x-j) A(x) U_j(x-j)^+
-* for j = dir.
-*/
+* for j = dir. */
 double hopping_triplet_backward(lattice const* l, fields const* f, params const* p, long i, int dir) {
 	double *a1 = NULL;
 	double *a2 = f->su2triplet[i];
@@ -619,8 +625,7 @@ double hopping_triplet_backward(lattice const* l, fields const* f, params const*
 /* Calculate the full covariant derivative for a SU(2) triplet at site i,
 * in the "forward" directions. Specifically, calculates
 *		2 \sum_j [ Tr A^2 - Tr A(x) U_j(x) A(x+j) U_j(x)^+ ]
-* using hopping_triplet_forward().
-*/
+* using hopping_triplet_forward(). */
 double covariant_triplet(lattice const* l, fields const* f, params const* p, long i) {
 	double tot = 0.0;
 	double mod = tripletsq(f->su2triplet[i]);
@@ -634,8 +639,7 @@ double covariant_triplet(lattice const* l, fields const* f, params const* p, lon
 /* Calculate the action due to single su2triplet field at site i.
 * This includes the potential, as well as hopping terms
 * in "forward" and "backwards" directions.
-* Used in metropolis update.
-*/
+* Used in metropolis update. */
 double localact_triplet(lattice const* l, fields const* f, params const* p, long i) {
 
 	double tot = 0.0;
@@ -661,12 +665,62 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 }
 
 
+
+/* Same as su2staple_wilson(), but only does the staple for U_mu(x) in one direction = nu.
+* If dagger = 1, also takes the Hermitian conjugate of both forward and backward staples */
+void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res) {
+	if (mu == nu) {
+		res[0] = 1.0;
+		for(int k=1; k<SU2LINK; k++) {
+			res[k] = 0.0;
+		}
+		return;
+	}
+
+	double tot[SU2LINK] = { 0.0 };
+	double* u1 = NULL;
+	double* u2 = NULL;
+	double* u3 = NULL;
+
+	// "upper" staple U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
+	u1 = f->su2link[ l->next[i][mu] ][nu];
+	u2 = f->su2link[ l->next[i][nu] ][mu];
+	u3 = f->su2link[i][nu];
+	su2staple_counterwise(tot, u1, u2, u3);
+	for(int k=0; k<SU2LINK; k++) {
+		// take conjugate if needed
+		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
+		res[k] = tot[k];
+	}
+
+	// "lower" staple U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu)
+	long site = l->next[i][mu];
+	site = l->prev[site][nu];
+	u1 = f->su2link[site][nu];
+	u2 = f->su2link[ l->prev[i][nu] ][mu];
+	u3 = f->su2link[ l->prev[i][nu] ][nu];
+	su2staple_clockwise(tot, u1, u2, u3);;
+	for(int k=0; k<SU2LINK; k++) {
+		// take conjugate if needed
+		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
+		res[k] += tot[k];
+	}
+
+}
+
+
+#ifdef BLOCKING
+
 /* Smearing routines. These construct a smeared field at each site
 * by averaging over the field and its covariant connection with nearest neighbors.
 * Naturally used with blocking routines.
 * In all routines here the input
 * smear_dir[j] = 1 if the direction j is to be smeared, 0 otherwise. */
 
+/* NB! the BLOCKING flag here protects smear_link() in particular, which can fail
+* in parallel implementation if the halo width is just 1 because it needs the
+* staple calculated also at a neighbor site, which may be in halo. in su2.h
+* HALOWIDTH is set to 2 if the BLOCKING flag is defined in makefile */
 
 /* Smear the SU(2) link at site i and store in res (link components).
 * This is done by calculating extended staples in the smearing directions,
@@ -788,8 +842,7 @@ void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, doub
 
 
 /* Smear all fields and store in f_b. Does not smear fields at odd sites in smearing
-* directions, because those are not needed for blocked lattices.
-*/
+* directions, because those are not needed for blocked lattices. */
 void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir) {
 
   // no halos
@@ -835,3 +888,5 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
 
   } // end i
 }
+
+#endif // end BLOCKING

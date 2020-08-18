@@ -394,8 +394,7 @@ void make_blocklists(lattice* l, lattice* b, int const* block_dir) {
 
 /* Make a dummy lattice struct for nodes on standby. This allocs everything that
 * normal layout() does, so the lattice can be freed using free_lattice(),
-* but the resulting lattice is essentially empty.
-*/
+* but the resulting lattice is essentially empty. */
 void standby_layout(lattice* l) {
 
   if (!l->standby) {
@@ -433,7 +432,8 @@ void standby_layout(lattice* l) {
     l->site_at_z = alloc_latticetable(l->sites_per_z, l->sliceL[0]);
   #endif
 
-  alloc_comlist(&l->comlist, 1); // sets sends,recvs = 0
+  // no need to alloc dummy comlists
+  l->comlist.sends = 0; l->comlist.recvs = 0;
 }
 
 
