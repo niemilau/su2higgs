@@ -25,6 +25,10 @@
 *	The normalizations of the ai components are now the same as usually in continuum.
 * See also the Mathematica notebook su2.nb.
 *
+*	Usually in continuum we have phi = (H1, H2)^T ; the matrix parametrization is then
+*
+* Phi = (H2* , H1)
+*				(-H1*, H2)
 *
 *	Real SU(2) triplets are parametrized as:
 *		A = \frac12 A[a] sigma[a],  a = 1,2,3.
@@ -32,16 +36,15 @@
 * which uses A = A[a] sigma[a] and has the action written in a slightly different,
 * but equal, form.
 *
-*
 *	My potential is  V = m^2 Tr A^2 + b4 (Tr A^2)^2 + 0.5 a2 Tr(\Phi^+ \Phi) Tr A^2,
 *	where the normalization matches what is usually used in continuum for the A[a].
-*
 *
 *	U(1) links are written simply as U_j(x) = exp(i a_j(x)), where a_j(x) is real
 * and stored in u1link[x][j]. We assume "standard" Wilson action, i.e.
 * 	gamma = 1, see doc.
-//TODO
 *
+* For 2 Higgs doublets (flag HIGGS2), I assume a doublet basis where the kinetic
+* terms are diagonal and canonically normalized.
 */
 
 #include "su2.h"
@@ -133,184 +136,6 @@ void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2,
 }
 
 
-/* Calculate untraced staple in counterclockwise direction ("usual" direction),
-*  and store it in V.
-* Specifically, calculates:
-* 	U1 U2^+ U3^+
-*/
-void su2staple_counterwise(double* V, double* u1, double* u2, double* u3) {
-
-	V[0] = u1[0]*u2[0]*u3[0] + u1[1]*u2[1]*u3[0] + u1[2]*u2[2]*u3[0] + u1[3]*u2[3]*u3[0] +
-   u1[1]*u2[0]*u3[1] - u1[0]*u2[1]*u3[1] - u1[3]*u2[2]*u3[1] +
-   u1[2]*u2[3]*u3[1] + u1[2]*u2[0]*u3[2] + u1[3]*u2[1]*u3[2] -
-   u1[0]*u2[2]*u3[2] - u1[1]*u2[3]*u3[2] + u1[3]*u2[0]*u3[3] -
-   u1[2]*u2[1]*u3[3] + u1[1]*u2[2]*u3[3] - u1[0]*u2[3]*u3[3];
-
-	 V[1] = u1[1]*u2[0]*u3[0] - u1[0]*u2[1]*u3[0] - u1[3]*u2[2]*u3[0] + u1[2]*u2[3]*u3[0] -
-   u1[0]*u2[0]*u3[1] - u1[1]*u2[1]*u3[1] - u1[2]*u2[2]*u3[1] -
-   u1[3]*u2[3]*u3[1] - u1[3]*u2[0]*u3[2] + u1[2]*u2[1]*u3[2] -
-   u1[1]*u2[2]*u3[2] + u1[0]*u2[3]*u3[2] + u1[2]*u2[0]*u3[3] +
-   u1[3]*u2[1]*u3[3] - u1[0]*u2[2]*u3[3] - u1[1]*u2[3]*u3[3];
-
-	 V[2] = u1[2]*u2[0]*u3[0] + u1[3]*u2[1]*u3[0] - u1[0]*u2[2]*u3[0] - u1[1]*u2[3]*u3[0] +
-   u1[3]*u2[0]*u3[1] - u1[2]*u2[1]*u3[1] + u1[1]*u2[2]*u3[1] -
-   u1[0]*u2[3]*u3[1] - u1[0]*u2[0]*u3[2] - u1[1]*u2[1]*u3[2] -
-   u1[2]*u2[2]*u3[2] - u1[3]*u2[3]*u3[2] - u1[1]*u2[0]*u3[3] +
-   u1[0]*u2[1]*u3[3] + u1[3]*u2[2]*u3[3] - u1[2]*u2[3]*u3[3];
-
-	 V[3] = u1[3]*u2[0]*u3[0] - u1[2]*u2[1]*u3[0] + u1[1]*u2[2]*u3[0] - u1[0]*u2[3]*u3[0] -
-   u1[2]*u2[0]*u3[1] - u1[3]*u2[1]*u3[1] + u1[0]*u2[2]*u3[1] +
-   u1[1]*u2[3]*u3[1] + u1[1]*u2[0]*u3[2] - u1[0]*u2[1]*u3[2] -
-   u1[3]*u2[2]*u3[2] + u1[2]*u2[3]*u3[2] - u1[0]*u2[0]*u3[3] -
-   u1[1]*u2[1]*u3[3] - u1[2]*u2[2]*u3[3] - u1[3]*u2[3]*u3[3];
-}
-
-/* Calculate untraced staple in clockwise direction ("inverse" direction),
-*  and store it in V.
-* Specifically, calculates:
-* 	U1^+ U2^+ U3
-*/
-void su2staple_clockwise(double* V, double* u1, double* u2, double* u3) {
-
-	V[0] = u1[0]*u2[0]*u3[0] - u1[1]*u2[1]*u3[0] - u1[2]*u2[2]*u3[0] - u1[3]*u2[3]*u3[0] +
-   u1[1]*u2[0]*u3[1] + u1[0]*u2[1]*u3[1] - u1[3]*u2[2]*u3[1] +
-   u1[2]*u2[3]*u3[1] + u1[2]*u2[0]*u3[2] + u1[3]*u2[1]*u3[2] +
-   u1[0]*u2[2]*u3[2] - u1[1]*u2[3]*u3[2] + u1[3]*u2[0]*u3[3] -
-   u1[2]*u2[1]*u3[3] + u1[1]*u2[2]*u3[3] + u1[0]*u2[3]*u3[3];
-
-	 V[1] = -u1[1]*u2[0]*u3[0] - u1[0]*u2[1]*u3[0] + u1[3]*u2[2]*u3[0] -
-   u1[2]*u2[3]*u3[0] + u1[0]*u2[0]*u3[1] - u1[1]*u2[1]*u3[1] -
-   u1[2]*u2[2]*u3[1] - u1[3]*u2[3]*u3[1] - u1[3]*u2[0]*u3[2] +
-   u1[2]*u2[1]*u3[2] - u1[1]*u2[2]*u3[2] - u1[0]*u2[3]*u3[2] +
-   u1[2]*u2[0]*u3[3] + u1[3]*u2[1]*u3[3] + u1[0]*u2[2]*u3[3] - u1[1]*u2[3]*u3[3];
-
-	 V[2] = -(u1[2]*u2[0]*u3[0]) - u1[3]*u2[1]*u3[0] - u1[0]*u2[2]*u3[0] +
-   u1[1]*u2[3]*u3[0] + u1[3]*u2[0]*u3[1] - u1[2]*u2[1]*u3[1] +
-   u1[1]*u2[2]*u3[1] + u1[0]*u2[3]*u3[1] + u1[0]*u2[0]*u3[2] -
-   u1[1]*u2[1]*u3[2] - u1[2]*u2[2]*u3[2] - u1[3]*u2[3]*u3[2] -
-   u1[1]*u2[0]*u3[3] - u1[0]*u2[1]*u3[3] + u1[3]*u2[2]*u3[3] - u1[2]*u2[3]*u3[3];
-
-	 V[3] = -(u1[3]*u2[0]*u3[0]) + u1[2]*u2[1]*u3[0] - u1[1]*u2[2]*u3[0] -
-   u1[0]*u2[3]*u3[0] - u1[2]*u2[0]*u3[1] - u1[3]*u2[1]*u3[1] -
-   u1[0]*u2[2]*u3[1] + u1[1]*u2[3]*u3[1] + u1[1]*u2[0]*u3[2] +
-   u1[0]*u2[1]*u3[2] - u1[3]*u2[2]*u3[2] + u1[2]*u2[3]*u3[2] +
-   u1[0]*u2[0]*u3[3] - u1[1]*u2[1]*u3[3] - u1[2]*u2[2]*u3[3] - u1[3]*u2[3]*u3[3];
-}
-
-
-/* Calculate full untraced staple for an SU(2) link and stores it in V
-* Only the contribution from Wilson action is included here, modulo the beta prefactor(s).
-* Specifically, calculates:
-* 	\sum_{nu != mu} (U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
- 																	+ U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu) )
-* where mu = dir.
-*/
-void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V) {
-	double tot[SU2LINK] = { 0.0 };
-	double* u1 = NULL;
-	double* u2 = NULL;
-	double* u3 = NULL;
-
-	for (int j=0; j<l->dim; j++) {
-		if (j != dir) {
-			// "upper" staple
-			u1 = f->su2link[ l->next[i][dir] ][j];
-			u2 = f->su2link[ l->next[i][j] ][dir];
-			u3 = f->su2link[i][j];
-			su2staple_counterwise(V, u1, u2, u3);
-			for(int k=0; k<SU2LINK; k++){
-				tot[k] += V[k];
-			}
-			// "lower" staple
-			u1 = f->su2link[ l->prev[(l->next[i][dir])][j] ][j];
-			u2 = f->su2link[(l->prev[i][j])][dir];
-			u3 = f->su2link[(l->prev[i][j])][j];
-			su2staple_clockwise(V, u1, u2, u3);;
-			for(int k=0; k<SU2LINK; k++){
-				tot[k] += V[k];
-			}
-		}
-	}
-
-	for(int k=0; k<SU2LINK; k++){
-		V[k] = tot[k];
-	}
-
-}
-
-
-/* Calculate total untraced staple for a SU(2) link and store in V.
-* Staple S here refers to the matrix multiplying link U in the trace, action ~ Tr US.
-*	Specifically, calculates:
-* 	-\beta * 0.5 * su2staple_wilson()
-* plus whatever comes from other terms in the action.
-* Wilson staple is
-*    -----
-*   |     |
-*   V     |
-*   ------->
-*   ^     |
-*   |     |
-*    -----
-*
-* Triplet is not included here, because its' hopping term is quadratic in the link
-* and cannot be expressed as a simple staple.
-*/
-void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V) {
-
-	su2staple_wilson(l, f, i, dir, V);
-	for (int k=0; k<4; k++) {
-		V[k] *= -0.5 * p->betasu2;
-	}
-	#ifdef HIGGS
-		// add hopping term: -Tr U_j Phi(x+j) exp(-i a_j(x) sigma_3) Phi(x)^+,
-		// a_j(x) = 0 if hypercharge is neglected.
-		double nextphi[4];
-		double currentphi[4];
-		long nextsite = l->next[i][dir];
-		// we want Hermitian conjugate of Phi(x):
-
-		currentphi[0] = f->su2doublet[i][0];
-		currentphi[1] = -1.0*f->su2doublet[i][1];
-		currentphi[2] = -1.0*f->su2doublet[i][2];
-		currentphi[3] = -1.0*f->su2doublet[i][3];
-		nextphi[0] = f->su2doublet[nextsite][0];
-		nextphi[1] = f->su2doublet[nextsite][1];
-		nextphi[2] = f->su2doublet[nextsite][2];
-		nextphi[3] = f->su2doublet[nextsite][3];
-
-		#ifdef U1
-			// the U(1) contribution can be written as
-			// I cos(a) - i sin(a) sigma_3, so in our notation it can be
-			// treated as a doublet field with components
-			// a[0] = sqrt(2) cos(a), a[1] = 0, a[2] = 0, a[3] = -sqrt(2) sin(a)
-			double s = sin(f->u1link[i][dir]);
-			double c = cos(f->u1link[i][dir]);
-			double b[4];
-			for (int k=0; k<4; k++) {
-				b[k] = nextphi[k];
-			}
-			// calculate Phi(x+j) times the hypercharge bit
-			nextphi[0] = c*b[0] + s*b[3];
-			nextphi[1] = c*b[1] + s*b[2];
-			nextphi[2] = -s*b[1] + c*b[2];
-			nextphi[3] = -s*b[0] + c*b[3];
-		#endif
-
-		/* Here we use su2rot to do the multiplication.
-		 However, we need a factor 1/sqrt(2) becase the doublet components
-		 are normalized differently from SU(2) links. For the same reason
-		 there is another 1/sqrt(2) when we add the scalar staple to the
-		 link staple, so overall we add to the Wilson staple
-		 -0.5 times what su2rot() of two doublets gives us.
-		*/
-		su2rot(nextphi, currentphi);
-		for (int k=0; k<4; k++) {
-			V[k] -= 0.5 * nextphi[k];
-		}
-	#endif
-}
-
 
 /* Calculate Wilson action for a single SU(2) link.  Explicitly, calculates:
 * beta * \Sum_{i < j} ( 1 - 0.5 Re Tr U_i (x) U_j (x+i) U_i(x+j)^+ U_j(x)^+ )
@@ -349,8 +174,8 @@ double localact_su2link(lattice const* l, fields const* f, params const* p, long
 		}
 	}
 	tot *= p->betasu2;
-
-/* same using staples, for debugging. Both work.
+	/*
+	//same using staples, for debugging. Both work.
 	double staple[4];
 	double V[4];
 	memcpy(V, f.su2link[i][dir], SU2LINK*sizeof(double));
@@ -361,9 +186,10 @@ double localact_su2link(lattice const* l, fields const* f, params const* p, long
 	*/
 
 	// hopping terms:
-	#ifdef HIGGS
-		tot += hopping_doublet_forward(l, f, p, i, dir);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) tot += hopping_doublet_forward(l, f, i, dir, db);
 	#endif
+
 	#ifdef TRIPLET
 		tot += hopping_triplet_forward(l, f, p, i, dir);
 	#endif
@@ -449,7 +275,6 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 }
 
 
-
 /**********************************
 * 	Routines for U(1) fields		*
 ***********************************/
@@ -509,8 +334,8 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 	tot *= p->betau1;
 
 	// hopping terms:
-	#ifdef HIGGS
-		tot += hopping_doublet_forward(l, f, p, i, dir);
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) tot += hopping_doublet_forward(l, f, i, dir, db);
 	#endif
 
 	return tot;
@@ -522,18 +347,31 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 ***********************************/
 
 /* Calculate 0.5 Tr \Phi^+ \Phi
-*	 which corresponds to \phi^\dagger \phi in continuum notation.
-*/
+*	 which corresponds to \phi^\dagger \phi in continuum notation. */
 double doubletsq(double* a) {
 	return 0.5 * (a[0]*a[0] + a[1]*a[1] + a[2]*a[2] + a[3]*a[3]);
 }
 
+/* Calculate product of two doublets f1, f2 in matrix parametrization
+* and store again in f1: f1 <- f1.f2. If conj==1, takes conjugate of f1 first */
+void phiproduct(double* f1, double const* f2, int conj) {
+
+	double a[SU2DB];
+	memcpy(a, f1, SU2DB * sizeof(a[0]));
+	if (conj) {
+		for (int k=1; k<SU2DB; k++) a[k] *= -1.0;
+	}
+
+	f1[0] = (a[0]*f2[0] - a[1]*f2[1] - a[2]*f2[2] - a[3]*f2[3]) / sqrt(2.0);
+	f1[1] = (a[1]*f2[0] + a[0]*f2[1] + a[3]*f2[2] - a[2]*f2[3]) / sqrt(2.0);
+	f1[2] = (a[2]*f2[0] - a[3]*f2[1] + a[0]*f2[2] + a[1]*f2[3]) / sqrt(2.0);
+	f1[3] = (a[3]*f2[0] + a[2]*f2[1] - a[1]*f2[2] + a[0]*f2[3]) / sqrt(2.0);
+}
 
 /* Calculate trace of two SU(2) doublets and a SU(2) link. Used in hopping terms.
 * Specifically, calculates:
 *		Tr \Phi_1^+ U \Phi_2.
-* Note that this is always real.
-*/
+* Note that this is always real. */
 double hopping_trace(double* phi1, double* u, double* phi2) {
 
 	return phi1[0]*phi2[0]*u[0] + phi1[1]*phi2[1]*u[0] + phi1[2]*phi2[2]*u[0] +
@@ -546,8 +384,7 @@ double hopping_trace(double* phi1, double* u, double* phi2) {
 
 /* Same as hopping_trace(), but includes hypercharge.
 * Specifically, calculates:
-*		Re Tr \Phi_1^+ U \Phi_2 exp[-i a sigma_3].
-*/
+*		Re Tr \Phi_1^+ U \Phi_2 exp[-i a sigma_3]. */
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 	double s = sin(a);
 	double c = cos(a);
@@ -566,109 +403,153 @@ double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 
 }
 
+/* Routines below access f->su2doublet directly, so protect with preprocessor if */
+#if (NHIGGS > 0 )
 
-/* Calculate the hopping term for a SU(2) doublet at site i,
+/* Calculate the hopping term for a SU(2) doublet 'phi' at site i,
 * in the "forward" direction. Specifically, calculates
 *		-Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3)
-* for j = dir and \alpha_j(x) = 0 if hypercharge is neglected.
-*/
-double hopping_doublet_forward(lattice const* l, fields const* f, params const* p, long i, int dir) {
-	double *phi1 = f->su2doublet[i];
-	double *phi2 = NULL;
-	double *U = NULL;
+* for j = dir and \alpha_j(x) = 0 if hypercharge is neglected. */
+double hopping_doublet_forward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
+
+	double **higgs = f->su2doublet[higgs_id];
+
+	double *phi1 = higgs[i];
+	double *phi2 = higgs[l->next[i][dir]];
+	double *U = f->su2link[i][dir];
+
 	double tot = 0.0;
 
-	phi2 = f->su2doublet[(l->next[i][dir])];
-	U = f->su2link[i][dir];
-
 	#ifndef U1
-	// no U(1)
-	tot -= hopping_trace(phi1, U, phi2);
+		tot -= hopping_trace(phi1, U, phi2);
 	#else
-	// include U(1)
-	tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[i][dir]);
+		tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[i][dir]);
 	#endif
 
 	return tot;
 }
 
-/* Calculate the hopping term for a SU(2) doublet at site i,
+/* Calculate the hopping term for a SU(2) doublet 'phi' at site i,
 * in the "backwards" direction. Specifically, calculates
 *		- Tr \Phi(x-j)^+ U_j(x-j) \Phi(x) exp(-i \alpha_j(x-j) \sigma_3)
 * for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected. */
-double hopping_doublet_backward(lattice const* l, fields const* f, params const* p, long i, int dir) {
-	double *phi1 = NULL;
-	double *phi2 = f->su2doublet[i];
-	double *U = NULL;
+double hopping_doublet_backward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
+
+	double **higgs = f->su2doublet[higgs_id];
+
+	long prev = l->prev[i][dir];
+
+	double *phi1 = higgs[prev];
+	double *phi2 = higgs[i];
+	double *U = f->su2link[prev][dir];
 	double tot = 0.0;
 
-	long previous = l->prev[i][dir];
-
-	phi1 = f->su2doublet[previous];
-	U = f->su2link[previous][dir];
-
 	#ifndef U1
-	// no U(1)
-	tot -= hopping_trace(phi1, U, phi2);
+		// no U(1)
+		tot -= hopping_trace(phi1, U, phi2);
 	#else
-	// include U(1)
-	tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[previous][dir]);
+		// include U(1)
+		tot -= hopping_trace_su2u1(phi1, U, phi2, f->u1link[prev][dir]);
 	#endif
 
 	return tot;
+
 }
 
-/* Calculate the full covariant derivative for a SU(2) doublet at site i,
+/* Calculate the full covariant derivative for an SU(2) doublet at site i,
 * in the "forward" directions. Specifically, calculates
 *		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ] */
-double covariant_doublet(lattice const* l, fields const* f, params const* p, long i) {
+double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id) {
+
 	double tot = 0.0;
-	double mod = doubletsq(f->su2doublet[i]);
+	double **phi = f->su2doublet[higgs_id];
+	double mod = doubletsq(phi[i]);
 	for (int dir=0; dir<l->dim; dir++){
 		// multiply by 2 here because doubletsq gives 0.5 Tr Phi^+ Phi
-		tot += 2.0 * mod + hopping_doublet_forward(l, f, p, i, dir);
+		tot += 2.0 * mod + hopping_doublet_forward(l, f, i, dir, higgs_id);
 	}
 
 	return tot;
 }
 
+#endif // if (NHIGGS > 0)
 
-/* Calculate the Higgs potential for a su2doublet field at site i.
-* Specifically: V = 0.5 m^2 Tr(\Phi^+ \Phi) + 0.25 * \lambda (Tr(\Phi^+ \Phi))^2 in the SM.
-* Contributions from other fields that couple to Higgs are also included.
-* Used in localact_doublet(), which is used in metropolis update. */
-double higgspotential(fields const* f, params const* p, long i) {
-
-	double mod = doubletsq(f->su2doublet[i]);
-	double pot = p->msq_phi * mod + p->lambda_phi * mod*mod;
-
-	#ifdef TRIPLET
-	// add term 0.5 Tr Phi^+ Phi Tr A^2
-		pot += p->a2 * mod * tripletsq(f->su2triplet[i]);
-	#endif
-
-	return pot;
-}
 
 /* Calculate the action due to single su2doublet field at site i.
 * This includes the potential, as well as hopping terms
 * in "forward" and "backwards" directions.
 * Used in metropolis update. */
-double localact_doublet(lattice const* l, fields const* f, params const* p, long i) {
+double localact_doublet(lattice const* l, fields const* f, params const* p, long i, int higgs_id) {
+
 
 	double tot = 0.0;
 	// Full covariant derivative with the local Tr Phi^+ Phi included,
 	// and summed over directions:
-	tot += covariant_doublet(l, f, p, i);
+	tot += covariant_doublet(l, f, i, higgs_id);
 
 	for (int dir=0; dir<l->dim; dir++) {
 		// contribution from backwards hopping terms:
-		tot += hopping_doublet_backward(l, f, p, i, dir);
+		tot += hopping_doublet_backward(l, f, i, dir, higgs_id);
 	}
 
 	tot += higgspotential(f, p, i);
 
 	return tot;
+}
+
+/* Calculate phi_{12} = phi1^\dagger phi2, where the fields are now in vector parametrization */
+complex get_phi12(double const* h1, double const* h2) {
+	complex res;
+	/* R = Re phi12, I = Im phi12 = -0.5 i Tr \Phi_1 \sigma_3 \he\Phi_2 */
+	res.re = 0.5*(h1[0]*h2[0] + h1[1]*h2[1] + h1[2]*h2[2] + h1[3]*h2[3]);
+	res.im = 0.5*(h1[3]*h2[0] + h1[2]*h2[1] - h1[1]*h2[2] - h1[0]*h2[3]);
+
+	return res;
+}
+
+/* Calculate the full scalar potential at site i, including all scalar fields.
+* Specifically: V = 0.5 m^2 Tr(\Phi^+ \Phi) + 0.25 * \lambda (Tr(\Phi^+ \Phi))^2 in the SM.
+* Used in localact_doublet(), which is used in metropolis update. */
+double higgspotential(fields const* f, params const* p, long i) {
+
+	double pot = 0.0;
+
+	#if (NHIGGS > 0)
+		double *h1 = f->su2doublet[0][i];
+		double mod = doubletsq(h1);
+		pot += p->msq_phi * mod + p->lambda_phi * mod*mod;
+
+		#if (NHIGGS == 2)
+			/* Two-Higgs doublet potential is
+			* 	V = m1^2 f11 + m2^2 f22 + 0.5(m12^2 f12 + h.c.)
+			*			 + lam1 f11^2 + lam2 f22^2 + lam3 f11 f22 + lam4 f12 f21
+			*  		 + 0.5(lam5 f12^2 + lam6 f11 f12 + lam7 f22 f21 + h.c. )
+			* where f11 = phi1^+.phi1 etc. see documentation for the alternative form used below */
+
+			double *h2 = f->su2doublet[1][i];
+			double f11 = mod;
+			double f22 = doubletsq(h2);
+
+			complex f12 = get_phi12(h1, h2);
+			double R = f12.re; double I = f12.im;
+
+			pot += p->msq_phi2 * f22 + p->m12sq.re * R - p->m12sq.im * I + p->lam2 * f22*f22
+					  + p->lam3 * f11*f22 + p->lam4 * (R*R + I*I) + p->lam5.re*(R*R - I*I) - 2.0*p->lam5.im*R*I
+						+ f11 * (p->lam6.re*R - p->lam6.im*I) + f22*(p->lam7.re*R + p->lam7.im*I);
+		#endif
+
+	#endif
+
+	#ifdef TRIPLET
+		// add 0.5 m^2 Tr Sigma^2 + b4 (0.5 Tr Sigma^2)^2, plus couplings to other scalars
+		double mod_trip = tripletsq(f->su2triplet[i]); // 0.5 Tr Sigma^2
+		pot += p->msq_triplet * mod_trip + p->b4 * mod_trip * mod_trip;
+		#if (NHIGGS > 0)
+			pot += p->a2 * mod * mod_trip;
+		#endif
+	#endif
+
+	return pot;
 }
 
 /**********************************
@@ -770,56 +651,12 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 	double mod = tripletsq(f->su2triplet[i]);
 
 	tot += p->msq_triplet * mod + p->b4 * mod * mod;
-	#ifdef HIGGS
+	#if (NHIGGS > 0)
 		// add term 0.5 Tr Phi^+ Phi Tr A^2
-		tot += p->a2 * doubletsq(f->su2doublet[i]) * mod;
+		tot += p->a2 * doubletsq(f->su2doublet[0][i]) * mod;
 	#endif
 
 	return tot;
-}
-
-
-
-/* Same as su2staple_wilson(), but only does the staple for U_mu(x) in one direction = nu.
-* If dagger = 1, also takes the Hermitian conjugate of both forward and backward staples */
-void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res) {
-	if (mu == nu) {
-		res[0] = 1.0;
-		for(int k=1; k<SU2LINK; k++) {
-			res[k] = 0.0;
-		}
-		return;
-	}
-
-	double tot[SU2LINK] = { 0.0 };
-	double* u1 = NULL;
-	double* u2 = NULL;
-	double* u3 = NULL;
-
-	// "upper" staple U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
-	u1 = f->su2link[ l->next[i][mu] ][nu];
-	u2 = f->su2link[ l->next[i][nu] ][mu];
-	u3 = f->su2link[i][nu];
-	su2staple_counterwise(tot, u1, u2, u3);
-	for(int k=0; k<SU2LINK; k++) {
-		// take conjugate if needed
-		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
-		res[k] = tot[k];
-	}
-
-	// "lower" staple U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu)
-	long site = l->next[i][mu];
-	site = l->prev[site][nu];
-	u1 = f->su2link[site][nu];
-	u2 = f->su2link[ l->prev[i][nu] ][mu];
-	u3 = f->su2link[ l->prev[i][nu] ][nu];
-	su2staple_clockwise(tot, u1, u2, u3);;
-	for(int k=0; k<SU2LINK; k++) {
-		// take conjugate if needed
-		if (dagger && k != 0) tot[k] = -1.0 * tot[k];
-		res[k] += tot[k];
-	}
-
 }
 
 
@@ -894,6 +731,10 @@ void smear_link(lattice const* l, fields const* f, int const* smear_dir, double*
 
 }
 
+
+// TODO doublet
+void smear_doublet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i) {
+}
 
 /* Smear the triplet field at site i and store in res (triplet components).
 * This is done by calculating
@@ -987,7 +828,7 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
       } // end dir
 
       // scalars
-      #ifdef HIGGS
+      #if (NHIGGS > 0)
 
       #endif
       #ifdef TRIPLET

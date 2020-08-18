@@ -38,7 +38,7 @@
 * the following steps need to be taken:
 *
 *		1. #define a constant label for it in a header (su2.h) and add it to get_weight_parameters().
-*		2. Tell calc_orderparam(), alloc_backup_arrays(), free_muca_arrays(),
+*		2. Tell calc_orderparam(), alloc_muca_arrays(), free_muca_arrays(),
 *			 store_muca_fields() and reset_muca_fields() what to do for this case.
 *		3. In update_lattice_muca(), call multicanonical_acceptance() after updating all the
 *			 fields contributing to the order param and reject the updates if necessary (this is the tricky part).
@@ -667,7 +667,6 @@ int whichbin(weight const* w, double val) {
 	}
 }
 
-
 /* Calculate muca order parameter and distribute to all nodes.
 * Only the contribution from sites with parity = par is recalculated
 * while the other parity contribution is read from w.param_value */
@@ -681,27 +680,32 @@ double calc_orderparam(lattice const* l, fields const* f, params const* p, weigh
 	}
 
 	switch(w->orderparam) {
+
+#ifdef TRIPLET
 		case SIGMASQ :
-			for (long i=offset; i<max; i++) {
-				tot += tripletsq(f->su2triplet[i]);
-			}
+			for (long i=offset; i<max; i++) tot += tripletsq(f->su2triplet[i]);
 			break;
-		case PHI2SIGMA2 :
-			for (long i=offset; i<max; i++) {
-				tot += doubletsq(f->su2doublet[i]) * tripletsq(f->su2triplet[i]);
-			}
-			break;
+#endif
+
+#if defined (TRIPLET) && (NHIGGS > 0)
     case PHI2MINUSSIGMA2 :
-      for (long i=offset; i<max; i++) {
-				tot += doubletsq(f->su2doublet[i]) - tripletsq(f->su2triplet[i]);
-      }
+      for (long i=offset; i<max; i++) tot += doubletsq(f->su2doublet[0][i]) - tripletsq(f->su2triplet[i]);
       break;
+#endif
+
+#if (NHIGGS > 0)
 		case PHISQ :
-			for (long i=offset; i<max; i++) {
-				tot += doubletsq(f->su2doublet[i]);
-			}
+			for (long i=offset; i<max; i++) tot += doubletsq(f->su2doublet[0][i]);
 			break;
-	}
+#endif
+
+#if (NHIGGS > 1)
+		case PHI2SQ :
+			for (long i=offset; i<max; i++) tot += doubletsq(f->su2doublet[1][i]);
+			break;
+#endif
+
+	} // end switch
 
 	tot = allreduce(tot, l->comm) / l->vol;
 
@@ -711,88 +715,35 @@ double calc_orderparam(lattice const* l, fields const* f, params const* p, weigh
 }
 
 
-/* Backup all fields contributing to the order parameter,
-* in case an update sweep is rejected later by the global acc/rej.
-* Ordering in the backup array is exactly the same as in the original field array. */
-void store_muca_fields(lattice const* l, fields* f, weight* w) {
-
+/* Allocate field backup arrays (no halos to save memory) */
+void alloc_muca_backups(lattice const* l, weight* w) {
 	switch(w->orderparam) {
+
+#ifdef TRIPLET
 		case SIGMASQ :
-			for (long i=0; i<l->sites; i++) {
-				for (int dof=0; dof<SU2TRIP; dof++) {
-					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
-				}
-			}
+			w->fbu.su2triplet = make_field(l->sites, SU2TRIP);
 			break;
+
+#if (NHIGGS > 0)
     case PHI2MINUSSIGMA2 :
-		case PHI2SIGMA2 :
-			for (long i=0; i<l->sites; i++) {
-				for (int dof=0; dof<SU2TRIP; dof++) {
-					f->backup_triplet[i][dof] = f->su2triplet[i][dof];
-				}
-			}
-			// continue to store Higgs
+			w->fbu.su2triplet = make_field(l->sites, SU2TRIP);
+			w->fbu.su2doublet[0] = make_field(l->sites, SU2DB);
+			break;
+#endif
+#endif
+
+#if (NHIGGS > 0)
 		case PHISQ :
-			for (long i=0; i<l->sites; i++) {
-				for (int dof=0; dof<SU2DB; dof++) {
-					f->backup_doublet[i][dof] = f->su2doublet[i][dof];
-				}
-			}
+			w->fbu.su2doublet[0] = make_field(l->sites, SU2DB);
 			break;
-	}
-}
-
-
-/* Undo field updates if the multicanonical step is rejected. */
-void reset_muca_fields(lattice const* l, fields* f, weight* w, char par) {
-
-	long offset, max;
-	if (par == EVEN) {
-		offset = 0; max = l->evensites;
-	} else {
-		offset = l->evensites; max = l->sites;
-	}
-
-	switch(w->orderparam) {
-		case SIGMASQ :
-			for (long i=offset; i<max; i++) {
-				for (int dof=0; dof<SU2TRIP; dof++) {
-					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
-				}
-			}
+#endif
+#if (NHIGGS > 1)
+		case PHI2SQ :
+			w->fbu.su2doublet[1] = make_field(l->sites, SU2DB);
 			break;
-    case PHI2MINUSSIGMA2 :
-		case PHI2SIGMA2 :
-			for (long i=offset; i<max; i++) {
-				for (int dof=0; dof<SU2TRIP; dof++) {
-					f->su2triplet[i][dof] = f->backup_triplet[i][dof];
-				}
-			}
-		// continue to undo Higgs changes
-		case PHISQ :
-			for (long i=offset; i<max; i++) {
-				for (int dof=0; dof<SU2DB; dof++) {
-					f->su2doublet[i][dof] = f->backup_doublet[i][dof];
-				}
-			}
-			break;
-	}
-}
+#endif
 
-
-// Allocate field backup arrays
-void alloc_backup_arrays(lattice const* l, fields* f, weight const* w) {
-	switch(w->orderparam) {
-		case SIGMASQ :
-			f->backup_triplet = make_field(l->sites, SU2TRIP);
-			break;
-		case PHI2SIGMA2 :
-    case PHI2MINUSSIGMA2 :
-			f->backup_triplet = make_field(l->sites, SU2TRIP);
-		case PHISQ :
-			f->backup_doublet = make_field(l->sites, SU2DB);
-			break;
-	}
+	} // end switch
 }
 
 // Free memory allocated for multicanonical
@@ -810,15 +761,28 @@ void free_muca_arrays(fields* f, weight *w) {
 
 	// free backup arrays
 	switch(w->orderparam) {
+#ifdef TRIPLET
 		case SIGMASQ :
-			free_field(f->backup_triplet);
+			free_field(w->fbu.su2triplet);
 			break;
-		case PHI2SIGMA2 :
+#if (NHIGGS > 0)
     case PHI2MINUSSIGMA2 :
-			free_field(f->backup_triplet);
-		case PHISQ :
-			free_field(f->backup_doublet);
+			free_field(w->fbu.su2triplet);
+			free_field(w->fbu.su2doublet[0]);
 			break;
+#endif
+#endif
+
+#if (NHIGGS > 0)
+		case PHISQ :
+			free_field(w->fbu.su2doublet[0]);
+			break;
+#endif
+#if (NHIGGS > 1)
+		case PHI2SQ :
+			free_field(w->fbu.su2doublet[1]);
+			break;
+#endif
 	}
 }
 

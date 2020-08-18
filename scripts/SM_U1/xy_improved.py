@@ -5,17 +5,33 @@ import math
 from pylab import genfromtxt
 
 
-## read in temperature T and beta_G
-if not len(sys.argv) in [5]:
-    sys.stderr.write('Usage: %s <x> <y> <z> <beta_G>\n' %
+## read in continuum x, y and beta_G (no U(1) implemented!!)
+# these are also the "improved" lattice x, y, beta
+if not len(sys.argv) in [4]:
+    sys.stderr.write('Usage: %s <x> <y> <beta_G>\n' %
                      sys.argv[0])
     sys.exit(1)
 
-x = float(sys.argv[1])
-y = float(sys.argv[2])
-z = float(sys.argv[3])
-beta = float(sys.argv[4])
+x_imp = float(sys.argv[1])
+y_imp = float(sys.argv[2])
+beta_imp = float(sys.argv[3])
+z = 0
 
+print('---- Read in: x = %g, y = %g, z = %g, beta_G = %g ----\n'
+    % (x_imp, y_imp, z, beta_imp))
+
+## Calculate "naive" parameters in the lattice action
+# see hep-lat/9709053, esp appendix B.1
+
+ZgInv = 1.0 + 0.667394974 / beta_imp
+Zm = 1 + (-0.23584293 + 0.29193980*x_imp) / beta_imp
+
+beta = beta_imp * ZgInv
+x = ZgInv * (x_imp + (0.01824624 - 0.47168586*x_imp + 0.58387959*x_imp**2) / beta_imp )
+y = ZgInv**2 * Zm * y_imp
+
+### now use naive lattice-continuum relations to calculate
+## the lattice mass which should model the continuum theory with these naive values
 
 # generic constants
 Sigma = 3.17591153625
@@ -26,9 +42,6 @@ k1 = 0.958382
 k2 = 0.25*Sigma**2 - 0.5 * delta - 0.25
 k3 = 0.751498
 k4 = 1.204295
-
-print('---- Read in: x = %g, y = %g, z = %g, beta_G = %g ----\n'
-    % (x, y, z, beta))
 
 #### convert to lattice parameters, in units of a.
 # i.e. the standard relations but treat a=1.
@@ -56,5 +69,8 @@ mass_ct2 = - 1.0/(16*math.pi**2.0) * ((51.0/16.0 * gsq**2 - 9.0/8.0 * gsq*gpsq \
 
 msq = gsq**2 * y + mass_ct1 + mass_ct2
 
-print('---- Lattice parameters: msq = %.12lf, lam = %.12lf, betau1 = %.12lf ----\n'
+print('---- Lattice parameters: msq = %g, lam = %g, betau1 = %g ----\n'
     % (msq, lam, betau1))
+
+print('---- Naive lattice x, y, beta: x = %g, y = %g, beta = %g, Zg^(-2)*Zm = %g ----\n'
+    % (x, y, beta, ZgInv**2 * Zm))

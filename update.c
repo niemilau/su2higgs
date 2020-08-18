@@ -8,12 +8,30 @@
 
 #include "su2.h"
 
+/* General routine for doing a global multicanonical accept/reject check in an update sweep.
+* Does NOT undo field changes in case of reject, this needs to be done manually afterwards */
+int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity) {
+
+	// local field updates do not recalculate the muca order parameter, so the old
+	//value is still in w->param_value:
+	double orderparam_old = w->param_value[EVEN] + w->param_value[ODD];
+	// recalculate with the new fields; this also updates w->param_value[par]
+	double orderparam_new = calc_orderparam(l, f, p, w, parity);
+
+	int accept = multicanonical_acceptance(l, w, orderparam_old, orderparam_new);
+	if (!accept) {
+		// rejected, undo changes to w->param_value
+		w->param_value[parity] = orderparam_old - w->param_value[otherparity(parity)];
+	}
+	c->accepted_muca += accept;
+	c->total_muca++;
+
+	return accept;
+}
+
 
 /* Sweep over the lattice in a checkerboard layout and update half of the links.
-* Gauge links are updated only in direction specified by dir.
-* Parity of a site is assumed to be stored in params.
-*
-*/
+* Gauge links are updated only in direction specified by dir. */
 void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
@@ -34,8 +52,7 @@ void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, co
 
 }
 
-/* Same as checkerboard_sweep_su2link(), but for U(1) links instead.
-*/
+/* Same as checkerboard_sweep_su2link(), but for U(1) links instead. */
 void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir) {
 	// EVEN sites come before ODD
 	long offset, max;
@@ -57,10 +74,12 @@ void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, cou
 }
 
 
+#if (NHIGGS > 0)
 /* Sweep over the lattice in a checkerboard layout and update half of the doublets.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 0 if ALL local updates were rejected by multicanonical, nonzero otherwise */
-int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro) {
+int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c,
+			weight* w, int parity, int metro, int higgs_id) {
 
 	int accept = 1;
 	long muca_interval = l->sites_total; // initialize to some large value to avoid bugs
@@ -75,25 +94,33 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 	// check if multicanonical is to be used
 	int do_muca = 0;
 	if (w->do_acceptance) {
-		if (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
-			store_muca_fields(l, f, w);
-			do_muca = 1;
-			muca_interval = (max - offset) / w->checks_per_sweep; // takes floor if not integer
-			if (muca_interval <= 0) muca_interval = 1;
-			accept = 0; // the sweep may be rejected by multicanonical
-		}
+
+		if (higgs_id == 0 && (w->orderparam == PHISQ || w->orderparam == PHI2MINUSSIGMA2)) do_muca = 1;
+		else if (higgs_id == 1 && (w->orderparam == PHI2SQ)) do_muca = 1;
+	}
+
+	if (do_muca) {
+		cp_field(l, f->su2doublet[higgs_id], w->fbu.su2doublet[higgs_id], SU2DB, parity);
+		muca_interval = (max - offset) / w->checks_per_sweep; // takes floor if not integer
+		if (muca_interval <= 0) muca_interval = 1;
+		accept = 0; // the sweep may be rejected by multicanonical
 	}
 
 	// then the update sweep, doing a global muca acc/rej every muca_interval sites
 	for (long i=offset; i<max; i++) {
 
 		if (p->algorithm_su2doublet == OVERRELAX && (metro == 0)) {
-			c->acc_overrelax_doublet += overrelax_doublet(l, f, p, i);
-			c->total_overrelax_doublet++;
+
+			#if (NHIGGS == 2)
+				c->acc_overrelax_doublet[higgs_id] += overrelax_higgs2(l, f, p, i, higgs_id);
+			#else
+				c->acc_overrelax_doublet[higgs_id] += overrelax_doublet(l, f, p, i);
+			#endif
+			c->total_overrelax_doublet[higgs_id]++;
 
 		} else if (p->algorithm_su2doublet == METROPOLIS || (metro != 0)) {
-			c->accepted_doublet += metro_doublet(l, f, p, i);
-			c->total_doublet++;
+			c->accepted_doublet[higgs_id] += metro_doublet(l, f, p, i, higgs_id);
+			c->total_doublet[higgs_id]++;
 		}
 
 		if (do_muca) {
@@ -101,52 +128,45 @@ int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, 
 			if (muca_count % muca_interval == 0) {
 				// do the global muca acc/rej step, and take new backups unless the sweep is finished
 				int make_backups = (i < max-1);
-				accept += muca_check(l, f, p, c, w, parity, make_backups);
-				/* if rejected, the field changes have now been undone. */
+				int acc = muca_check(l, f, p, c, w, parity);
+				accept += acc;
+
+				if (!acc) {
+					// rejected, undo field changes
+					cp_field(l, w->fbu.su2doublet[higgs_id], f->su2doublet[higgs_id], SU2DB, parity);
+				} else if (make_backups) {
+					cp_field(l, f->su2doublet[higgs_id], w->fbu.su2doublet[higgs_id], SU2DB, parity);
+				}
+
 			} // end muca check
 		} // end do muca
+/*************************/
 
 	} // end site loop
 
 	// if the muca interval did not add up, do a final check here without taking new backups
 	if (do_muca && (max - offset) % w->checks_per_sweep != 0) {
-		accept += muca_check(l, f, p, c, w, parity, 0);
+		int acc = muca_check(l, f, p, c, w, parity);
+		if (!acc) cp_field(l, w->fbu.su2doublet[higgs_id], f->su2doublet[higgs_id], SU2DB, parity);
+		accept += acc;
 	}
 
 	return accept; // return is nonzero if at least one muca check was accepted
 }
 
-/* */
-int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups) {
-
-	// local field updates do not recalculate the muca order parameter, so the old value is still in w->param_value:
-	double orderparam_old = w->param_value[EVEN] + w->param_value[ODD];
-	// recalculate with the new fields; this also updates w->param_value[par]
-	double orderparam_new = calc_orderparam(l, f, p, w, parity);
-
-	int accept = multicanonical_acceptance(l, w, orderparam_old, orderparam_new);
-	if (!accept) {
-		// rejected, undo field changes and w->param_value
-		reset_muca_fields(l, f, w, parity);
-		w->param_value[parity] = orderparam_old - w->param_value[otherparity(parity)];
-	} else if (make_backups) {
-		// accepted, make new field backups
-		store_muca_fields(l, f, w);
-	}
-	c->accepted_muca += accept;
-	c->total_muca++;
-
-	return accept;
-}
+#endif // if (NHIGGS > 0)
 
 
+
+#ifdef TRIPLET
 /* Sweep over the lattice in a checkerboard layout and update half of the triplets.
 * Last argument metro is 1 if we force a metropolis update and 0 otherwise.
 * Return value is 0 if ALL local updates were rejected by multicanonical, nonzero otherwise */
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro) {
 
 	int accept = 1;
-	double muca_param_old = 0;
+	long muca_interval = l->sites_total;
+	long muca_count = 0;
 	long offset, max;
 	if (parity == EVEN) {
 		offset = 0; max = l->evensites;
@@ -157,14 +177,17 @@ int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, 
 	// multicanonical preparations if the order parameter depends on the triplet
 	int do_muca = 0;
 	if (w->do_acceptance) {
-		if (w->orderparam == SIGMASQ || w->orderparam == PHI2MINUSSIGMA2 || w->orderparam == PHI2SIGMA2) {
-			muca_param_old = w->param_value[EVEN] + w->param_value[ODD];
-			store_muca_fields(l, f, w);
+		if (w->orderparam == SIGMASQ || w->orderparam == PHI2MINUSSIGMA2) {
+			cp_field(l, f->su2triplet, w->fbu.su2triplet, SU2TRIP, parity);
+			muca_interval = (max - offset) / w->checks_per_sweep; // takes floor if not integer
+			if (muca_interval <= 0) muca_interval = 1;
+			accept = 0; // the sweep may be rejected by multicanonical
 			do_muca = 1;
 		}
 	}
 
-	// then the update sweep
+
+	// then the update sweep, doing a global muca acc/rej every muca_interval sites
 	for (long i=offset; i<max; i++) {
 		if (p->algorithm_su2triplet == OVERRELAX && (metro == 0)) {
 			c->acc_overrelax_triplet += overrelax_triplet(l, f, p, i);
@@ -173,26 +196,38 @@ int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, 
 			c->accepted_triplet += metro_triplet(l, f, p, i);
 			c->total_triplet++;
 		}
+
+		if (do_muca) {
+			muca_count++;
+			if (muca_count % muca_interval == 0) {
+				// do the global muca acc/rej step, and take new backups unless the sweep is finished
+				int make_backups = (i < max-1);
+				int acc = muca_check(l, f, p, c, w, parity);
+				accept += acc;
+
+				if (!acc) {
+					// rejected, undo field changes
+					cp_field(l, w->fbu.su2triplet, f->su2triplet, SU2TRIP, parity);
+				} else if (make_backups) {
+					cp_field(l, f->su2triplet, w->fbu.su2triplet, SU2TRIP, parity);
+				}
+
+			} // end muca check
+		} // end do muca
+/*************************/
+	} // end site loop
+
+	// if the muca interval did not add up, do a final check here without taking new backups
+	if (do_muca && (max - offset) % w->checks_per_sweep != 0) {
+		int acc = muca_check(l, f, p, c, w, parity);
+		if (!acc) cp_field(l, w->fbu.su2triplet, f->su2triplet, SU2TRIP, parity);
+		accept += acc;
 	}
-
-	// now the global multicanonical step
-	if (do_muca) {
-		double muca_param_new = calc_orderparam(l, f, p, w, parity); // this also updates w->param_value[par]
-		accept = multicanonical_acceptance(l, w, muca_param_old, muca_param_new);
-
-		if (!accept) {
-			// rejected, undo field changes and w->param_value
-			reset_muca_fields(l, f, w, parity);
-			w->param_value[parity] = muca_param_old - w->param_value[otherparity(parity)];
-		}
-
-		c->accepted_muca += accept;
-		c->total_muca++;
-	}
-
 	return accept;
 
 }
+
+#endif // ifdef TRIPLET
 
 
 /* Full update on all sites + halo communication.
@@ -209,8 +244,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 	/* Sweeps for gauge links. Arrays par_a (parity) and dir_a (directions)
 	* specify the order of updates. These have length 2*dim. Defaults are (with dim=3)
 	* par_a = [0,1,0,1,0,1], dirs_a = [0,0,1,1,2,2], i.e.
-	* first EVEN and ODD links in direction 0, then EVEN/ODD in dir 1 etc.
-	*/
+	* first EVEN and ODD links in direction 0, then EVEN/ODD in dir 1 etc. */
 	for (int k=0; k<p->update_links; k++) { // repeat the whole process p->update_links times
 
 		const int NV = 2*l->dim;
@@ -280,7 +314,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 			par_a[0] = EVEN; par_a[1] = ODD;
 		}
 
-		#ifdef HIGGS
+		#if (NHIGGS > 0)
 		for (int k=0; k<p->update_su2doublet; k++) {
 
 			if (c->higgs_sweeps >= metro_interval-1) {
@@ -293,11 +327,13 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 
 			for (int j=0; j<=1; j++) {
 				int par = par_a[j];
-				accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro);
 
-				// if the sweep was rejected, no need to sync halos
-				if (accept) {
-					update_halo(l, par, f->su2doublet, SU2DB);
+				for (int db=0; db<NHIGGS; db++) {
+					accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, db);
+					if (accept) update_halo(l, par, f->su2doublet[db], SU2DB);
+					/* NOTE: if using a non-local multicanonical order parameter that depends
+					* on the field at x, x+i, x+2i etc then it is necessary to sync halos
+					* WITHIN the update sweep ! */
 				}
 
 			}
@@ -319,9 +355,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 				int par = par_a[j];
 				accept = checkerboard_sweep_su2triplet(l, f, p, c, w, par, metro);
 				// if the sweep was rejected, no need to sync halos
-				if (accept) {
-					update_halo(l, par, f->su2triplet, SU2TRIP);
-				}
+				if (accept) update_halo(l, par, f->su2triplet, SU2TRIP);
 
 			}
 		}
@@ -330,9 +364,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 }
 
 
-/* Routine sync_halos()
-* This syncs all halo fields. Should be called before starting the simulation.
-*/
+/* Routine sync_halos(): just syncs all halo fields. */
 void sync_halos(lattice* l, fields* f) {
 
 	for (int parity=0; parity<=1; parity++) {
@@ -344,8 +376,8 @@ void sync_halos(lattice* l, fields* f) {
 			#endif
 		}
 
-		#ifdef HIGGS
-			update_halo(l, parity, f->su2doublet, SU2DB);
+		#if (NHIGGS > 0)
+			for (int db=0; db < NHIGGS; db++) update_halo(l, parity, f->su2doublet[db], SU2DB);
 		#endif
 
 		#ifdef TRIPLET

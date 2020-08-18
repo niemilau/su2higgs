@@ -17,6 +17,14 @@ void check_set(int set, char *name) {
   }
 }
 
+/* quick function for reading couplings etc into a memory address*/
+int read_double(char* key, char* name, char* value, double* address) {
+  if(!strcasecmp(key, name)) {
+    *address = strtod(value,NULL);
+    return 1;
+  } else return 0;
+}
+
 /** Load parameters into struct from file.
  *
  * Parses parameters from file given by string `filename`.
@@ -86,6 +94,12 @@ void get_parameters(char *filename, lattice* l, params *p) {
 	int set_a2 = 0;
 	int set_b4 = 0;
 	int set_sigma0 = 0;
+
+  #if (NHIGGS == 2)
+    // too many params to write all out, just count if we set them all or not
+    int higgs2_params = 14 - 2; // lam1 and m1sq are accounted above
+    int set_higgs2_params = 0;
+  #endif
 
   int set_update_links = 0;
   int set_scalar_sweeps = 0;
@@ -198,6 +212,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
       p->phi0 = strtod(value,NULL);
       set_phi0 = 1;
     }
+
 		// triplet parameters
 		else if(!strcasecmp(key,"msq_triplet")) {
       p->msq_triplet = strtod(value,NULL);
@@ -273,7 +288,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
       }
     #endif
 
-    #ifdef HIGGS
+    #if (NHIGGS > 0)
       else if(!strcasecmp(key,"algorithm_su2doublet")) {
         if(!strcasecmp(value,"metropolis")) {
   	       p->algorithm_su2doublet = METROPOLIS;
@@ -348,6 +363,24 @@ void get_parameters(char *filename, lattice* l, params *p) {
       else if(!strcasecmp(key,"do_trajectory")) {
         p->do_trajectory = strtol(value,NULL,10);
         set_do_trajectory = 1;
+      }
+    #endif
+
+    #if (NHIGGS == 2)
+      else {
+        // for two Higgs potential parameters use the shorthand routine
+        set_higgs2_params += read_double(key, "msq_phi2", value, &p->msq_phi2);
+        set_higgs2_params += read_double(key, "m12sq_re", value, &p->m12sq.re);
+        set_higgs2_params += read_double(key, "m12sq_im", value, &p->m12sq.im);
+        set_higgs2_params += read_double(key, "lam2", value, &p->lam2);
+        set_higgs2_params += read_double(key, "lam3", value, &p->lam3);
+        set_higgs2_params += read_double(key, "lam4", value, &p->lam4);
+        set_higgs2_params += read_double(key, "lam5_re", value, &p->lam5.re);
+        set_higgs2_params += read_double(key, "lam5_im", value, &p->lam5.im);
+        set_higgs2_params += read_double(key, "lam6_re", value, &p->lam6.re);
+        set_higgs2_params += read_double(key, "lam6_im", value, &p->lam6.im);
+        set_higgs2_params += read_double(key, "lam7_re", value, &p->lam7.re);
+        set_higgs2_params += read_double(key, "lam7_im", value, &p->lam7.im);
       }
     #endif
 
@@ -436,13 +469,21 @@ void get_parameters(char *filename, lattice* l, params *p) {
   #endif
   // these parameters are attempted to read but the checks are skipped
   // if preprocessor identifier not defined
-	#ifdef HIGGS
+	#if (NHIGGS > 0)
   check_set(set_su2DBalg, "algorithm_su2doublet");
 	check_set(set_update_doublet, "update_doublet");
 	check_set(set_phi0, "phi0");
 	check_set(set_lambda_phi, "lambda");
 	check_set(set_msq_phi, "msq");
 	#endif
+
+  #if (NHIGGS == 2)
+    if (set_higgs2_params != higgs2_params) {
+      printf("Error setting parameters for second Higgs! Got %d, expected %d\n", set_higgs2_params, higgs2_params);
+      die(-1131);
+    }
+  #endif
+
 	#ifdef TRIPLET
 	check_set(set_su2triplet_alg, "algorithm_su2triplet");
 	check_set(set_update_triplet, "update_triplet");
@@ -450,7 +491,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
 	check_set(set_b4, "b4");
 	check_set(set_msq_triplet, "msq_triplet");
 	#endif
-  #if defined (TRIPLET) && defined (HIGGS)
+  #if defined (TRIPLET) && (NHIGGS > 0)
   check_set(set_a2, "a2");
   #endif
 
@@ -582,10 +623,16 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 					// TODO
 					w->orderparam = 0;
 				}
-				#ifdef HIGGS
+				#if (NHIGGS > 0)
         else if(!strcasecmp(value,"phisq")) {
   	       w->orderparam = PHISQ;
            printf0(*l, "Multicanonical order parameter: phi^2\n");
+        }
+				#endif
+        #if (NHIGGS > 1)
+        else if(!strcasecmp(value,"phi2sq")) {
+  	       w->orderparam = PHI2SQ;
+           printf0(*l, "Multicanonical order parameter: phi2^2\n");
         }
 				#endif
 				#ifdef TRIPLET
@@ -593,11 +640,7 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
   	       w->orderparam = SIGMASQ;
            printf0(*l, "Multicanonical order parameter: Tr Sigma^2 \n");
         }
-				else if (!strcasecmp(value,"phi2Sigma2")) {
-  	       w->orderparam = PHI2SIGMA2;
-           printf0(*l, "Multicanonical order parameter: phi^2 Tr Sigma^2 \n");
-        }
-          #ifdef HIGGS
+          #if (NHIGGS > 0)
           else if (!strcasecmp(value,"phi2minusSigma2")) {
     	       w->orderparam = PHI2MINUSSIGMA2;
              printf0(*l, "Multicanonical order parameter: phi^2 - Tr Sigma^2 \n");
@@ -652,20 +695,28 @@ void print_parameters(lattice l, params p) {
     p.update_links, p.scalar_sweeps);
 
 	printf("-------------------------- Lattice parameters --------------------------\n");
-	printf("SU(2) beta %.1lf\n", p.betasu2);
+	printf("SU(2) beta %g\n", p.betasu2);
   #ifdef U1
-  printf("U(1) beta %.1lf\n", p.betau1);
+  printf("U(1) beta %g\n", p.betau1);
   #endif
-	#ifdef HIGGS
-	printf("msq (Higgs) %lf, lambda (Higgs) %lf, ", p.msq_phi, p.lambda_phi);
-	printf("initial phi0 %.2lf, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
+
+  #if (NHIGGS == 2)
+    printf("msq1 %g, msq2 %g, m12sq_re %g, m12sq_im %g \n", p.msq_phi, p.msq_phi2, p.m12sq.re, p.m12sq.im);
+    printf("lam1 %g, lam2 %g, lam3 %g, lam4 %g, lam5_re %g, lam5_im %g \n", p.lambda_phi, p.lam2, p.lam3, p.lam4, p.lam5.re, p.lam5.im);
+    printf("lam6_re %g, lam6_im %g, lam7_re %g, lam7_im %g \n", p.lam6.re, p.lam6.im, p.lam7.re, p.lam7.im);
+    printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
+
+  #elif (NHIGGS == 1)
+	printf("msq (Higgs) %g, lambda (Higgs) %g, ", p.msq_phi, p.lambda_phi);
+	printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 	#endif
+
 	#ifdef TRIPLET
-	printf("msq (triplet) %lf, b4 %lf, ", p.msq_triplet, p.b4);
-    #ifdef HIGGS
-    printf("a2 %lf, ", p.a2);
+	printf("msq (triplet) %g, b4 %g, ", p.msq_triplet, p.b4);
+    #if (NHIGGS > 0)
+    printf("a2 %g, ", p.a2);
     #endif
-	printf("initial sigma0 %.2lf, update_su2triplet %d\n",p.sigma0, p.update_su2triplet);
+	printf("initial sigma0 %g, update_su2triplet %d\n",p.sigma0, p.update_su2triplet);
 	#endif
 	printf("\n");
   //fprintf(stderr, "msq %lf, lambda %lf, g %lf, msigmasq %lf, a2 %lf, b4 %lf\n",

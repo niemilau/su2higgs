@@ -8,9 +8,9 @@
 
 dim 3
 
-L1 12
-L2 12
-L3 12
+L1 48
+L2 48
+L3 48
 
 # start new simulation (initial configuration still read from latticefile)?
 reset 0
@@ -19,13 +19,13 @@ reset 0
 iterations 200000
 
 # how many thermalization sweeps before starting measurements/weighting?
-n_thermalize 100
+n_thermalize 0
 
 # how often to write measurements
 interval 4
 
 # how often to write lattice configuration to file 
-checkpoint 10000
+checkpoint 2000
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -43,8 +43,22 @@ betasu2 12.0
 #betau1 8.0
 
 # doublet
-msq -1.2821488473242986
-lambda 0.20270573608868533
+msq -0.194549221785
+lambda 0.016095347348
+
+## two Higgs potential parameters
+msq_phi2 0.2
+m12sq_re 0.4
+m12sq_im 0.6
+lam2 2
+lam3 3
+lam4 4
+lam5_re 5.0
+lam5_im 5.5
+lam6_re 6.0
+lam6_im 6.5
+lam7_re 7.0
+lam7_im 7.5
 
 # triplet
 msq_triplet -0.5032354703283564
@@ -54,7 +68,6 @@ a2 2.6953060227675745
 # initial values for fields (overwritten by existing lattice file)
 phi0 0.2
 sigma0 0.2
-
 
 ### update algorithms
 

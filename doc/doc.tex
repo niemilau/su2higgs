@@ -109,20 +109,22 @@ This is simply the dimensionally reduced Standard Model with $\gr{U(1)}$ hyperch
 \begin{align}
 \mathcal{L} = \frac14 (F^a_{ij})^2 + (D_i \phi)^\dagger (D_i \phi) + \mu^2_\phi \phi^\dagger\phi + \lambda (\phi^\dagger\phi)^2.
 \end{align}
-Everything here is in terms of 3d parameters, hence no subscript. On the lattice, it is convenient to parametrize the doublet using the Pauli matrices $\sigma_j$; this simplifies many update algorithms. We define 
+Everything here is in terms of 3d parameters, hence no subscript. On the lattice, it is convenient to parametrize the doublet using the Pauli matrices $\sigma_j$; this simplifies many update algorithms. If the vector $\phi = \frac{1}{\sqrt{2}}(H_1, H_2)^T$, the matrix field is obtained as 
 \begin{align}
-\label{eq:Higgsfield}
-\Phi = \frac{1}{\sqrt{2}} (\phi_0 \sigma_0 + i \phi_k \sigma_k ), 
+\label{eq:Higgs-matrix}
+\Phi = \frac{1}{\sqrt{2}}\begin{pmatrix}
+H_2^* & H_1 \\
+-H_1^* & H_2
+\end{pmatrix} \equiv \frac{1}{\sqrt{2}} (h_0 \sigma_0 + i h_k \sigma_k), 
 \end{align}
-where $\sigma_0$ is the unit matrix and $\phi_\mu$ are real numbers. In terms of the components $\phi_\mu$, the familiar vector $\phi$ is 
+and the code uses the RHS components $h_0, h_k$. They are related to the vector components as 
 \begin{align}
-\phi = \frac{1}{\sqrt{2}} 
-\begin{pmatrix}
-\phi_2 - i \phi_1 \\
-\phi_0 + i \phi_3 
-\end{pmatrix},
+h_0 = \RE H_2, \quad h_1 = \IM H_1, \quad h_2 = \RE H_1. \quad h_3 = -\IM H_2.
 \end{align}
-which can be checked by comparing the hopping term where the ordering of the components does make a difference. Note that $\frac12 \Tr \he\Phi\Phi = \he\phi\phi = \frac12 \phi_\mu \phi_\mu$. \lauri{In David's code, the components are ordered differently as the vector notation is preferred, leading to a seemingly different implementation of the hopping term.}
+This can be checked by comparing hopping terms in the two parametrizations as the ordering does make a difference. Note that $\frac12 \Tr \he\Phi\Phi = \he\phi\phi = \frac12 \phi_\mu \phi_\mu$. \lauri{In David's code, the components are ordered differently as the vector notation is preferred, leading to a seemingly different implementation of the hopping term.}
+
+
+
 
 The discretized action reads ($i,j$ denote directions)
 \begin{align}
@@ -147,6 +149,26 @@ The code operates with the dimensionless object $\frac12 a \Tr \he\Phi\Phi$ etc,
 \end{align}
 with $\beta_G$ essentially used to fix the lattice spacing. The lattice parameters need to be matched onto parameters in continuum renormalization (usually \MSbar) by comparing divergences at two loops (c.f. Ref.~\cite{Laine:1995np}). Formulas for converting continuum parameters into inputs for the code are listed in Appendix~\ref{sec:lat-cont}.
 
+
+\subsubsection{Notes on multiple Higgs doublets}
+
+Suppose we have two doublets $\phi_1, \phi_2$. There are four independent bilinears: $\phi_{ij} = \he\phi_i\phi_j$, and the potential used in code is 
+\begin{align}
+V(\phi_1, \phi_2) =& m_1^2 \phi_{11} + m_2^2 \phi_{22} + \frac12 (m_{12}^2 \phi_{12} + h.c.) + \lambda_1 \phi_{11}^2 + \lambda_2 \phi_{22}^2 + \lambda_3 \phi_{11}\phi_{22} + \lambda_4 \phi_{12}\phi_{21} \nonumber \\
+& + \frac12 (\lambda_5 \phi_{12}^2 + \lambda_6 \phi_{11}\phi_{12} + \lambda_7 \phi_{22}\phi_{21} + h.c.).
+\end{align}
+\lauri{(note: factor of $1/2$ in all complex terms!!)} 
+
+In terms of matrices $\Phi_1, \Phi_2$ defined as in eq.~(\ref{eq:Higgs-matrix}), we have 
+\begin{align}
+\phi_{ii} = \frac12 \Tr \he\Phi_i\Phi_i, \quad R \equiv \RE \phi_{12} = \frac12 \Tr \he\Phi_1\Phi_2, \quad I \equiv \IM \phi_{12} = - i\frac12 \Tr \Phi_1 \sigma_3 \he\Phi_2
+\end{align}
+and the potential can be written as 
+\begin{align}
+V =& m_1^2 \phi_{11} + m_2^2 \phi_{22} + \RE m_{12}^2 R - \IM m_{12}^2 I + \lambda_1 \phi_{11}^2 + \lambda_2 \phi_{22}^2 + \lambda_3 \phi_{11}\phi_{22} + \lambda_4 (R^2 + I^2)\nonumber \\
+& + \RE \lambda_5 (R^2 - I^2) - 2\IM \lambda_5 RI + \phi_{11} (\RE\lambda_6 R - \IM\lambda_6 I) +  \phi_{22} (\RE \lambda_7 R + \IM \lambda_7 I),
+\end{align}
+which is easy to program in.
 
 
 \subsection{SU(2) + adjoint scalar (real triplet)}
@@ -276,7 +298,7 @@ and $\beta_H$ can be calculated from given continuum parameters via their Eqs.~(
 For the histogram in Fig.~6 of Ref.~\cite{Kajantie:1995kf} (left figure), our lattice inputs corresponding to $\beta_G=8, m^*_H = 35$ GeV, $T^* = 94.181$ GeV are
 \begin{align}
 \label{eq:SM-inputs}
-\lambda = 0.00915047 \quad m^2_\text{\phi} = -0.207404.
+\lambda = 0.00915047 \quad m^2_\phi = -0.207404.
 \end{align}
 Some histograms produced with my code using these inputs are shown in Fig.~\ref{fig:SM_hgrams}.
 
@@ -301,7 +323,7 @@ Some histograms produced with my code using these inputs are shown in Fig.~\ref{
 For the right-hand side histogram in Fig.~6 of Ref.~\cite{Kajantie:1995kf}, the inputs corresponding to $\beta_G=8, m^*_H = 70$ GeV, $T^* = 153.620$ GeV are
 \begin{align}
 \label{eq:SM-inputs2}
-\lambda = 0.0448519 \quad m^2_\text{\phi} = -0.287506.
+\lambda = 0.0448519 \quad m^2_\phi = -0.287506.
 \end{align}
 \lauri{Haven't really tested these yet because the other cases worked so well...}
 
@@ -369,11 +391,11 @@ Instead, I asked Kari to search through his old files and he found the following
 \end{align}
 with only $\beta_H$ varying. According to Ref.~\cite{Kajantie:1995kf} the $A_0$ histograms there are evaluated at $\beta_H = 0.34771$. In terms of these, a straightforward conversion to our lattice parameters gives: 
 \begin{align}
-m^2_\text{\phi} &= 2\left( \frac{1}{\beta_H} - 3 - \frac{2\beta_R}{\beta_H}\right) = -0.262345\\
+m^2_\phi &= 2\left( \frac{1}{\beta_H} - 3 - \frac{2\beta_R}{\beta_H}\right) = -0.262345\\
 \lambda &= \frac{4\beta_R}{\beta_H^2} = 0.0410249 \\
-m^2_\text{\Sigma} &= -\frac{2\beta_2^A}{\beta_G} = -0.189333 \\
-b_\text{4} &= \frac{4\beta_4^A}{\beta_G^2} = 0.00531667 \\
-a_\text{2} &= \frac{2}{\beta_G} = \frac16 = 0.16666667.
+m^2_\Sigma &= -\frac{2\beta_2^A}{\beta_G} = -0.189333 \\
+b_4 &= \frac{4\beta_4^A}{\beta_G^2} = 0.00531667 \\
+a_2 &= \frac{2}{\beta_G} = \frac16 = 0.16666667.
 \end{align}
 Running simulations with these, we obtain histograms shown in Fig~\ref{fig:hgrams_SM_A0}. We see that although the small-volume histograms agree quite well with Kari, the histograms for $32^3$ and $40^3$ lattices \textbf{do not agree}. I am tempted to think that this is because the inputs are off (since I have no means of really verifying what they used). Note that it looks like the temperature is just slightly off here (insufficient numerical accuracy in the inputs??).
 
@@ -425,7 +447,7 @@ and taking $O=1$ fixes the proportionality constant to be
 \end{align}
 So we have the reweighting formula: If a canonical expectation value is known at value $x'$, at some other value $x$ the expectation value can be obtained from
 \begin{align}
-\langle O \rangle_x =  \frac{\langle O e^{-k(x-x')} \rangle_{x'}}{\langle e^{-k(x-x')}\rangle_{x'}}
+\langle O \rangle_x =  \frac{\langle O e^{-k(x-x')} \rangle_{x'}}{\langle e^{-k(x-x')}\rangle_{x'}}
 \end{align}
 provided that $x$ is not too far from the original $x'$. In Monte Carlo, 
 \begin{align}

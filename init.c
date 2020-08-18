@@ -15,31 +15,29 @@
 */
 
 // set SU(2) links to unity
-void setsu2(fields f, lattice l) {
+void setsu2(fields* f, lattice const* l) {
 
-	for (long i=0; i<l.sites_total; i++) {
-		for (int dir=0; dir<l.dim; dir++) {
-			f.su2link[i][dir][0] = 1.0;
-			f.su2link[i][dir][1] = 0.0;
-			f.su2link[i][dir][2] = 0.0;
-			f.su2link[i][dir][3] = 0.0;
+	for (long i=0; i<l->sites; i++) {
+		for (int dir=0; dir<l->dim; dir++) {
+			f->su2link[i][dir][0] = 1.0;
+			f->su2link[i][dir][1] = 0.0;
+			f->su2link[i][dir][2] = 0.0;
+			f->su2link[i][dir][3] = 0.0;
 		}
 	}
 }
 
 // set U(1) links to unity
-void setu1(fields f, lattice l) {
+void setu1(fields* f, lattice const* l) {
 
-	for (long i=0; i<l.sites_total; i++) {
-		for (int dir=0; dir<l.dim; dir++) {
-			f.u1link[i][dir] = 0.0;
+	for (long i=0; i<l->sites; i++) {
+		for (int dir=0; dir<l->dim; dir++) {
+			f->u1link[i][dir] = 0.0;
 		}
 	}
 }
 
-/* generate a random SU(2) matrix and store it in the argument
-* Original implementation by David Weir
-*/
+/* generate a random SU(2) matrix and store it in the argument */
 void random_su2link(double *su2) {
 
 	double u[4];
@@ -58,40 +56,48 @@ void random_su2link(double *su2) {
 }
 
 // Initialize SU(2) doublets to unity * 1/sqrt(2).
-void setdoublets(fields f, lattice l, params p) {
-	for (long i=0; i<l.sites_total; i++) {
-		f.su2doublet[i][0] = p.phi0;
-		f.su2doublet[i][1] = 0.0;
-		f.su2doublet[i][2] = 0.0;
-		f.su2doublet[i][3] = 0.0;
+void setdoublets(fields* f, lattice const* l, params const* p) {
+
+	#if (NHIGGS > 0)
+
+	for (int db=0; db<NHIGGS; db++) {
+		for (long i=0; i<l->sites_total; i++) {
+			f->su2doublet[db][i][0] = p->phi0;
+			for (int dof=1; dof<SU2DB; dof++) f->su2doublet[db][i][dof] = 0.0;
+		}
 	}
+
+	#endif
 }
 
 
 // Initialize SU(2) adjoint scalars
-void settriplets(fields f, lattice l, params p) {
-	for (long i=0; i<l.sites_total; i++) {
-		f.su2triplet[i][0] = p.sigma0;
-		f.su2triplet[i][1] = 0.0;
-		f.su2triplet[i][2] = 0.0;
+void settriplets(fields* f, lattice const* l, params const* p) {
+	for (long i=0; i<l->sites; i++) {
+		f->su2triplet[i][0] = p->sigma0;
+		f->su2triplet[i][1] = 0.0;
+		f->su2triplet[i][2] = 0.0;
 	}
 }
 
 
 // Initialize all fields used in the simulation
-void setfields(fields f, lattice l, params p) {
+void setfields(fields* f, lattice* l, params const* p) {
 
 	setsu2(f, l);
 	#ifdef U1
 		setu1(f, l);
 	#endif
 
-	#ifdef HIGGS
+	#if (NHIGGS > 0)
 		setdoublets(f, l, p);
 	#endif
+
 	#ifdef TRIPLET
-		settriplets(f,l, p);
+		settriplets(f, l, p);
 	#endif
+
+	sync_halos(l, f);
 }
 
 
@@ -113,15 +119,32 @@ void copy_fields(lattice const* l, fields const* f_old, fields* f_new) {
 		}
 
 		// scalars
-		#ifdef HIGGS
-			memcpy(f_new->su2doublet[i], f_old->su2doublet[i], SU2DB*sizeof(f_old->su2doublet[i][0]));
+		#if (NHIGGS > 0 )
+			for (int db=0; db<NHIGGS; db++) {
+				 memcpy(f_new->su2doublet[db][i], f_old->su2doublet[db][i], SU2DB*sizeof(f_old->su2doublet[db][i][0]));
+			 }
 		#endif
+
 		#ifdef TRIPLET
 			memcpy(f_new->su2triplet[i], f_old->su2triplet[i], SU2TRIP*sizeof(f_old->su2triplet[i][0]));
 		#endif
 
 	}
 
+}
+
+/* Copy an individual field with 'dofs' components per site (does not copy halos) */
+void cp_field(lattice const* l, double** field, double** new, int dofs, int parity) {
+
+	long max, offset = 0;
+	if (parity == EVENODD) max = l->sites;
+	else if (parity == EVEN) max = l->evensites;
+	else if (parity == ODD) {
+		max = l->sites;
+		offset = l->evensites;
+	}
+
+	for (long i=offset; i<max; i++) memcpy(new[i], field[i], dofs * sizeof(double));
 }
 
 
@@ -134,15 +157,23 @@ void init_counters(counters* c) {
 	c->triplet_sweeps = 0;
 	c->accepted_su2link = 0;
 	c->accepted_u1link = 0;
-	c->accepted_doublet = 0;
+
 	c->accepted_triplet = 0;
-	c->acc_overrelax_doublet = 0;
 	c->acc_overrelax_triplet = 0;
+
+	#if (NHIGGS > 0)
+		for (int db=0; db<NHIGGS; db++) {
+			c->accepted_doublet[db] = 0;
+			c->acc_overrelax_doublet[db] = 0;
+			c->total_overrelax_doublet[db] = 0;
+			c->total_doublet[db] = 0;
+		}
+	#endif
+
+
 	c->total_su2link = 0;
 	c->total_u1link = 0;
-	c->total_doublet = 0;
 	c->total_triplet = 0;
-	c->total_overrelax_doublet = 0;
 	c->total_overrelax_triplet = 0;
 	c->accepted_muca = 0;
 	c->total_muca = 0;

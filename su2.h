@@ -1,66 +1,13 @@
 #ifndef SU2_H
 #define SU2_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
-#include <string.h>
-#include <stdarg.h>
-#include <time.h>
-
 #include "comms.h"
+#include "stddefs.h"
 
-#ifdef MPI
-	#include <mpi.h>
-#else
-	// No MPI, define dummy communicator (not actually used in serial)
-	typedef struct {} MPI_Comm;
+#ifndef NHIGGS // specify in makefile, otherwise assume no Higgs doublets
+	#define NHIGGS 0
 #endif
 
-/* If using blocking, need larger halos because of link smearing in su2u1.c */
-#ifdef BLOCKING
-	#define HALOWIDTH 2
-
-#else
- #define HALOWIDTH 1 // no blocking, halo extends just one site in each direction
-
-#endif
-
-// degrees of freedom per site for different fields
-#define SU2DB 4
-#define SU2LINK 4
-#define SU2TRIP 3
-
-// update algorithms
-#define METROPOLIS 1 // Metropolis
-#define HEATBATH 2 // Heatbath
-#define OVERRELAX 3 // Overrelaxation
-
-// parity identifiers
-#define EVEN 0
-#define ODD 1
-#define EVENODD 2
-
-// multicanonical order parameters
-#define PHISQ 1
-#define SIGMASQ 2
-#define PHI2MINUSSIGMA2 3
-#define PHI2SIGMA2 4
-
-// different modes for updating the multicanonical weight function
-#define READONLY 0
-#define FAST 1
-#define SLOW 2 // these are protected by the SLOW_MUCA flag
-
-// nasty globals for keeping track of evaluation time
-double waittime;
-double Global_comms_time, Global_total_time;
-double Global_current_action; // for debugging gradient flows etc
-
-typedef struct {
-	double re, im;
-}	complex;
 
 /* Struct "lattice": contains info on lattice dimensions, lookup tables for
 * sites and everything related to parallelization. */
@@ -145,9 +92,7 @@ typedef struct {
 	*/
 	int random_sweeps;
 
-	// Parameters in the action
-	// possible generalization: make separate structures
-	// for each field in the theory that contain their respective params
+	/* Parameters in the action */
 	double betasu2; // 4/(g^2)
 	double betau1; // 2/(g'^2)
 	// doublet
@@ -157,6 +102,15 @@ typedef struct {
 	double msq_triplet;
 	double a2; // Higgs portal
 	double b4; // self quartic
+
+	#if (NHIGGS == 2)
+		/* with 2 Higgs doublets, the couplings are assumed to be in a doublet basis
+		* where the kinetic terms are diagonal and canonically normalized */
+		double msq_phi2;
+		complex m12sq;
+		double lam2, lam3, lam4;
+		complex lam5, lam6, lam7;
+	#endif
 
 	// initial values for fields
 	double phi0; // doublet
@@ -211,14 +165,16 @@ typedef struct {
 
 	//double *su2singlet;
 	double ***su2link;
-	double **su2doublet;
 	double **su2triplet;
 	double **u1link;
 
-	// backup arrays. these are used in global multicanonical steps in case the update sweep needs to be undone
-	double **backup_doublet;
-	double **backup_triplet;
+	// NHIGGS copies of Higgs doublets, accessed as su2doublet[id][site][component]
+	#if (NHIGGS > 0)
+		double** su2doublet[NHIGGS];
+	#endif
+
 } fields;
+
 
 typedef struct {
 
@@ -230,10 +186,12 @@ typedef struct {
 	// count metropolis updates
 	long total_su2link, accepted_su2link;
 	long total_u1link, accepted_u1link;
-	long total_doublet, accepted_doublet;
+	#if (NHIGGS > 0)
+		long total_doublet[NHIGGS], accepted_doublet[NHIGGS];
+		long total_overrelax_doublet[NHIGGS], acc_overrelax_doublet[NHIGGS];
+	#endif
+
 	long total_triplet, accepted_triplet;
-	// count overrelax updates
-	long total_overrelax_doublet, acc_overrelax_doublet;
 	long total_overrelax_triplet, acc_overrelax_triplet;
 
 	long total_muca, accepted_muca;
@@ -274,31 +232,14 @@ typedef struct {
 	int mode; // one of the multicanonical "modes" defined above, affects weight recursion
 	char weightfile[100]; // file name
 
+	fields fbu; // backup fields for undoing a rejected multicanonical update sweep
+
 	// additional data arrays used in slow update mode only
 	long* gsum;
 	long* nsum;
 	double* hgram;
 } weight;
 
-
-/* inlines */
-inline char otherparity(char parity) {
-	if (parity == EVEN)
-		return ODD;
-	else if (parity == ODD) {
-		return EVEN;
-	} else {
-		printf("Error in function otherparity (su2.h) !!!\n");
-	}
-}
-
-// multiply two complex numbers
-inline complex cmult(complex z1, complex z2) {
-	complex res;
-	res.re = z1.re*z2.re - z1.im*z2.im;
-	res.im = z2.re*z1.im + z1.re*z2.im;
-	return res;
-}
 
 // comms.c
 void make_comlists(lattice *l, comlist_struct *comlist);
@@ -374,12 +315,7 @@ void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2,
 double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
 long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i);
 double localact_su2link(lattice const* l, fields const* f, params const* p, long i, int dir);
-void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V);
-void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res);
-void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
 double su2trace4(double *u1, double *u2, double *u3, double *u4);
-void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
-void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
 void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, double* clover);
 double hopping_trace(double* phi1, double* u, double* phi2);
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a);
@@ -390,12 +326,12 @@ double local_u1wilson(lattice const* l, fields const* f, params const* p, long i
 double localact_u1link(lattice const* l, fields const* f, params const* p, long i, int dir);
 // doublet routines
 double doubletsq(double* a);
-long double avg_doublet2(fields const* f, params const* p);
-long double avg_doublet4(fields const* f, params const* p);
-double hopping_doublet_forward(lattice const* l, fields const* f, params const* p, long i, int dir);
-double hopping_doublet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
-double covariant_doublet(lattice const* l, fields const* f, params const* p, long i);
-double localact_doublet(lattice const* l, fields const* f, params const* p, long i);
+void phiproduct(double* f1, double const* f2, int conj);
+complex get_phi12(double const* h1, double const* h2);
+double hopping_doublet_forward(lattice const* l, fields const* f, long i, int dir, int higgs_id);
+double hopping_doublet_backward(lattice const* l, fields const* f, long i, int dir, int higgs_id);
+double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id);
+double localact_doublet(lattice const* l, fields const* f, params const* p, long i, int higgs_id);
 double higgspotential(fields const* f, params const* p, long i);
 // triplet routines
 double tripletsq(double* a);
@@ -411,10 +347,19 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
 #endif
 
 
+// staples.c
+void su2staple_counterwise(double* V, double* u1, double* u2, double* u3);
+void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
+void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V);
+void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res);
+void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
+void staple_doublet(double* res, lattice const* l, fields const* f, params const* p, long i, int higgs_id);
+
+
 // metropolis.c
 int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
 int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir);
-int metro_doublet(lattice const* l, fields* f, params const* p, long i);
+int metro_doublet(lattice const* l, fields* f, params const* p, long i, int higgs_id);
 int metro_triplet(lattice const* l, fields* f, params const* p, long i);
 
 // heatbath.c
@@ -422,26 +367,32 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 
 // overrelax.c
 double polysolve3(long double a, long double b, long double c, long double d);
-int overrelax_doublet(lattice const* l, fields* f, params const* p, long i);
+#if (NHIGGS > 0)
+int overrelax_doublet(lattice const* l, fields* f, params const* p, long i); // for N=1 Higgs potentials
+int overrelax_higgs2(lattice const* l, fields* f, params const* p, long i, int higgs_id); // for N>1 Higgs potentials
+#endif
 int overrelax_triplet(lattice const* l, fields* f, params const* p, long i);
+
 
 // update.c
 void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight* w);
 void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
 void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir);
-int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
+int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c,
+			weight* w, int parity, int metro, int higgs_id);
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
 void sync_halos(lattice* l, fields* f);
-int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int make_backups);
+int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity);
 void shuffle(int *arr, int len);
 
 // init.c
-void setsu2(fields f, lattice l);
+void setsu2(fields* f, lattice const* l);
 void random_su2link(double *su2);
-void setu1(fields f, lattice l);
-void setfields(fields f, lattice l, params p);
-void setdoublets(fields f, lattice l, params p);
-void settriplets(fields f, lattice l, params p);
+void setu1(fields* f, lattice const* l);
+void setfields(fields* f, lattice* l, params const* p);
+void setdoublets(fields* f, lattice const* l, params const* p);
+void settriplets(fields* f, lattice const* l, params const* p);
+void cp_field(lattice const* l, double** field, double** new, int dofs, int parity);
 void copy_fields(lattice const* l, fields const* f_old, fields* f_new);
 void init_counters(counters* c);
 
@@ -478,16 +429,16 @@ int update_weight(weight* w);
 int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double newval);
 int whichbin(weight const* w, double val);
 double calc_orderparam(lattice const* l, fields const* f, params const* p, weight* w, char par);
-void store_muca_fields(lattice const* l, fields* f, weight* w);
-void reset_muca_fields(lattice const* l, fields* f, weight* w, char par);
-void alloc_backup_arrays(lattice const* l, fields* f, weight const* w);
+void alloc_muca_backups(lattice const* l, weight* w);
 void free_muca_arrays(fields* f, weight *w);
 void init_last_max(weight* w);
 void update_weight_slow(weight* w);
 
 #ifdef CORRELATORS
 // correlation.c
-	double higgs_correlator(lattice* l, fields const* f, int x, int dir);
+	#if (NHIGGS > 0)
+		double higgs_correlator(lattice* l, fields const* f, int x, int dir, int higgs_id);
+	#endif
 	#ifdef TRIPLET
 		double triplet_correlator(lattice* l, fields const* f, int d, int dir);
 		complex projected_photon_operator(lattice* l, fields const* f, int z, int dir, int* mom);

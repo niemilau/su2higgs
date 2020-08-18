@@ -33,10 +33,11 @@ double plane_sum(double (*funct)(double*), double** field, lattice* l, long x, i
   return res;
 }
 
+#if (NHIGGS > 0)
 /* Calculate H(l) = (1/V) \sum_z h(z) h(z+l),
 * where h(z) = \sum_{x,y} Tr\Phi(z)\Phi(z).
 * Below the argument d = l and dir specifies which direction z lives in. */
-double higgs_correlator(lattice* l, fields const* f, int d, int dir) {
+double higgs_correlator(lattice* l, fields const* f, int d, int dir, int higgs_id) {
 
   double res = 0.0;
   for (int z=0; z<l->L[dir]; z++) {
@@ -46,8 +47,8 @@ double higgs_correlator(lattice* l, fields const* f, int d, int dir) {
     * direction instead. */
     int zd = (z + d) % l->L[dir];
 
-    double h1 = plane_sum(doubletsq, f->su2doublet, l, z, dir); // h1 <- h(z)
-    double h2 = plane_sum(doubletsq, f->su2doublet, l, zd, dir); // h2 <- h(z+l)
+    double h1 = plane_sum(doubletsq, f->su2doublet[higgs_id], l, z, dir); // h1 <- h(z)
+    double h2 = plane_sum(doubletsq, f->su2doublet[higgs_id], l, zd, dir); // h2 <- h(z+l)
 
     res += h1 * h2;
   }
@@ -55,6 +56,8 @@ double higgs_correlator(lattice* l, fields const* f, int d, int dir) {
   // also: doubletsq measures 0.5 Tr Phi^+ Phi, so multiply by 4 to get H(l)
   return 4.0*res / ((double) l->vol);
 }
+
+#endif // if NHIGGS > 0
 
 
 #ifdef TRIPLET
@@ -206,7 +209,7 @@ void print_labels_correlators() {
 
 	FILE* f = fopen("labels_correl", "w");
   fprintf(f, "%d distance\n", k); k++;
-  #ifdef HIGGS
+  #if (NHIGGS > 0)
     fprintf(f, "%d H(l) = sum_z h(z) h(z+l) / V\n", k); k++; // Higgs correlator
   #endif
   #ifdef TRIPLET
@@ -233,8 +236,8 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
   int max_distance = l->L[dir] / 2;
 
   for (int d=0; d<max_distance; d++) {
-    #ifdef HIGGS
-      double hcorr = higgs_correlator(l, f, d, dir);
+    #if (NHIGGS > 0)
+      double hcorr = higgs_correlator(l, f, d, dir, 0);
     #endif
     #ifdef TRIPLET
       double tripcorr = triplet_correlator(l, f, d, dir);
@@ -244,7 +247,7 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
     // write
     if (!l->rank) {
       fprintf(file, "%d ", d);
-      #ifdef HIGGS
+      #if (NHIGGS > 0)
         fprintf(file, "%g ", hcorr);
       #endif
       #ifdef TRIPLET
@@ -273,6 +276,13 @@ void measure_blocked_correlators(lattice* l, lattice* b, fields const* f, fields
   }
   fields f_smear;
   alloc_fields(l, &f_smear);
+
+  #if (NHIGGS > 0)
+    printf("Error in correlation.c: Higgs smearing not yet implemented!!!\n");
+    free_fields(l, &f_smear);
+    return;
+  #endif
+
   smear_fields(l, f, &f_smear, block_dir);
   // transfer the smeared fields on the blocked lattice:
   make_blocked_fields(l, b, &f_smear, f_b);
