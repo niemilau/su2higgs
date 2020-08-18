@@ -777,7 +777,8 @@ void free_muca_arrays(fields* f, weight *w) {
 		case PHISQ :
 			free_field(w->fbu.su2doublet[0]);
 			break;
-#elif (NHIGGS > 1)
+#endif
+#if (NHIGGS > 1)
 		case PHI2SQ :
 			free_field(w->fbu.su2doublet[1]);
 			break;

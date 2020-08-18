@@ -629,6 +629,12 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
            printf0(*l, "Multicanonical order parameter: phi^2\n");
         }
 				#endif
+        #if (NHIGGS > 1)
+        else if(!strcasecmp(value,"phi2sq")) {
+  	       w->orderparam = PHI2SQ;
+           printf0(*l, "Multicanonical order parameter: phi2^2\n");
+        }
+				#endif
 				#ifdef TRIPLET
 				else if (!strcasecmp(value,"Sigmasq")) {
   	       w->orderparam = SIGMASQ;
