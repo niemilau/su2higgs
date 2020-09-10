@@ -230,6 +230,35 @@ int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, 
 #endif // ifdef TRIPLET
 
 
+#ifdef SINGLET
+
+/* Update sweep for the singlet */
+int checkerboard_sweep_singlet(lattice const* l, fields* f, params const* p, counters* c,
+			weight* w, int parity, int metro) {
+
+	long offset, max;
+	if (parity == EVEN) {
+		offset = 0; max = l->evensites;
+	} else {
+		offset = l->evensites; max = l->sites;
+	}
+
+	for (long i=offset; i<max; i++) {
+		if (p->algorithm_singlet == OVERRELAX && (metro == 0)) {
+			c->acc_overrelax_singlet += overrelax_singlet(l, f, p, i);
+			c->total_overrelax_singlet++;
+		} else if (p->algorithm_singlet == METROPOLIS || (metro != 0)) {
+			c->accepted_singlet += metro_singlet(l, f, p, i);
+			c->total_singlet++;
+		}
+	}
+
+	return 1;
+
+}
+#endif
+
+
 /* Full update on all sites + halo communication.
 * Following, hep-lat/9804019, we first update the gauge links and then scalars.
 * Each link direction is updated separately, I.E. first dir1 with even and odd,
@@ -360,7 +389,29 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 			}
 		}
 		#endif
-	}
+
+		#ifdef SINGLET
+		for (int k=0; k<p->update_singlet; k++) {
+			if (c->singlet_sweeps >= metro_interval-1) {
+				metro = 1;
+				c->singlet_sweeps = 0;
+			} else {
+				metro = 0;
+				c->singlet_sweeps++;
+			}
+
+			for (int j=0; j<=1; j++) {
+				int par = par_a[j];
+				accept = checkerboard_sweep_singlet(l, f, p, c, w, par, metro);
+				// if the sweep was rejected, no need to sync halos
+				if (accept) update_halo(l, par, f->singlet, 1);
+			}
+
+			#endif
+
+		}
+
+	} // end scalar_sweeps loop
 }
 
 
@@ -384,7 +435,11 @@ void sync_halos(lattice* l, fields* f) {
 			update_halo(l, parity, f->su2triplet, SU2TRIP);
 		#endif
 
+		#ifdef SINGLET
+			update_halo(l, parity, f->singlet, 1);
+		#endif
 	}
+
 }
 
 // Shuffle an array

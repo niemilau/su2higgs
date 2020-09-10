@@ -117,6 +117,11 @@ void alloc_fields(lattice const* l, fields *f) {
     * wise this is essentially just a non-gauge field with p.dim components. */
     f->u1link = make_field(sites, l->dim);
   #endif
+
+  #ifdef SINGLET
+    f->singlet = make_field(sites, 1);
+  #endif
+
 }
 
 
@@ -134,6 +139,9 @@ void free_fields(lattice const* l, fields *f) {
 	#endif
   #ifdef U1
     free_field(f->u1link);
+  #endif
+  #ifdef SINGLET
+    free_field(f->singlet);
   #endif
 
 }

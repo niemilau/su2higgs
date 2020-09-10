@@ -22,11 +22,13 @@
 #if (NHIGGS > 2)
 	#warning !!! Higgs potential not implemented for N>2 doublets !!!
 #elif (NHIGGS > 1) && defined (TRIPLET)
-	#warning !!! TRIPLET with multiple Higgs doublets not implemented !!!
-#elif (NHIGGS > 0) && defined (GRADFLOW)
-	#warning !!! Gradient flow with Higgs not implemented !!!
-#elif (NHIGGS > 0) && defined (BLOCKING)
-	#warning !!! Blocking not implemented for the Higgs !!!
+	#warning !!! TRIPLET with N>1 Higgs doublets not implemented !!!
+#elif (NHIGGS > 1) && defined (SINGLET)
+	#warning !!! SINGLET with N>1 Higgs doublets not implemented !!!
+#elif ( (NHIGGS > 0) || defined (SINGLET)) && defined (GRADFLOW)
+	#warning !!! Gradient flow not implemented for all fields !!!
+#elif ( (NHIGGS > 0) || defined (SINGLET)) && defined (BLOCKING)
+	#warning !!! Blocking not implemented for all fields !!!
 #endif
 
 /* If using blocking, need larger halos because of link smearing in su2u1.c */

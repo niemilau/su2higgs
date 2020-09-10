@@ -101,6 +101,16 @@ void get_parameters(char *filename, lattice* l, params *p) {
     int set_higgs2_params = 0;
   #endif
 
+  #ifdef SINGLET
+    int set_update_singlet = 0;
+    int set_singletalg = 0;
+    int set_singlet0 = 0;
+    int set_b1s=0, set_msq_s=0, set_b3s=0, set_b4s=0;
+    #if (NHIGGS == 1)
+      int set_a1s=0, set_a2s=0;
+    #endif
+  #endif
+
   int set_update_links = 0;
   int set_scalar_sweeps = 0;
   int set_update_doublet = 0;
@@ -230,6 +240,43 @@ void get_parameters(char *filename, lattice* l, params *p) {
       p->sigma0 = strtod(value,NULL);
       set_sigma0 = 1;
     }
+    #ifdef SINGLET
+      else if(!strcasecmp(key,"update_singlet")) {
+        p->update_singlet = strtol(value,NULL,10);
+        set_update_singlet = 1;
+      }
+      else if(!strcasecmp(key,"singlet0")) {
+        p->singlet0 = strtod(value,NULL);
+        set_singlet0 = 1;
+      }
+      else if(!strcasecmp(key,"b1_s")) {
+        p->b1_s = strtod(value,NULL);
+        set_b1s = 1;
+      }
+      else if(!strcasecmp(key,"msq_s")) {
+        p->msq_s = strtod(value,NULL);
+        set_msq_s = 1;
+      }
+      else if(!strcasecmp(key,"b3_s")) {
+        p->b3_s = strtod(value,NULL);
+        set_b3s = 1;
+      }
+      else if(!strcasecmp(key,"b4_s")) {
+        p->b4_s = strtod(value,NULL);
+        set_b4s = 1;
+      }
+      #if (NHIGGS == 1)
+        else if(!strcasecmp(key,"a1_s")) {
+          p->a1_s = strtod(value,NULL);
+          set_a1s = 1;
+        }
+        else if(!strcasecmp(key,"a2_s")) {
+          p->a2_s = strtod(value,NULL);
+          set_a2s = 1;
+        }
+      #endif
+    #endif
+
     else if(!strcasecmp(key,"latticefile")) {
       strcpy(p->latticefile,value);
       set_latticefile = 1;
@@ -319,6 +366,22 @@ void get_parameters(char *filename, lattice* l, params *p) {
       } else if(!strcasecmp(key,"update_triplet")) {
         p->update_su2triplet = strtol(value,NULL,10);
         set_update_triplet = 1;
+      }
+    #endif
+    #ifdef SINGLET
+      else if(!strcasecmp(key,"algorithm_singlet")) {
+        if(!strcasecmp(value,"metropolis")) {
+           p->algorithm_singlet = METROPOLIS;
+        } else if(!strcasecmp(value,"overrelax")) {
+           p->algorithm_singlet = OVERRELAX;
+        } else {
+          printf("Unknown algorithm for singlets, using metropolis\n");
+          p->algorithm_singlet = METROPOLIS;
+        }
+        set_singletalg = 1;
+      } else if(!strcasecmp(key,"update_singlet")) {
+        p->update_singlet = strtol(value,NULL,10);
+        set_update_singlet = 1;
       }
     #endif
     // end reading update algorithms
@@ -493,6 +556,20 @@ void get_parameters(char *filename, lattice* l, params *p) {
 	#endif
   #if defined (TRIPLET) && (NHIGGS > 0)
   check_set(set_a2, "a2");
+  #endif
+
+  #ifdef SINGLET
+  check_set(set_singletalg, "algorithm_singlet");
+  check_set(set_update_singlet, "update_singlet");
+  check_set(set_singlet0, "singlet0");
+  check_set(set_b1s, "b1_s");
+  check_set(set_b3s, "b3_s");
+  check_set(set_b4s, "b4_s");
+  check_set(set_msq_s, "msq_s");
+  #if (NHIGGS==1)
+    check_set(set_a1s, "a1_s");
+    check_set(set_a2s, "a2_s");
+  #endif
   #endif
 
   #ifdef MEASURE_Z
@@ -718,6 +795,15 @@ void print_parameters(lattice l, params p) {
     #endif
 	printf("initial sigma0 %g, update_su2triplet %d\n",p.sigma0, p.update_su2triplet);
 	#endif
+
+  #ifdef SINGLET
+  printf("msq (singlet) %g, b1_s %g, b3_s %g, b4_s %g, ", p.msq_s, p.b1_s, p.b3_s, p.b4_s);
+    #if (NHIGGS > 0)
+    printf("a1_s %g, a2 %g, ", p.a1_s, p.a2_s);
+    #endif
+	printf("initial singlet0 %g, update_singlet %d\n",p.singlet0, p.update_singlet);
+  #endif
+
 	printf("\n");
   //fprintf(stderr, "msq %lf, lambda %lf, g %lf, msigmasq %lf, a2 %lf, b4 %lf\n",
 	  //p.msq, p.lambda, p.g, p.msigmasq, p.a2, p.b4);

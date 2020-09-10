@@ -8,9 +8,9 @@
 
 dim 3
 
-L1 48
-L2 48
-L3 48
+L1 12
+L2 12
+L3 12
 
 # start new simulation (initial configuration still read from latticefile)?
 reset 0
@@ -19,13 +19,13 @@ reset 0
 iterations 200000
 
 # how many thermalization sweeps before starting measurements/weighting?
-n_thermalize 0
+n_thermalize 200
 
 # how often to write measurements
 interval 4
 
 # how often to write lattice configuration to file 
-checkpoint 2000
+checkpoint 10000
 
 # perform initial sensibility checks on lattice layout?
 run_checks 1
@@ -39,7 +39,7 @@ latticefile lattice
 ### parameters
 ## at T = 122.3, a = 0.008240436430478594
 # gauge couplings
-betasu2 12.0
+betasu2 8.0
 #betau1 8.0
 
 # doublet
@@ -65,9 +65,18 @@ msq_triplet -0.5032354703283564
 b4 0.11666666666666665
 a2 2.6953060227675745
 
+# singlet
+msq_s -0.1
+b1_s 3
+b3_s 2
+b4_s 0.3
+a1_s 3
+a2_s 0.25
+
 # initial values for fields (overwritten by existing lattice file)
 phi0 0.2
 sigma0 0.2
+singlet0 0.2
 
 ### update algorithms
 
@@ -79,16 +88,18 @@ algorithm_u1link metropolis
 algorithm_su2doublet overrelax
 # SU(2) triplet: metropolis or overrelax
 algorithm_su2triplet overrelax
-
+# singlets: metropolis or overrelax
+algorithm_singlet overrelax
 
 # how many times per sweep to update the fields
 scalar_sweeps 5
+update_singlet 1
 update_doublet 1
 update_triplet 1
 update_links 1
 
 ## ---- Multicanonical ---- ##
-multicanonical 1
+multicanonical 0
 bins 80
 min 0.418
 max 3.57

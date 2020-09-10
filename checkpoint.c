@@ -57,6 +57,18 @@ void print_acceptance(params p, counters c) {
 				100.0*c.accepted_triplet/c.total_triplet);
 		}
 	#endif
+
+	#ifdef SINGLET
+	if (p.algorithm_singlet == METROPOLIS) {
+		printf("Singlet %.2lf%%, ",
+			100.0*c.accepted_singlet/c.total_singlet);
+	} else if (p.algorithm_singlet == OVERRELAX) {
+		printf("Singlet overrelax %.2lf%%, Singlet Metropolis %.2lf%%, ",
+			100.0*c.acc_overrelax_singlet/c.total_overrelax_singlet,
+			100.0*c.accepted_singlet/c.total_singlet);
+	}
+	#endif
+
 	if (p.multicanonical) {
 		printf("multicanonical %.2lf%%",
 				100.0*c.accepted_muca/c.total_muca);
@@ -68,8 +80,7 @@ void print_acceptance(params p, counters c) {
 /* Write all fields to a file.
 * Also stores lattice dimensions and current iteration number.
 * Theory parameters such as beta_G and masses are NOT stored!
-* Neither are model-specific acceptance rates.
-*/
+* Neither are model-specific acceptance rates. */
 void save_lattice(lattice const* l, fields f, counters c, char* fname) {
 
 	FILE *file;
@@ -97,6 +108,10 @@ void save_lattice(lattice const* l, fields f, counters c, char* fname) {
 
 	#ifdef TRIPLET
 		write_field(l, file, &f.su2triplet[0][0], SU2TRIP);
+	#endif
+
+	#ifdef SINGLET
+		write_field(l, file, &f.singlet[0][0], 1);
 	#endif
 
 	if (l->rank == 0) {
@@ -184,6 +199,10 @@ void load_lattice(lattice* l, fields* f, counters* c, char* fname) {
 
 	#ifdef TRIPLET
 		read_field(l, file, &f->su2triplet[0][0], SU2TRIP);
+	#endif
+
+	#ifdef TRIPLET
+		read_field(l, file, &f->singlet[0][0], 1);
 	#endif
 
 	// finally, sync all halo fields; these were not loaded from the file
