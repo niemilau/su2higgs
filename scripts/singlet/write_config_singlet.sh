@@ -33,6 +33,7 @@ a2=$(grep a2 $latticefile | awk '{print $2}')
 cp config config_bu
 
 sed -i "s/at T = .*/at T = $T, a = $a/g" config
+sed -i "s/betasu2 .*/betasu2 $beta/g" config
 sed -i "s/msq .*/msq $mphisq/g" config
 sed -i "s/lambda .*/lambda $lambda/g" config
 sed -i "s/msq_s .*/msq_s $mSsq/g" config
