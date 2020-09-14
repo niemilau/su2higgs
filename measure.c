@@ -275,9 +275,10 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 		#endif
 
 		#ifdef SINGLET
-			fprintf(file, "%g %g %g %g ", singlet, singlet2, singlet3, singlet4);
+			fprintf(file, "%g %g %g %g ",
+				singlet/((double)l->vol), singlet2/((double)l->vol), singlet3/((double)l->vol), singlet4)/((double)l->vol);
 			#if (NHIGGS == 1)
-				fprintf(file, "%g %g ", Sphisq, S2phisq);
+				fprintf(file, "%g %g ", Sphisq/((double)l->vol), S2phisq/((double)l->vol));
 			#endif
 		#endif
 
