@@ -84,6 +84,12 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 	#ifdef TRIPLET
 		B += 0.5 * p->a2 * tripletsq(f->su2triplet[i]);
 	#endif
+	#ifdef SINGLET
+		// V = 1/2 a1 S \he\phi\phi + 1/2 a2 S^2 \he\phi\phi + ...
+		double S = f->singlet[i][0];
+		B += 0.25 * p->a1_s * S + 0.25 * p->a2_s * S*S;
+	#endif
+
 	double C = 0.25 * p->lambda_phi;
 
 	// we need to solve V(X') - V(X) = 0, where Y is kept constant. Write this as
