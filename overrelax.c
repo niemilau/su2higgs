@@ -10,7 +10,7 @@
 #include "su2.h"
 
 
-// Find real root to the equation x^3 + b*x^2 + c*x + d = 0
+// Find real root to the equation a*x^3 + b*x^2 + c*x + d = 0
 double polysolve3(long double a, long double b, long double c, long double d) {
 	// discriminant. NB! the numbers here can get quite large/small...
 	long double discr = 18.0*a*b*c*d - 4.0*b*b*b*d + b*b*c*c - 4.0*a*c*c*c - 27.0*a*a*d*d;
@@ -34,6 +34,9 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 }
 
 
+#if (NHIGGS > 0)
+
+
 /* Higgs overrelaxation as described in hep-lat/9510020 and hep-lat/9804019 (more recent).
 * The doublet is Phi(x) = 1/sqrt(2) (phi_0 I + i sig_i phi_i), i = 1,2,3,
 * and the local Higgs action is written as
@@ -47,8 +50,7 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 * p(X') = min(p0, 1), p0 = (dS(X)/dX) / (dS(X')/dX'). If new X is accepted,
 * the Y overrelaxation reads: phi'_a = -phi_a - f_a (X' + X).
 * Note however that the Y overrelaxation is not necessary at all, X update is enough.
-* So if the action is not invariant under Y -> -Y, can choose to keep Y constant instead.
-*/
+* So if the action is not invariant under Y -> -Y, can choose to keep Y constant instead. */
 int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
 	// 1 Higgs doublet only!! For 2 Higgses see overrelax_higgs2()
@@ -84,6 +86,12 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 	#ifdef TRIPLET
 		B += 0.5 * p->a2 * tripletsq(f->su2triplet[i]);
 	#endif
+	#ifdef SINGLET
+		// V = 1/2 a1 S \he\phi\phi + 1/2 a2 S^2 \he\phi\phi + ...
+		double S = f->singlet[i][0];
+		B += 0.25 * p->a1_s * S + 0.25 * p->a2_s * S*S;
+	#endif
+
 	double C = 0.25 * p->lambda_phi;
 
 	// we need to solve V(X') - V(X) = 0, where Y is kept constant. Write this as
@@ -119,6 +127,10 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
 }
 
+#endif // NHIGGS > 0
+
+
+#ifdef TRIPLET
 
 /* Same Cartesian overrelax as overrelax_doublet(), but for adjoint scalar.
 */
@@ -222,6 +234,57 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i) {
 	}
 
 }
+
+#endif // TRIPLET
+
+
+#ifdef SINGLET
+
+int overrelax_singlet(lattice const* l, fields* f, params const* p, long i) {
+
+	double S = f->singlet[i][0];
+	/* Local action due to S(x): act = c1 S + c2 S^2 + c3 S^3 + c4 S^4 */
+	double c1 = p->b1_s;
+	for (int dir=0; dir<l->dim; dir++) {
+		long next = l->next[i][dir];
+		long prev = l->prev[i][dir];
+		c1 -= (f->singlet[next][0] + f->singlet[prev][0]);
+	}
+
+	double c2 = l->dim + 0.5*p->msq_s;
+	double c3 = 1.0/3.0 * p->b3_s;
+	double c4 = 0.25 * p->b4_s;
+
+	#if (NHIGGS == 1)
+		double phisq = doubletsq(f->su2doublet[0][i]);
+		c1 += 0.5*p->a1_s*phisq;
+		c2 += 0.5*p->a2_s*phisq;
+	#endif
+
+	/* Solve Y from act(S) - act(Y) = 0. Can factor out trivial solution Y=S, so
+	* need to solve d0 + d1 Y + d2 Y^2 + d3 Y^3 = 0 */
+	double d0 = c1 + c2*S + c3*S*S + c4*S*S*S;
+	double d1 = c2 + c3*S + c4*S*S;
+	double d2 = c3 + c4*S;
+	double d3 = c4;
+
+	double Y = polysolve3(d3, d2, d1, d0);
+
+	/* Acc/rej to preserve detailed balance. Derivatives of the local action wrt. S and Y */
+	double dV = c1 + 2.0*c2*S + 3.0*c3*S*S + 4.0*c4*S*S*S;
+	double dV_new = c1 + 2.0*c2*Y + 3.0*c3*Y*Y + 4.0*c4*Y*Y*Y;
+
+	if (fabs(dV/dV_new) >= drand48()) {
+		f->singlet[i][0] = Y;
+		return 1;
+	} else {
+		// reject, no changes to the field
+		return 0;
+	}
+
+}
+
+#endif
 
 #if (NHIGGS == 2)
 

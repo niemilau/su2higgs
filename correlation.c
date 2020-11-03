@@ -200,6 +200,7 @@ complex projected_photon_correlator(lattice* l, fields const* f, int d, int dir)
 }
 
 
+
 #endif // end if TRIPLET
 
 

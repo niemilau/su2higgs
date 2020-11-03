@@ -11,8 +11,7 @@
 
 /*
 * Update a single SU(2) link using Metropolis.
-* Returns 1 if update was accepted and 0 if rejected.
-*/
+* Returns 1 if update was accepted and 0 if rejected. */
 int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir) {
 
 	double oldlink[4];
@@ -45,8 +44,7 @@ int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir)
 * Update a single U(1) link using Metropolis.
 * Remember that our links are U_i(x) = exp(i a_i(x))
 * and a_i(x) is in f.u1link
-* Returns 1 if update was accepted and 0 if rejected.
-*/
+* Returns 1 if update was accepted and 0 if rejected. */
 int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir) {
 
 	double oldlink = f->u1link[i][dir];
@@ -142,3 +140,29 @@ int metro_triplet(lattice const* l, fields* f, params const* p, long i) {
 		return 0;
 	}
 }
+
+#ifdef SINGLET
+
+/* Metropolis update for a singlet field at site i */
+int metro_singlet(lattice const* l, fields* f, params const* p, long i) {
+	double oldfield = f->singlet[i][0];
+	double act_old = localact_singlet(l, f, p, i);
+
+	f->singlet[i][0] += 1.0*(drand48() - 0.5);
+	double act_new = localact_singlet(l, f, p, i);
+
+	double diff = act_new - act_old;
+	if (diff < 0) {
+		return 1;
+	}
+	else if (diff > 0 && ( exp(-(diff)) > drand48() )) {
+		return 1;
+	}
+	else {
+		f->singlet[i][0] = oldfield;
+		return 0;
+	}
+
+}
+
+#endif

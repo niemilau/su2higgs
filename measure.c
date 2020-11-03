@@ -47,6 +47,17 @@ void print_labels() {
 		fprintf(f, "%d total magnetic charge density\n", k); k++;
 		fprintf(f, "%d number of magnetic monopoles\n", k); k++;
 	#endif
+	#ifdef SINGLET
+		fprintf(f, "%d S\n", k); k++;
+		fprintf(f, "%d S^2\n", k); k++;
+		fprintf(f, "%d S^3\n", k); k++;
+		fprintf(f, "%d S^4\n", k); k++;
+		#if (NHIGGS==1)
+			fprintf(f, "%d S phi^2\n", k); k++;
+			fprintf(f, "%d S^2 phi^2\n", k); k++;
+		#endif
+	#endif
+
 
 	fclose(f);
 }
@@ -85,8 +96,13 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	double mag_charge = 0.0;
 	double mag_charge_abs = 0.0;
 
-
-	double mod = 0.0;
+	// singlet
+	double singlet = 0.0;
+	double singlet2 = 0.0;
+	double singlet3 = 0.0;
+	double singlet4 = 0.0;
+	double Sphisq = 0.0;
+	double S2phisq = 0.0;
 
 	// some overlap here. action_local() already calculates local wilson action, hopping terms etc.
 	for (long i=0; i<l->sites; i++) {
@@ -96,11 +112,13 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			u1wilson += local_u1wilson(l, f, p, i);
 		#endif
 
+		double mod = 0.0;
+
 		#if (NHIGGS > 0)
 
 			for (int db=0; db<NHIGGS; db++) {
 
-				double mod = doubletsq(f->su2doublet[db][i]);
+				mod = doubletsq(f->su2doublet[db][i]);
 				for (int dir=0; dir<l->dim; dir++) {
 					hopping_phi[db] += hopping_doublet_forward(l, f, i, dir, db) / l->dim;
 				}
@@ -134,6 +152,19 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			double charge = magcharge_cube(l, f, p, i);
 			mag_charge += charge;
 			mag_charge_abs += fabs(charge);
+		#endif
+
+		#ifdef SINGLET
+			double S = f->singlet[i][0];
+			singlet += S;
+			singlet2 += S*S;
+			singlet3 += S*S*S;
+			singlet4 += S*S*S*S;
+			#if (NHIGGS == 1)
+				mod = doubletsq(f->su2doublet[0][i]);
+				Sphisq += mod * S;
+				S2phisq += mod * S * S;
+			#endif
 		#endif
 	}
 
@@ -181,6 +212,17 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	mag_charge_abs /= (2.0*M_PI*sqrt(p->betasu2)); // this is now the total number of monopoles
 		#if (NHIGGS > 0)
 		phi2Sigma2 = reduce_sum(phi2Sigma2, l->comm);
+		#endif
+	#endif
+
+	#ifdef SINGLET
+		singlet = reduce_sum(singlet, l->comm);
+		singlet2 = reduce_sum(singlet2, l->comm);
+		singlet3 = reduce_sum(singlet3, l->comm);
+		singlet4 = reduce_sum(singlet4, l->comm);
+		#if (NHIGGS==1)
+			Sphisq = reduce_sum(Sphisq, l->comm);
+			S2phisq = reduce_sum(S2phisq, l->comm);
 		#endif
 	#endif
 
@@ -233,7 +275,16 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			// and number of monopoles + antimonopoles (should be an integer)
 			fprintf(file, "%g %g ", mag_charge, mag_charge_abs );
 		#endif
-		fprintf(file, "\n");
+
+		#ifdef SINGLET
+			fprintf(file, "%g %g %g %g ",
+				singlet/((double)l->vol), singlet2/((double)l->vol), singlet3/((double)l->vol), singlet4)/((double)l->vol);
+			#if (NHIGGS == 1)
+				fprintf(file, "%g %g ", Sphisq/((double)l->vol), S2phisq/((double)l->vol));
+			#endif
+		#endif
+
+		fprintf(file, "\n"); // end write
 		fflush(file);
 	}
 
@@ -258,6 +309,16 @@ double action_local(lattice const* l, fields const* f, params const* p, long i) 
 
 	#ifdef TRIPLET
 		tot += covariant_triplet(l, f, p, i);
+	#endif
+
+	#ifdef SINGLET
+		// add just the kinetic term, rest is in higgspotential()
+		double S = f->singlet[i][0];
+		tot += l->dim * S*S;
+		for (int dir=0; dir<l->dim; dir++) {
+			long next = l->next[i][dir];
+			tot -= S * f->singlet[next][0];
+		}
 	#endif
 
 	return tot;
@@ -285,8 +346,7 @@ void print_labels_local(lattice const* l, char* fname) {
 * Output is not in any particular order in terms of the coordinates.
 * Assumes that sites in each node are ordered in the same fashion
 * and that all nodes have the same number of (real) sites!
-* Could also just send the coordinates, but this needs more comms and/or memory...
-*/
+* Could also just send the coordinates, but this needs more comms and/or memory... */
 void measure_local(char* fname, lattice const* l, fields const* f, params const* p) {
 
 	FILE* file;

@@ -472,8 +472,6 @@ double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id
 	return tot;
 }
 
-#endif // if (NHIGGS > 0)
-
 
 /* Calculate the action due to single su2doublet field at site i.
 * This includes the potential, as well as hopping terms
@@ -506,6 +504,9 @@ complex get_phi12(double const* h1, double const* h2) {
 
 	return res;
 }
+
+#endif // if (NHIGGS > 0)
+
 
 /* Calculate the full scalar potential at site i, including all scalar fields.
 * Specifically: V = 0.5 m^2 Tr(\Phi^+ \Phi) + 0.25 * \lambda (Tr(\Phi^+ \Phi))^2 in the SM.
@@ -547,6 +548,10 @@ double higgspotential(fields const* f, params const* p, long i) {
 		#if (NHIGGS > 0)
 			pot += p->a2 * mod * mod_trip;
 		#endif
+	#endif
+
+	#ifdef SINGLET
+		pot += potential_singlet(f, p, i);
 	#endif
 
 	return pot;
@@ -658,6 +663,52 @@ double localact_triplet(lattice const* l, fields const* f, params const* p, long
 
 	return tot;
 }
+
+
+#ifdef SINGLET
+/**********************************
+* 	Routines for singlets		*
+***********************************/
+
+/* Calculate the action due to singlet field at site i. */
+double localact_singlet(lattice const* l, fields const* f, params const* p, long i) {
+
+	double res = 0.0;
+	double S = f->singlet[i][0];
+	/* kinetic term: \sum_{x,i} [S(x)^2 + S(x)S(x+i)] */
+	res += l->dim * S*S;
+
+	for (int dir=0; dir<l->dim; dir++) {
+		long next = l->next[i][dir];
+		long prev = l->prev[i][dir];
+
+		res -= S * (f->singlet[next][0] + f->singlet[prev][0]);
+	}
+
+	res += potential_singlet(f, p, i);
+
+	return res;
+}
+
+/* Contributions to the scalar potential from singlet field */
+double potential_singlet(fields const* f, params const* p, long i) {
+
+	double pot = 0.0;
+	/* V(S) = b1 S + 1/2 msq_s S^2 + 1/3 b3 S^3 + 1/4 b4 S^4 + 1/2 a1 S \he\phi\phi + 1/2 a2 S^2 \he\phi\phi */
+	double S = f->singlet[i][0];
+	pot += p->b1_s * S + 0.5*p->msq_s * S*S + 1.0/3.0 * p->b3_s * S*S*S + 0.25*p->b4_s * S*S*S*S;
+
+	#if (NHIGGS==1)
+		double *h1 = f->su2doublet[0][i];
+		double mod = doubletsq(h1);
+
+		pot += 0.5*p->a1_s * S * mod + 0.5*p->a2_s * S*S * mod;
+	#endif
+
+	return pot;
+}
+
+#endif // end SINGLET routines
 
 
 #ifdef BLOCKING

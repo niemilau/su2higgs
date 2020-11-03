@@ -129,6 +129,16 @@ typedef struct {
 	short update_su2doublet;
 	short update_su2triplet;
 
+	#ifdef SINGLET
+		int update_singlet;
+		short algorithm_singlet;
+		double singlet0;
+		double b1_s, msq_s, b3_s, b4_s;
+		#if (NHIGGS == 1)
+			double a1_s, a2_s;
+		#endif
+	#endif
+
 	#ifdef CORRELATORS
 		int do_correlators;
 		int correlator_interval; // how often to measure correlators
@@ -173,6 +183,10 @@ typedef struct {
 		double** su2doublet[NHIGGS];
 	#endif
 
+	#ifdef SINGLET
+		double** singlet; // access as singlet[site][0], using 2d table so that this works with comms routines
+	#endif
+
 } fields;
 
 
@@ -182,6 +196,9 @@ typedef struct {
 
 	// keep track of when a metropolis sweep should be forced
 	int higgs_sweeps, triplet_sweeps;
+	#ifdef SINGLET
+		int singlet_sweeps;
+	#endif
 
 	// count metropolis updates
 	long total_su2link, accepted_su2link;
@@ -189,6 +206,13 @@ typedef struct {
 	#if (NHIGGS > 0)
 		long total_doublet[NHIGGS], accepted_doublet[NHIGGS];
 		long total_overrelax_doublet[NHIGGS], acc_overrelax_doublet[NHIGGS];
+	#endif
+
+	#ifdef SINGLET
+		long accepted_singlet;
+		long total_singlet;
+		long acc_overrelax_singlet;
+		long total_overrelax_singlet;
 	#endif
 
 	long total_triplet, accepted_triplet;
@@ -339,6 +363,10 @@ double hopping_triplet_forward(lattice const* l, fields const* f, params const* 
 double hopping_triplet_backward(lattice const* l, fields const* f, params const* p, long i, int dir);
 double covariant_triplet(lattice const* l, fields const* f, params const* p, long i);
 double localact_triplet(lattice const* l, fields const* f, params const* p, long i);
+#ifdef SINGLET
+double localact_singlet(lattice const* l, fields const* f, params const* p, long i);
+double potential_singlet(fields const* f, params const* p, long i);
+#endif
 #ifdef BLOCKING
 // smearing
 void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
@@ -361,6 +389,9 @@ int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir)
 int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir);
 int metro_doublet(lattice const* l, fields* f, params const* p, long i, int higgs_id);
 int metro_triplet(lattice const* l, fields* f, params const* p, long i);
+#ifdef SINGLET
+int metro_singlet(lattice const* l, fields* f, params const* p, long i);
+#endif
 
 // heatbath.c
 int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int dir);
@@ -372,6 +403,9 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i); // 
 int overrelax_higgs2(lattice const* l, fields* f, params const* p, long i, int higgs_id); // for N>1 Higgs potentials
 #endif
 int overrelax_triplet(lattice const* l, fields* f, params const* p, long i);
+#ifdef SINGLET
+int overrelax_singlet(lattice const* l, fields* f, params const* p, long i);
+#endif
 
 
 // update.c
@@ -381,6 +415,10 @@ void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, cou
 int checkerboard_sweep_su2doublet(lattice const* l, fields* f, params const* p, counters* c,
 			weight* w, int parity, int metro, int higgs_id);
 int checkerboard_sweep_su2triplet(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity, int metro);
+#ifdef SINGLET
+int checkerboard_sweep_singlet(lattice const* l, fields* f, params const* p, counters* c,
+			weight* w, int parity, int metro);
+#endif
 void sync_halos(lattice* l, fields* f);
 int muca_check(lattice const* l, fields* f, params const* p, counters* c, weight* w, int parity);
 void shuffle(int *arr, int len);
@@ -389,6 +427,9 @@ void shuffle(int *arr, int len);
 void setsu2(fields* f, lattice const* l);
 void random_su2link(double *su2);
 void setu1(fields* f, lattice const* l);
+#ifdef SINGLET
+void set_singlets(fields* f, lattice const* l, params const* p);
+#endif
 void setfields(fields* f, lattice* l, params const* p);
 void setdoublets(fields* f, lattice const* l, params const* p);
 void settriplets(fields* f, lattice const* l, params const* p);

@@ -80,6 +80,11 @@ void settriplets(fields* f, lattice const* l, params const* p) {
 	}
 }
 
+#ifdef SINGLET
+	void set_singlets(fields* f, lattice const* l, params const* p) {
+		for (long i=0; i<l->sites; i++) f->singlet[i][0] = p->singlet0;
+	}
+#endif
 
 // Initialize all fields used in the simulation
 void setfields(fields* f, lattice* l, params const* p) {
@@ -95,6 +100,10 @@ void setfields(fields* f, lattice* l, params const* p) {
 
 	#ifdef TRIPLET
 		settriplets(f, l, p);
+	#endif
+
+	#ifdef SINGLET
+		set_singlets(f, l, p);
 	#endif
 
 	sync_halos(l, f);
@@ -129,6 +138,10 @@ void copy_fields(lattice const* l, fields const* f_old, fields* f_new) {
 			memcpy(f_new->su2triplet[i], f_old->su2triplet[i], SU2TRIP*sizeof(f_old->su2triplet[i][0]));
 		#endif
 
+		#ifdef SINGLET
+			f_new->singlet[i][0] = f_old->singlet[i][0];
+		#endif
+
 	}
 
 }
@@ -155,6 +168,11 @@ void init_counters(counters* c) {
 
 	c->higgs_sweeps = 0;
 	c->triplet_sweeps = 0;
+
+	#ifdef SINGLET
+		c->singlet_sweeps = 0;
+	#endif
+
 	c->accepted_su2link = 0;
 	c->accepted_u1link = 0;
 
@@ -170,6 +188,12 @@ void init_counters(counters* c) {
 		}
 	#endif
 
+	#ifdef SINGLET
+		c->accepted_singlet = 0;
+		c->total_singlet = 0;
+		c->acc_overrelax_singlet = 0;
+		c->total_overrelax_singlet = 0;
+	#endif
 
 	c->total_su2link = 0;
 	c->total_u1link = 0;

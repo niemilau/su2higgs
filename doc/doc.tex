@@ -669,6 +669,36 @@ Note that there are also contributions not proportional to $a_2$.
 
 \lauri{TODO $\gr{U(1)}$ parts!!}
 
+
+\subsection{$\gr{SU(2)}$ + fundamental Higgs + singlet scalar}
+
+Add the following terms to the $\gr{SU(2)}$ + Higgs action:
+\begin{align}
+S_S =& a \sum_{x,i} \left[ S^2 - S(x) S(x+i)\right] \nonumber \\
+&+ a^3 \sum_x \Big[ b_1 S + \frac12 m^2_S S^2 + \frac13 b_3 S^3 + \frac14 b_4 S^4 + \frac12 a_1 S \frac12 \Tr \he\Phi\Phi + \frac12 a_2 S^2 \frac12 \Tr \he\Phi\Phi \Big].  
+\end{align}
+Here $m^2_S = m^2_S(\mu) + \delta m_S^2, b_1 = b_1(\mu) + \delta b_1$ etc with $\mu$ being the \MSbar scale.
+
+Neglecting $\mathcal{O}(a)$, the counterterms are:
+\begin{align}
+\delta V =& -\hbar \frac{\Sigma}{4\pi a} \left( \frac12 m_S^2 + 2 m_\phi^2 \right) + \frac{1}{(4\pi)^2} \frac34 g^2 m_\phi^2 \Big[ (4\delta - \Sigma^2) - \Big( \ln\frac{6}{a\mu} + \zeta \Big) \Big] + \text{indep of masses and } b_1 \\
+%% 
+\nonumber\\
+%%
+\delta b_1 =& -\hbar \frac{\Sigma}{4\pi a}\left(b_3  + a_1\right) + \hbar^2 \frac{1}{(4\pi)^2} \Big[ \frac38 a_1 g^2 (4\delta - \Sigma^2) + \Big( 2 b_3 b_4 + a_1(a_2 - \frac32 g^2) \Big) \Big( \ln\frac{6}{a\mu} + \zeta \Big) \Big] \\
+%% 
+\nonumber\\
+%%
+\delta m^2_S =& -\hbar \frac{\Sigma}{4\pi a} (2a_2 + 3b_4) + \hbar^2 \frac{1}{(4\pi)^2} \Big[ \frac34 a_2 g^2 (4\delta - \Sigma^2) + \Big( 2a_2^2 + 6b_4^2 - 3a_2 g^2 \Big)\Big( \ln\frac{6}{a\mu} + \zeta \Big) \Big] \\
+%% 
+\nonumber\\
+%%
+\delta m^2_\phi =& -\hbar \frac{\Sigma}{4\pi a}\left( \frac12 a_2 + \frac32 g^2 + 6\lambda \right) + \hbar^2 \frac{1}{(4\pi)^2} \Big[ \Big( -\frac{51}{16}g^4 - 9g^2\lambda +12\lambda^2 + \frac12 a_2^2 \Big)\Big( \ln\frac{6}{a\mu} + \zeta \Big)  \nonumber \\
+% 
+& + 9 g^2 \lambda \left(\delta - \frac14 \Sigma^2 \right) - \frac34 g^2 \left( \frac{15}{16} \Sigma^2  + \frac{\pi}{3}\Sigma + \frac54 - \frac{11}{2}\delta - 6\rho + 4\kappa_1 - 2\kappa_4 \right)\Big]  .
+\end{align}
+
+
 \section{Code technicalities}
 
 \begin{itemize}
