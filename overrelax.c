@@ -34,6 +34,9 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 }
 
 
+#if (NHIGGS > 0)
+
+
 /* Higgs overrelaxation as described in hep-lat/9510020 and hep-lat/9804019 (more recent).
 * The doublet is Phi(x) = 1/sqrt(2) (phi_0 I + i sig_i phi_i), i = 1,2,3,
 * and the local Higgs action is written as
@@ -47,8 +50,7 @@ double polysolve3(long double a, long double b, long double c, long double d) {
 * p(X') = min(p0, 1), p0 = (dS(X)/dX) / (dS(X')/dX'). If new X is accepted,
 * the Y overrelaxation reads: phi'_a = -phi_a - f_a (X' + X).
 * Note however that the Y overrelaxation is not necessary at all, X update is enough.
-* So if the action is not invariant under Y -> -Y, can choose to keep Y constant instead.
-*/
+* So if the action is not invariant under Y -> -Y, can choose to keep Y constant instead. */
 int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
 	// 1 Higgs doublet only!! For 2 Higgses see overrelax_higgs2()
@@ -125,6 +127,10 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
 }
 
+#endif // NHIGGS > 0
+
+
+#ifdef TRIPLET
 
 /* Same Cartesian overrelax as overrelax_doublet(), but for adjoint scalar.
 */
@@ -228,6 +234,9 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i) {
 	}
 
 }
+
+#endif // TRIPLET
+
 
 #ifdef SINGLET
 

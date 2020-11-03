@@ -472,8 +472,6 @@ double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id
 	return tot;
 }
 
-#endif // if (NHIGGS > 0)
-
 
 /* Calculate the action due to single su2doublet field at site i.
 * This includes the potential, as well as hopping terms
@@ -506,6 +504,9 @@ complex get_phi12(double const* h1, double const* h2) {
 
 	return res;
 }
+
+#endif // if (NHIGGS > 0)
+
 
 /* Calculate the full scalar potential at site i, including all scalar fields.
 * Specifically: V = 0.5 m^2 Tr(\Phi^+ \Phi) + 0.25 * \lambda (Tr(\Phi^+ \Phi))^2 in the SM.

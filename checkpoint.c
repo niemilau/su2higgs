@@ -201,7 +201,7 @@ void load_lattice(lattice* l, fields* f, counters* c, char* fname) {
 		read_field(l, file, &f->su2triplet[0][0], SU2TRIP);
 	#endif
 
-	#ifdef TRIPLET
+	#ifdef SINGLET
 		read_field(l, file, &f->singlet[0][0], 1);
 	#endif
 

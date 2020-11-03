@@ -112,11 +112,13 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			u1wilson += local_u1wilson(l, f, p, i);
 		#endif
 
+		double mod = 0.0;
+
 		#if (NHIGGS > 0)
 
 			for (int db=0; db<NHIGGS; db++) {
 
-				double mod = doubletsq(f->su2doublet[db][i]);
+				mod = doubletsq(f->su2doublet[db][i]);
 				for (int dir=0; dir<l->dim; dir++) {
 					hopping_phi[db] += hopping_doublet_forward(l, f, i, dir, db) / l->dim;
 				}
@@ -125,7 +127,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			}
 
 			#ifdef TRIPLET // only implemented for one Higgs!!
-				double mod = doubletsq(f->su2doublet[0][i]);
+				mod = doubletsq(f->su2doublet[0][i]);
 				phi2Sigma2 += mod * tripletsq(f->su2triplet[i]);
 			#endif
 
@@ -159,7 +161,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			singlet3 += S*S*S;
 			singlet4 += S*S*S*S;
 			#if (NHIGGS == 1)
-				double mod = doubletsq(f->su2doublet[0][i]);
+				mod = doubletsq(f->su2doublet[0][i]);
 				Sphisq += mod * S;
 				S2phisq += mod * S * S;
 			#endif

@@ -407,9 +407,9 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 				if (accept) update_halo(l, par, f->singlet, 1);
 			}
 
-			#endif
-
 		}
+
+		#endif // singlet
 
 	} // end scalar_sweeps loop
 }
