@@ -9,7 +9,7 @@ inputfile=$1
 T=$2
 beta=$3
 
-./params_singlet.py $inputfile $T $beta
+params_singlet.py $inputfile $T $beta
 
 # read the file created by the python script
 
