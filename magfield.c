@@ -185,8 +185,7 @@ void projector(double *proj, double *adjoint) {
 
 /* Calculate the projected Abelian "field strength" alpha_ij,
 * eq (3.3) in hep-lat/0512006, at a given site i and directions dir1, dir2.
-* So the return value is alpha(x_i)_{dir1, dir2}
-*/
+* So the return value is alpha(x_i)_{dir1, dir2} */
 double alpha_proj(lattice const* l, fields const* f, params const* p, long i, int dir1, int dir2) {
 	long nextsite;
 
@@ -218,14 +217,12 @@ double alpha_proj(lattice const* l, fields const* f, params const* p, long i, in
 
 /* Calculate magnetic field B_i(x) at a given site and direction,
 * eq. 3.4 in hep-lat/0512006 (B_i(x) = 0.5 * eps_{ijk} alpha_{jk}).
-* Should work in arbitrary p.dim dimensions.
-*/
+* Should work in arbitrary p.dim dimensions. */
 double magfield(lattice const* l, fields const* f, params const* p, long i, int dir) {
 
 	/* Two loops over the directions, with always d1 < d2.
 	* Also, need to account for the Levi-Civita symbol eps_{ijk}, with i = dir fixed.
-	* Now j < k always, so to get the correct sign we need 3 if checks (below).
-	*/
+	* Now j < k always, so to get the correct sign we need 3 if checks (below). */
 	double res = 0.0;
 	for (int d1=0; d1<l->dim; d1++) {
 		if (d1 == dir) {

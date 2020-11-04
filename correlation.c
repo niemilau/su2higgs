@@ -199,6 +199,112 @@ complex projected_photon_correlator(lattice* l, fields const* f, int d, int dir)
   return res;
 }
 
+/* Calculate the "full" photon operator in a plane. I use t'Hooft's gauge-invariant operator
+* gamma_{ij} = Sigma^a F^a_{ij} - 1/g \eps_{abc} Sigma^a (D_i Sigma)^b (D_j Sigma)^c,
+* where the adjoint scalar Sigma is normalized to unit length (note: gamma_{ij} is antisymmetric).
+* This is calculated in all directions PERPENDICULAR to 'dir' at fixed x_dir = z and averaged.
+* So in practice this routine calculates \sum_{x} \delta_{x_dir, z} \eps_{dir,ij} gamma_{ij}. */
+complex photon_projection_full(lattice* l, fields const* f, params const* p, int z, int dir, int* mom) {
+
+
+  /** TEMP: calculate Arttu's lattice alpha_munu instead **/
+
+  complex res;
+  res.re = 0.0; res.im = 0.0;
+
+  long z_node = z - l->offset[dir]; // coordinate on my node
+  int skip = 0;
+
+  if (z_node < 0 || z_node >= l->sliceL[dir]) {
+    skip = 1; // out of bounds, so my node does not contribute
+  }
+  if (!skip) {
+
+    for (long xy=0; xy<l->sites_per_coord[dir]; xy++) {
+      long site = l->sites_at_coord[dir][z_node][xy];
+
+      // momentum (p.x) at this site?
+      double px = 0.0;
+      for (int momdir=0; momdir<l->dim; momdir++) {
+        if (mom[momdir] != 0) {
+          px += ((double) (mom[momdir] * l->coords[site][momdir])) / ( (double)(l->L[momdir]) );
+        }
+      }
+
+      double alpha = 0.0;
+      /* loop over all directions except the input 'dir'; calculate
+      * the projected U(1) field strengths and add them without any epsilon tensors */
+      for (int d1=0; d1<l->dim; d1++) {
+        for (int d2=d1+1; d2<l->dim; d2++) {
+          if (d1 == dir || d2 == dir) continue;
+
+          // remember that alpha_ij is antisymmetric in ij, so multiply by 2 later
+          alpha += alpha_proj(l, f, p, site, d1, d2);
+        }
+      }
+
+      // multiply by exp(ip.k):
+      res.re += 2.0*alpha * cos(2.0*M_PI * px);
+      res.im += 2.0*alpha * sin(2.0*M_PI * px);
+    } // end xy loop
+
+  } // end if (!skip)
+
+  res.re = allreduce(res.re, l->comm);
+  res.im = allreduce(res.im, l->comm);
+  return res;
+
+}
+
+
+/* Calculate correlation of the photon at distance d. (more general than the above routine) */
+complex photon_correl(lattice* l, fields const* f, params const* p, int d, int dir, int transmom, int mode) {
+
+  complex res; res.re = 0.0; res.im = 0.0;
+
+  // mode == 0 operator requires dim = 3, mode == 1 always works
+  if (l->dim != 3 && l->rank) {
+    printf("Warning: photon correlation function only sensible in 3 dimensions!!\n");
+    return res;
+  }
+
+  // use a momentum channel in the first transverse direction
+  int mom[l->dim];
+  for (int dir0=0; dir0<l->dim; dir0++) mom[dir0] = 0;
+
+  for (int dir0=0; dir0<l->dim; dir0++) {
+    if (dir0 != dir) mom[dir0] = transmom;
+    break;
+  }
+
+  for (int z=0; z<l->L[dir]; z++) {
+
+    // coordinate at distance d, accounting for periodicity
+    int zd = (z + d) % l->L[dir];
+
+    complex op1, op2;
+    if (mode==0) {
+      op1 = projected_photon_operator(l, f, z, dir, mom);
+      op2 = projected_photon_operator(l, f, zd, dir, mom);
+    } else {
+      op1 = photon_projection_full(l, f, p, z, dir, mom);
+      op2 = photon_projection_full(l, f, p, zd, dir, mom);
+    }
+
+    // O1.O2*
+    op2.im = -1.0*op2.im;
+    complex prod = cmult(op1, op2);
+    res.re += prod.re;
+    res.im += prod.im;
+  }
+
+  res.re /= (double) (l->vol);
+  res.im /= (double) (l->vol);
+  // imag part should be zero because the correlator is symmetric wrt. z <-> z+d
+
+  return res;
+}
+
 
 
 #endif // end if TRIPLET
@@ -217,6 +323,13 @@ void print_labels_correlators() {
     fprintf(f, "%d Sigma^2 correlator\n", k); k++;
     fprintf(f, "%d projected photon correlator RE\n", k); k++;
     fprintf(f, "%d projected photon correlator IM\n", k); k++;
+    // other photon correls
+    fprintf(f, "%d projected photon correlator RE (p=2)\n", k); k++;
+    fprintf(f, "%d projected photon correlator IM (p=2)\n", k); k++;
+    fprintf(f, "%d alpha_munu RE (p=1)\n", k); k++;
+    fprintf(f, "%d alpha_munu IM (p=1)\n", k); k++;
+    fprintf(f, "%d alpha_munu RE (p=2)\n", k); k++;
+    fprintf(f, "%d alpha_munu IM (p=2)\n", k); k++;
   #endif
 
   fclose(f);
@@ -242,7 +355,13 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
     #endif
     #ifdef TRIPLET
       double tripcorr = triplet_correlator(l, f, d, dir);
-      complex photoncorr = projected_photon_correlator(l, f, d, dir);
+      // complex photoncorr = projected_photon_correlator(l, f, d, dir);
+      int mode = 0;
+      complex phot01 = photon_correl(l, f, p, d, dir, 1, mode);
+      complex phot02 = photon_correl(l, f, p, d, dir, 2, mode);
+      mode = 1;
+      complex phot11 = photon_correl(l, f, p, d, dir, 1, mode);
+      complex phot12 = photon_correl(l, f, p, d, dir, 2, mode);
     #endif
 
     // write
@@ -253,7 +372,9 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
       #endif
       #ifdef TRIPLET
         fprintf(file, "%g ", tripcorr);
-        fprintf(file, "%g %g ", photoncorr.re, photoncorr.im);
+        // fprintf(file, "%g %g ", photoncorr.re, photoncorr.im);
+        fprintf(file, "%g %g %g %g ", phot01.re, phot01.im, phot02.re, phot02.im);
+        fprintf(file, "%g %g %g %g ", phot11.re, phot11.im, phot12.re, phot12.im);
       #endif
 
       fprintf(file, "\n");
