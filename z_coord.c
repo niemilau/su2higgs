@@ -104,7 +104,7 @@ void print_z_labels(lattice const* l, params* p) {
 * TODO optimize communications, should be faster to send the whole arrays
 * instead of reducing sums in each element separately.
 */
-void measure_along_z(lattice const* l, fields const* f, params const* p, long id) {
+void measure_along_z_old(lattice const* l, fields const* f, params const* p, long id) {
   long z_max = l->L[l->z_dir];
   long z_slice = l->sliceL[l->z_dir];
   FILE* file;
@@ -191,6 +191,86 @@ void measure_along_z(lattice const* l, fields const* f, params const* p, long id
 }
 
 
+
+void measure_along_z(lattice const* l, fields const* f, params const* p, long id) {
+  long z_max = l->L[l->z_dir];
+  long z_slice = l->sliceL[l->z_dir];
+  FILE* file;
+  int k; long z;
+
+  int n_meas_z = 2;
+
+  #if (NHIGGS >= 2)
+
+  /* arrays for storing the observables as functions of z
+  * Can be understood as a field with z_max sites and n_meas_z DOFs */
+  double** meas = make_field(z_max, n_meas_z);
+  // initialize to 0. will remain 0 outside the range of z in my node
+  for (z=0; z<z_max; z++) {
+    for (k=0; k<n_meas_z; k++) {
+      meas[z][k] = 0.0;
+    }
+  }
+
+  // measure something at each z
+  for (long z=0; z<z_slice; z++) {
+    double phisq = 0.0;
+    double phi2sq = 0.0;
+
+    for (long x=0; x<l->sites_per_z; x++) {
+      long i = l->site_at_z[z][x];
+
+        phisq += doubletsq(f->su2doublet[0][i]);
+        phi2sq += doubletsq(f->su2doublet[1][i]);
+    } // end area loop
+
+    /* store using the physical, full z coordinate.
+    * Use same ordering here as in labels_z() */
+    k = 0;
+
+    meas[z + l->offset_z][k] = phisq; k++;
+    meas[z + l->offset_z][k] = phi2sq; k++;
+
+  } // end z loop
+
+  if (!l->rank) {
+    file = fopen("measure_z", "a");
+    // write header for the current set of measurements
+    fprintf(file, "\nMeasurement %ld:\n", id);
+  }
+
+  // now combine results from all nodes
+  for (z=0; z<z_max; z++) {
+    for (k=0; k<n_meas_z; k++) {
+      meas[z][k] = reduce_sum(meas[z][k], l->comm);
+    }
+  }
+
+  // write to file
+  for (z=0; z<z_max; z++) {
+    if (!l->rank) {
+      fprintf(file, "%ld ", z);
+
+      for (k=0; k<n_meas_z; k++) {
+        fprintf(file, "%g ", meas[z][k] / ((double)l->area) );
+      }
+
+      fprintf(file, "\n");
+  		fflush(file);
+    }
+  }
+
+  // done
+  if (!l->rank) {
+    fclose(file);
+  }
+
+  free_field(meas);
+
+  #endif
+}
+
+
 /* Create an initial configuration where two phases coexist, separated by
 * an interface at z = L[z_dir] / 2. The field values here need to be
 * adjusted depending on the field content.
@@ -254,6 +334,46 @@ void prepare_wall(lattice* l, fields* f, params const* p) {
   printf0(*l, "Wall profile initialized.\n");
 
 }
+
+void prepare_wall_2hdm(lattice* l, fields* f, params const* p) {
+
+  #if (NHIGGS>=2)
+
+  long z_max = l->sliceL[l->z_dir];
+  for (long z=0; z<z_max; z++) {
+
+    for (long x=0; x<l->sites_per_z; x++) {
+
+      // only sets wall for phi_2
+
+      long i = l->site_at_z[z][x];
+      if (z + l->offset_z < 0.5 * l->L[l->z_dir]) {
+        // for small z:
+
+        f->su2doublet[1][i][0] = 0.2 + 0.01*drand48();
+        for (int a=1; a<SU2DB; a++) {
+          f->su2doublet[1][i][a] = 0.01*drand48();
+        }
+
+      } else {
+        // for large z:
+        f->su2doublet[1][i][0] = 0.7 + 0.01*drand48();
+        for (int a=1; a<SU2DB; a++) {
+          f->su2doublet[1][i][a] = 0.05*drand48();
+        }
+
+      }
+    }
+  }
+  // wall initialized, now just need to sync halo fields
+  sync_halos(l, f);
+
+  printf0(*l, "2HDM wall profile initialized.\n");
+
+  #endif
+
+}
+
 
 
 #endif

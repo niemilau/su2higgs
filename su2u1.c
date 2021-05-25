@@ -675,7 +675,7 @@ double localact_singlet(lattice const* l, fields const* f, params const* p, long
 
 	double res = 0.0;
 	double S = f->singlet[i][0];
-	/* kinetic term: \sum_{x,i} [S(x)^2 + S(x)S(x+i)] */
+	/* kinetic term: \sum_{x,i} [S(x)^2 - S(x)S(x+i)] */
 	res += l->dim * S*S;
 
 	for (int dir=0; dir<l->dim; dir++) {
