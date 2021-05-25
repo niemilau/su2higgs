@@ -1,14 +1,12 @@
 # non-parallel makefile
 
-#CC := gcc -g -O3 -D HIGGS -D TRIPLET
+CC := mpicc -g -O3 -march=native
 
-CC := gcc -g -O3 -D TRIPLET -D BLOCKING -D CORRELATORS
-
-CFLAGS := 
+CFLAGS := -D MPI -D NHIGGS=1 -D SINGLET
 
 LIBS := -lm
 
-OBJECTS := main.o generic/mersenne.o layout.o comms.o alloc.o init.o parameters.o su2u1.o staples.o measure.o$
+OBJECTS := main.o generic/mersenne.o layout.o comms.o alloc.o init.o parameters.o su2u1.o staples.o measure.o \
         update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o \
         blocking.o z_coord.o magfield.o gradflow.o correlation.o hb_trajectory.o
 
@@ -22,4 +20,4 @@ su2: $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $(BINARY)
 
 clean:
-        rm $(OBJECTS)
+	rm $(OBJECTS)

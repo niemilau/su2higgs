@@ -236,39 +236,42 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	Global_comms_time += time;
 
+	double vol = ((double) l->vol);
+
 	// write to the file from root node. This is very fast performance wise
 	// the ordering here should be the same as in print_labels()
 	if (!l->rank) {
 		fprintf(file, "%g %g ", weight, muca_param);
 		fprintf(file, "%g %g ",
-			action, wilson/((double)l->vol) );
+			action, wilson/vol
+		);
 
 		#if (NHIGGS > 0 )
 		for (int db=0; db<NHIGGS; db++) {
 			fprintf(file, "%g %g %g ",
-				hopping_phi[db]/((double)l->vol), phi2[db]/((double)l->vol), phi4[db]/((double)l->vol)
+				hopping_phi[db]/vol, phi2[db]/vol, phi4[db]/vol
 			);
 		}
 		#endif
 
 		#if (NHIGGS == 2)
 		fprintf(file, "%g %g ",
-			phi12.re/((double)l->vol), phi12.im/((double)l->vol)
+			phi12.re/vol, phi12.im/vol
 		);
 		#endif
 
 		#ifdef TRIPLET
 			fprintf(file, "%g %g %g ",
-				hopping_Sigma/((double)l->vol), Sigma2/((double)l->vol), Sigma4/((double)l->vol)
+				hopping_Sigma/vol, Sigma2/vol, Sigma4/vol
 			);
 			#if (NHIGGS > 0)
 			fprintf(file, "%g ",
-				phi2Sigma2/((double)l->vol)
+				phi2Sigma2/vol
 			);
 			#endif
 		#endif
 		#ifdef U1
-			fprintf(file, "%g ", u1wilson/((double)l->vol) );
+			fprintf(file, "%g ", u1wilson/vol );
 		#endif
 		#ifdef TRIPLET
 			// store total magnetic charge density (should be ~0)
@@ -278,9 +281,12 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 		#ifdef SINGLET
 			fprintf(file, "%g %g %g %g ",
-				singlet/((double)l->vol), singlet2/((double)l->vol), singlet3/((double)l->vol), singlet4)/((double)l->vol);
+				singlet/vol, singlet2/vol, singlet3/vol, singlet4/vol
+			);
 			#if (NHIGGS == 1)
-				fprintf(file, "%g %g ", Sphisq/((double)l->vol), S2phisq/((double)l->vol));
+				fprintf(file, "%g %g ",
+					Sphisq/vol, S2phisq/vol
+				);
 			#endif
 		#endif
 
