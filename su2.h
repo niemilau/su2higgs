@@ -2,7 +2,7 @@
 #define SU2_H
 
 #include "comms.h"
-#include "stddefs.h"
+#include "generic/stddefs.h"
 
 #ifndef NHIGGS // specify in makefile, otherwise assume no Higgs doublets
 	#define NHIGGS 0

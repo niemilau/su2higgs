@@ -42,10 +42,10 @@ void random_su2link(double *su2) {
 
 	double u[4];
 	// this number can be adjusted for e.g. metro update
-	u[0] = 10.0 * (drand48() - 0.5);
-	u[1] = 1.0 * (drand48() - 0.5);
-	u[2] = 1.0 * (drand48() - 0.5);
-	u[3] = 1.0 * (drand48() - 0.5);
+	u[0] = 10.0 * (dran() - 0.5);
+	u[1] = 1.0 * (dran() - 0.5);
+	u[2] = 1.0 * (dran() - 0.5);
+	u[3] = 1.0 * (dran() - 0.5);
 
 	double norm = sqrt(u[0]*u[0] + u[1]*u[1] + u[2]*u[2] + u[3]*u[3]);
 

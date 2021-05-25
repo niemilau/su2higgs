@@ -112,7 +112,7 @@ int overrelax_doublet(lattice const* l, fields* f, params const* p, long i) {
 
 	beta = fabs(dV/dV_new);
 
-	if (beta >= drand48()) {
+	if (beta >= dran()) {
 		// accept, so overrelax Y' = -Y using the new X
 		// phi'_a = Y' - X' f_a = -phi_a - (X' + X) f_a,
 		// but my X calculated above has diff sign already. */
@@ -222,7 +222,7 @@ int overrelax_triplet(lattice const* l, fields* f, params const* p, long i) {
 
 	beta = fabs(dV/dV_new);
 
-	if (beta >= drand48()) {
+	if (beta >= dran()) {
 		// accept, so overrelax Y' = -Y using the new X
 		for (int k=0; k<SU2TRIP; k++) {
 			f->su2triplet[i][k] = -1.0*f->su2triplet[i][k] + (newX + X) * s[k] / F;
@@ -274,7 +274,7 @@ int overrelax_singlet(lattice const* l, fields* f, params const* p, long i) {
 	double dV = c1 + 2.0*c2*S + 3.0*c3*S*S + 4.0*c4*S*S*S;
 	double dV_new = c1 + 2.0*c2*Y + 3.0*c3*Y*Y + 4.0*c4*Y*Y*Y;
 
-	if (fabs(dV/dV_new) >= drand48()) {
+	if (fabs(dV/dV_new) >= dran()) {
 		f->singlet[i][0] = Y;
 		return 1;
 	} else {
@@ -403,7 +403,7 @@ int overrelax_higgs2(lattice const* l, fields* f, params const* p, long i, int h
 	double dV_new = 4.0*b4*Xn*Xn*Xn + 3.0*b3*Xn*Xn + 2.0*b2*Xn + b1;
 
 	b4 = fabs(dV/dV_new);
-	if (b4 >= drand48()) {
+	if (b4 >= dran()) {
 		// accept, so change phi_a so that Y is unchanged.
 		for (int k=0; k<SU2DB; k++) {
 			higgs[i][k] = higgs[i][k] + s[k] * (Xn - X);

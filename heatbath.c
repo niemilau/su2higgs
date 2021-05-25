@@ -47,12 +47,12 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 	int loop = 1;
 	int maxloops = 200;
 	do {
-		r1 = -1.0*log(1.0 - drand48())/a; //drand48() is between [0.0, 1.0)
-	  r2 = -1.0*log(1.0 - drand48())/a;
-	  r3 = cos(2*M_PI*drand48());
+		r1 = -1.0*log(1.0 - dran())/a; //dran() is between [0.0, 1.0)
+	  r2 = -1.0*log(1.0 - dran())/a;
+	  r3 = cos(2*M_PI*dran());
 	  r3 *= r3;
 	  d = r1*r3 + r2; // this is the delta in K-P paper
-		r3 = 1.0 - drand48();
+		r3 = 1.0 - dran();
 
 		loop++;
 	} while (r3*r3 > 1 - 0.5*d && loop <= maxloops);
@@ -78,9 +78,9 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 	// careful with the a[i] here, they can be zero
 	d = 0.0;
 	while (!(d > 0.0)) {
-		r1 = 1.0 - 2.0*drand48();
-		r2 = 1.0 - 2.0*drand48();
-		r3 = 1.0 - 2.0*drand48();
+		r1 = 1.0 - 2.0*dran();
+		r2 = 1.0 - 2.0*dran();
+		r3 = 1.0 - 2.0*dran();
 		d = sqrt(r1*r1 + r2*r2 + r3*r3);
 	}
 	d = 1.0/d;
@@ -102,7 +102,7 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 		double newact = 0.0;
 		newact += hopping_triplet_forward(l, f, p, i, dir);
 		double diff = oldact - newact;
-		if (drand48() < exp(diff)) {
+		if (dran() < exp(diff)) {
 			return 1;
 		} else {
 			f->su2link[i][dir][0] = oldlink[0];

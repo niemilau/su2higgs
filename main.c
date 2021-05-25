@@ -46,15 +46,23 @@ int main(int argc, char *argv[]) {
 		die(0);
 	}
 
-	// set RNG seed: different for each node!
-	long seed = (long) (time(NULL) * (l.rank + 1.0));
-	srand48(seed);
-	srand(seed+1); // seed also rand(), used when shuffling arrays
+	/* Initialize random number generator.
+	* The magic numbers for seeding are taken from Kari's setup_basic.c */
+	long seed = 0;
+  if (l.rank == 0) {
+    seed = time(NULL);
+    seed = seed^(seed<<26)^(seed<<9);
+    printf("Seed in root node: %ld\n", seed);
+  }
+  bcast_long(&seed, l.comm);
 
-
-	if (!l.rank) {
-		printf("Seed in root node: %ld\n", seed);
+	if (l.rank != 0) {
+	  // other nodes get different seeds
+	  seed += 1121*l.rank;
+	  seed = l.rank ^ ((532*l.rank)<<18);
 	}
+
+  seed_mersenne(seed); // seeding done
 
 	// read in the config file.
 	// This needs to be done before allocating anything since we don't know the dimensions otherwise

@@ -206,19 +206,19 @@ void prepare_wall(lattice* l, fields* f, params const* p) {
       if (z + l->offset_z < 0.5 * l->L[l->z_dir]) {
         // for small z:
         #ifdef HIGGS
-        f->su2doublet[i][0] = 0.2 + 0.01*drand48();
-        f->su2doublet[i][1] = 0.01*drand48();
-        f->su2doublet[i][2] = 0.01*drand48();
-        f->su2doublet[i][3] = 0.01*drand48();
+        f->su2doublet[i][0] = 0.2 + 0.01*dran();
+        f->su2doublet[i][1] = 0.01*dran();
+        f->su2doublet[i][2] = 0.01*dran();
+        f->su2doublet[i][3] = 0.01*dran();
         #endif
         #ifdef TRIPLET
-        f->su2triplet[i][0] = 1.5 + 0.05*drand48();
-        f->su2triplet[i][1] = 0.05*drand48();
-        f->su2triplet[i][2] = 0.05*drand48();
+        f->su2triplet[i][0] = 1.5 + 0.05*dran();
+        f->su2triplet[i][1] = 0.05*dran();
+        f->su2triplet[i][2] = 0.05*dran();
         #endif
         // also set gauge links to (hopefully) help with thermalization
         for (int dir=0; dir<l->dim; dir++) {
-          double u = 1.0 - 0.03*drand48();
+          double u = 1.0 - 0.03*dran();
     			f->su2link[i][dir][0] = u;
     			f->su2link[i][dir][1] = sqrt((double)(1.0 - u*u));
     			f->su2link[i][dir][2] = 0.0;
@@ -227,19 +227,19 @@ void prepare_wall(lattice* l, fields* f, params const* p) {
       } else {
         // for large z:
         #ifdef HIGGS
-        f->su2doublet[i][0] = 1.5 + 0.05*drand48();
-        f->su2doublet[i][1] = 0.05*drand48();
-        f->su2doublet[i][2] = 0.05*drand48();
-        f->su2doublet[i][3] = 0.05*drand48();
+        f->su2doublet[i][0] = 1.5 + 0.05*dran();
+        f->su2doublet[i][1] = 0.05*dran();
+        f->su2doublet[i][2] = 0.05*dran();
+        f->su2doublet[i][3] = 0.05*dran();
         #endif
         #ifdef TRIPLET
-        f->su2triplet[i][0] = 0.2 + 0.01*drand48();
-        f->su2triplet[i][1] = 0.01*drand48();
-        f->su2triplet[i][2] = 0.01*drand48();
+        f->su2triplet[i][0] = 0.2 + 0.01*dran();
+        f->su2triplet[i][1] = 0.01*dran();
+        f->su2triplet[i][2] = 0.01*dran();
         #endif
         // gauge links:
         for (int dir=0; dir<l->dim; dir++) {
-          double u = 1.0 - 0.4*drand48();
+          double u = 1.0 - 0.4*dran();
     			f->su2link[i][dir][0] = u;
     			f->su2link[i][dir][1] = sqrt((double)(1.0 - u*u));
     			f->su2link[i][dir][2] = 0.0;
