@@ -336,7 +336,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 		// Parity ordering, default par_a[EVEN, ODD].
 		int par_a[2];
 		if (p->random_sweeps) {
-			par_a[0] = (drand48() < 0.5) ? EVEN : ODD;
+			par_a[0] = (dran() < 0.5) ? EVEN : ODD;
 			par_a[1] = otherparity(par_a[0]);
 			bcast_int_array(par_a, 2, l->comm);
 		} else {
@@ -444,11 +444,11 @@ void sync_halos(lattice* l, fields* f) {
 
 // Shuffle an array
 void shuffle(int *arr, int len) {
-    int i, temp;
-    for(i = len-1; i > 0; i--) {
-        int j = rand() % (i+1);
-				temp = arr[i];
-				arr[i] = arr[j];
-				arr[j] = temp;
-    }
+	int i, temp;
+  for(i = len-1; i > 0; i--) {
+      unsigned int j = iran() % (i+1);
+			temp = arr[i];
+			arr[i] = arr[j];
+			arr[j] = temp;
+  }
 }

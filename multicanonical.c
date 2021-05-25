@@ -377,7 +377,7 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 
 		double diff = W_new - W_old;
 
-		if(exp(-(diff)) > drand48()) {
+		if(exp(-(diff)) > dran()) {
       accept = 1;
     } else {
       accept = 0;
