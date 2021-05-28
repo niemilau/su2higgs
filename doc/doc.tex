@@ -205,15 +205,15 @@ Simulations in the electroweak $\gr{SU(2) \times U(1)}$ effective theory in 3d w
 
 The link variable is just the complex number $U_i(x) = \exp(i g' B_i(x)) \equiv \exp(i \alpha_i(x))$, where $B_i = a (B_i)_\text{cont}$ is the associated gauge field in the $\gr{U(1)}$ algebra; the simulation will operate on the real numbers $\alpha_i(x)$ (in code: u1field[x][dir]). The Higgs covariant derivative in continuum is taken to be 
 \begin{align}
-D_i \phi = \partial_i \phi + \frac12 i g A^a_i \sigma_a + \frac12 i g' B_i 
+D_i \phi = \partial_i \phi + \frac12 i g A^a_i \sigma_a + Y i g' B_i 
 \end{align}
-\lauri{(do the signs matter at all here?!)}
+and I use normalization $Y = 1/2$.
 
 The Higgs doublet $\Phi$, in matrix parametrization, transforms under a $\gr{SU(2) \times U(1)}$ gauge transformation as 
 \begin{align}
-\Phi(x) \rightarrow G(x) \Phi(x) e^{-i \alpha(x)\sigma_3},
+\Phi(x) \rightarrow G(x) \Phi(x) e^{-i Y \alpha(x)\sigma_3},
 \end{align}
-where $\sigma_3$ is the third Pauli matrix \lauri{(where does this come from?!)}. The plaquette trace for $\gr{U(1)}$ can be written as 
+where $\sigma_3$ is the third Pauli matrix (to check that this is the correct transformation rule, apply $\phi \rightarrow e^{i\alpha} G(x) \phi$ on the vector $\phi$ and see how the elements of $\Phi$ transform). The plaquette trace for $\gr{U(1)}$ can be written as 
 \begin{align}
 p_{ij}(x) = \exp\{i[\alpha_i(x) + \alpha_j(x+i) - \alpha_i(x+j) - \alpha_j(x)]\}.
 \end{align}
