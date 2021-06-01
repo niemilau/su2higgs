@@ -52,6 +52,7 @@ void checkerboard_sweep_su2link(lattice const* l, fields* f, params const* p, co
 
 }
 
+#ifdef U1
 /* Same as checkerboard_sweep_su2link(), but for U(1) links instead. */
 void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, counters* c, int parity, int dir) {
 	// EVEN sites come before ODD
@@ -70,8 +71,8 @@ void checkerboard_sweep_u1link(lattice const* l, fields* f, params const* p, cou
 		}
 		c->total_u1link++;
 	}
-
 }
+#endif
 
 
 #if (NHIGGS > 0)

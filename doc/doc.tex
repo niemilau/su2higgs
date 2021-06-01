@@ -203,17 +203,7 @@ S_{a_2} = \sum_\textbf{x} (a a_2) \frac12 \Tr (a\he\Phi\Phi) \Tr (a\Sigma^2).
 
 Simulations in the electroweak $\gr{SU(2) \times U(1)}$ effective theory in 3d were discussed in \cite{Kajantie:1996qd}. Including the $\gr{U(1)}$ gauge field to the actions above is straightforward. 
 
-The link variable is just the complex number $U_i(x) = \exp(i g' B_i(x)) \equiv \exp(i \alpha_i(x))$, where $B_i = a (B_i)_\text{cont}$ is the associated gauge field in the $\gr{U(1)}$ algebra; the simulation will operate on the real numbers $\alpha_i(x)$ (in code: u1field[x][dir]). The Higgs covariant derivative in continuum is taken to be 
-\begin{align}
-D_i \phi = \partial_i \phi + \frac12 i g A^a_i \sigma_a + Y i g' B_i 
-\end{align}
-and I use normalization $Y = 1/2$.
-
-The Higgs doublet $\Phi$, in matrix parametrization, transforms under a $\gr{SU(2) \times U(1)}$ gauge transformation as 
-\begin{align}
-\Phi(x) \rightarrow G(x) \Phi(x) e^{-i Y \alpha(x)\sigma_3},
-\end{align}
-where $\sigma_3$ is the third Pauli matrix (to check that this is the correct transformation rule, apply $\phi \rightarrow e^{i\alpha} G(x) \phi$ on the vector $\phi$ and see how the elements of $\Phi$ transform). The plaquette trace for $\gr{U(1)}$ can be written as 
+The link variable is just the complex number $u_i(x) = \exp(i g' B_i(x)) \equiv \exp(i \alpha_i(x))$, where $B_i = a (B_i)_\text{cont}$ is the associated gauge field in the $\gr{U(1)}$ algebra; the simulation will operate on the real numbers $\alpha_i(x)$ (in code: u1field[x][dir]). The plaquette trace for $\gr{U(1)}$ can be written as 
 \begin{align}
 p_{ij}(x) = \exp\{i[\alpha_i(x) + \alpha_j(x+i) - \alpha_i(x+j) - \alpha_j(x)]\}.
 \end{align}
@@ -223,19 +213,32 @@ S_\gr{U(1)} = \beta_G' \sum_{x, i<j} \Big[ 1 - \frac12 \Big(p_{ij}^{1/\gamma} + 
 \end{align}
 where $\gamma > 0$ is an arbitrary parameter that can be adjusted to reduce finite-size effects. Note that all values of $\gamma$ should give the same continuum limit, but to get proper representations of the $\gr{U(1)}$ group one has to choose  $\gamma = 1, 1/2, 1/3, \dots$ \lauri{(understand this!!)}. I use $\gamma = 1$ because then the above action is very simple to implement in the code. We denote 
 \begin{align}
-\beta_G' = \frac{4}{a {g'}^2} = \beta_G \frac{g^2}{{g'}^2}.
+\beta_G' = \frac{1}{a {g'}^2},
 \end{align}
-\lauri{Careful:} sometimes this $\beta$ is defined differently. In the end what matters is the number multiplying the plaquettes, as the constant part can always be adjusted without changing physics. I believe this is the definition for $\beta_G'$ used in \cite{Kajantie:1996qd}.
+which guarantees the correct continuum limit.
 
-The only change to the scalar sector is in the hopping terms, modifying update algorithms for the Higgs and also the $\gr{SU(2)}$ links. \lauri{Adjoint scalars are assumed to be singlets under hypercharge transformations.} The Higgs covariant derivative becomes 
+
+The Higgs covariant derivative in continuum is taken to be 
 \begin{align}
-\sum_{x, i} \Big[ \Tr \he\Phi(x)\Phi(x) - \RE\Tr \he\Phi(x)U_i(x)\Phi(x+i)e^{-i \alpha_i(x)\sigma_3}\Big].
+D_i \phi = \partial_i \phi + \frac12 i g A^a_i \sigma_a + Y i g' B_i 
+\end{align}
+and I use normalization $Y = 1/2$.
+The Higgs doublet $\Phi$, in matrix parametrization, transforms under a $\gr{SU(2) \times U(1)}$ gauge transformation as 
+\begin{align}
+\Phi(x) \rightarrow G(x) \Phi(x) e^{-i Y \alpha(x)\sigma_3},
+\end{align}
+where $\sigma_3$ is the third Pauli matrix (to check that this is the correct transformation rule, apply $\phi \rightarrow e^{i Y \alpha} G(x) \phi$ on the vector $\phi$ and see how the elements of $\Phi$ transform). 
+
+The only change to the scalar sector is in the hopping terms, modifying update algorithms for the Higgs and also the $\gr{SU(2)}$ links. The Higgs covariant derivative becomes 
+\begin{align}
+\sum_{x, i} \Big[ \Tr \he\Phi(x)\Phi(x) - \RE\Tr \he\Phi(x)U_i(x)\Phi(x+i)e^{-i Y \alpha_i(x)\sigma_3}\Big].
 \end{align}
 To calculate this, it is often convenient to write 
 \begin{align}
-e^{-i \alpha\sigma_3} = \sigma_0\cos\alpha - i \sigma_3 \sin\alpha,
+e^{-i Y \alpha\sigma_3} = \sigma_0\cos( Y \alpha) - i \sigma_3 \sin(Y \alpha),
 \end{align}
 with $\sigma_0$ again being the $2\times 2$ identity matrix. The choice of $\gamma$ does not affect the Higgs hopping term. Note that this trace is still real.
+\lauri{Note:} I could of course rescale the $\alpha_\mu$ variables so that effectively $Y=1$ in the above. But then the relation to continuum $B_\mu$ would be different, so $\beta_G'$ would be different. In the $Y=1$ normalization, $\beta_G' = 4/(a{g'}^2)$, which is what \cite{Kajantie:1996qd} uses.
 
 \section{Local update algorithms}
 

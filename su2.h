@@ -8,6 +8,10 @@
 	#define NHIGGS 0
 #endif
 
+#ifdef U1
+	// nasty global for Higgs hypercharge
+	extern const double higgs_Y; // set Y=1/2 in parameters.c
+#endif
 
 /* Struct "lattice": contains info on lattice dimensions, lookup tables for
 * sites and everything related to parallelization. */
@@ -93,11 +97,13 @@ typedef struct {
 	int random_sweeps;
 
 	/* Parameters in the action */
-	double betasu2; // 4/(g^2)
-	double betau1; // 2/(g'^2)
+	double betasu2; // 4 / (a g^2)
+
+
 	// doublet
 	double msq_phi; // Higgs mass
 	double lambda_phi; // Higgs quartic
+
 	// triplet
 	double msq_triplet;
 	double a2; // Higgs portal
@@ -118,7 +124,6 @@ typedef struct {
 
 	// How to update the fields
 	short algorithm_su2link;
-	short algorithm_u1link;
 	short algorithm_su2doublet;
 	short algorithm_su2triplet;
 
@@ -128,6 +133,12 @@ typedef struct {
 	// additional sweeps on top of scalar_sweeps
 	short update_su2doublet;
 	short update_su2triplet;
+
+	// U(1) hypercharge
+	#ifdef U1
+		double betau1; // 1 / (a g'^2) in this code
+		short algorithm_u1link;
+	#endif
 
 	#ifdef SINGLET
 		int update_singlet;
@@ -176,7 +187,10 @@ typedef struct {
 	//double *su2singlet;
 	double ***su2link;
 	double **su2triplet;
-	double **u1link;
+
+	#ifdef U1
+		double **u1link; // actually the exponent
+	#endif
 
 	// NHIGGS copies of Higgs doublets, accessed as su2doublet[id][site][component]
 	#if (NHIGGS > 0)
@@ -344,10 +358,12 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 double hopping_trace(double* phi1, double* u, double* phi2);
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a);
 double hopping_trace_triplet(double* a1, double* u, double* a2);
+#ifdef U1
 // U(1) routines
 double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
 double local_u1wilson(lattice const* l, fields const* f, params const* p, long i);
 double localact_u1link(lattice const* l, fields const* f, params const* p, long i, int dir);
+#endif
 // doublet routines
 double doubletsq(double* a);
 void phiproduct(double* f1, double const* f2, int conj);

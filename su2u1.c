@@ -275,15 +275,19 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 }
 
 
+#ifdef U1
 /**********************************
 * 	Routines for U(1) fields		*
 ***********************************/
 
+/* The link variable is u_mu(x) = e^(i alpha_\mu(x)), and my
+* u1link[i][mu] = alpha_\mu at site i. Normalization is so that \alpha_\mu = g' B_\mu
+* when the continuum field B_\mu is canonically normalized. */
+
 /* Calculate plaquette trace in the (dir1, dir2) plane
 *	of U(1) link at lattice site i, i.e. same as su2ptrace()
 * but for U(1). Note that since we take the real part,
-* the result is just a cosine.
-*/
+* the result is just a cosine. */
 double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 
 	double u1 = f->u1link[i][dir1];
@@ -299,8 +303,7 @@ double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 * a loop over sites gives the total Wilson action. This is NOT the full Contribution
 * due to a single link, so do NOT use this in update algorithms.
 *  Specifically, calculates:
-* beta_U1 * \Sum_{i < j} [1 - cos(a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x)]
-*/
+* beta_U1 * \Sum_{i < j} [1 - cos(a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x)] */
 double local_u1wilson(lattice const* l, fields const* f, params const* p, long i) {
 
 	double res = 0.0;
@@ -319,8 +322,7 @@ double local_u1wilson(lattice const* l, fields const* f, params const* p, long i
 * This requires calculating the plaquette trace in two plaquettes in each plane
 * that contain the link at site i. Used in metropolis updates.
 *
-* See localact_su2link() for SU(2) version.
-*/
+* See localact_su2link() for SU(2) version. */
 double localact_u1link(lattice const* l, fields const* f, params const* p, long i, int dir) {
 
 	double tot = 0.0;
@@ -341,6 +343,7 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 	return tot;
 }
 
+#endif // U1
 
 /**********************************
 * 	Routines for SU(2) doublets		*
@@ -382,12 +385,13 @@ double hopping_trace(double* phi1, double* u, double* phi2) {
    phi1[0]*phi2[3]*u[3];
 }
 
+#ifdef U1
 /* Same as hopping_trace(), but includes hypercharge.
 * Specifically, calculates:
-*		Re Tr \Phi_1^+ U \Phi_2 exp[-i a sigma_3]. */
+*		Re Tr \Phi_1^+ U \Phi_2 exp[-i Y alpha sigma_3], where alpha is the u1link */
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
-	double s = sin(a);
-	double c = cos(a);
+	double s = sin(higgs_Y * a);
+	double c = cos(higgs_Y * a);
 
 	return c*phi1[0]*phi2[0]*u[0] - s*phi1[3]*phi2[0]*u[0] + c*phi1[1]*phi2[1]*u[0] -
    s*phi1[2]*phi2[1]*u[0] + s*phi1[1]*phi2[2]*u[0] + c*phi1[2]*phi2[2]*u[0] +
@@ -400,8 +404,8 @@ double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
    s*phi1[0]*phi2[0]*u[3] + c*phi1[3]*phi2[0]*u[3] - s*phi1[1]*phi2[1]*u[3] -
    c*phi1[2]*phi2[1]*u[3] + c*phi1[1]*phi2[2]*u[3] - s*phi1[2]*phi2[2]*u[3] -
    c*phi1[0]*phi2[3]*u[3] + s*phi1[3]*phi2[3]*u[3];
-
 }
+#endif
 
 /* Routines below access f->su2doublet directly, so protect with preprocessor if */
 #if (NHIGGS > 0 )

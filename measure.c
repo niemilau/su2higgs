@@ -120,7 +120,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 				mod = doubletsq(f->su2doublet[db][i]);
 				for (int dir=0; dir<l->dim; dir++) {
-					hopping_phi[db] += hopping_doublet_forward(l, f, i, dir, db) / l->dim;
+					hopping_phi[db] += hopping_doublet_forward(l, f, i, dir, db);
 				}
 				phi2[db] += mod;
 				phi4[db] += mod*mod;
@@ -145,7 +145,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			Sigma2 += tripletmod;
 			Sigma4 += tripletmod * tripletmod;
 			for (int dir=0; dir<l->dim; dir++) {
-				hopping_Sigma += hopping_triplet_forward(l, f, p, i, dir) / l->dim;
+				hopping_Sigma += hopping_triplet_forward(l, f, p, i, dir);
 			}
 
 			// calculate charge density of magnetic monopoles
@@ -236,6 +236,9 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	time = ((double) (end - start)) / CLOCKS_PER_SEC;
 	Global_comms_time += time;
 
+	/* write volume averages to file. For hopping terms and gauge actions,
+	* take also the average over directions */
+
 	double vol = ((double) l->vol);
 
 	// write to the file from root node. This is very fast performance wise
@@ -243,13 +246,13 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	if (!l->rank) {
 		fprintf(file, "%g %g ", weight, muca_param);
 		fprintf(file, "%g %g ",
-			action, wilson/vol
+			action, wilson/(vol * l->dim)
 		);
 
 		#if (NHIGGS > 0 )
 		for (int db=0; db<NHIGGS; db++) {
 			fprintf(file, "%g %g %g ",
-				hopping_phi[db]/vol, phi2[db]/vol, phi4[db]/vol
+				hopping_phi[db]/(vol * l->dim), phi2[db]/vol, phi4[db]/vol
 			);
 		}
 		#endif
@@ -262,7 +265,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 		#ifdef TRIPLET
 			fprintf(file, "%g %g %g ",
-				hopping_Sigma/vol, Sigma2/vol, Sigma4/vol
+				hopping_Sigma/(vol * l->dim), Sigma2/vol, Sigma4/vol
 			);
 			#if (NHIGGS > 0)
 			fprintf(file, "%g ",
@@ -271,7 +274,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			#endif
 		#endif
 		#ifdef U1
-			fprintf(file, "%g ", u1wilson/vol );
+			fprintf(file, "%g ", u1wilson/ (vol * l->dim) );
 		#endif
 		#ifdef TRIPLET
 			// store total magnetic charge density (should be ~0)

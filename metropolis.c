@@ -40,8 +40,8 @@ int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir)
 	}
 }
 
-/*
-* Update a single U(1) link using Metropolis.
+#ifdef U1
+/* Update a single U(1) link using Metropolis.
 * Remember that our links are U_i(x) = exp(i a_i(x))
 * and a_i(x) is in f.u1link
 * Returns 1 if update was accepted and 0 if rejected. */
@@ -68,6 +68,7 @@ int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir) 
 		return 0;
 	}
 }
+#endif
 
 
 #if (NHIGGS > 0)

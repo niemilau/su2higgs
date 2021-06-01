@@ -38,7 +38,7 @@ gpsq = gsq * z
 lam = x * gsq
 
 if (z != 0):
-    betau1 = beta * (1.0 / z)
+    betau1 = 1.0 / gpsq
 else:
     betau1 = 0
 

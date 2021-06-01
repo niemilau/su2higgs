@@ -7,6 +7,12 @@
 #include "su2.h"
 
 
+#ifdef U1
+  // fix hypercharges manually. Note: global constant
+  const double higgs_Y = 0.5;
+#endif
+
+
 /** Helper routine, checks a parameter is set and if not prints error.
  */
 void check_set(int set, char *name) {
@@ -36,6 +42,7 @@ int read_double(char* key, char* name, char* value, double* address) {
  * Original implementation by David Weir.
  */
 void get_parameters(char *filename, lattice* l, params *p) {
+
 
 	int set_dim = 0;
   int set_L = 0;
@@ -205,10 +212,6 @@ void get_parameters(char *filename, lattice* l, params *p) {
       p->betasu2 = strtod(value,NULL);
       set_betasu2 = 1;
     }
-    else if(!strcasecmp(key,"betau1")) {
-      p->betau1 = strtod(value,NULL);
-      set_betau1 = 1;
-    }
 		// Higgs parameters
 		else if(!strcasecmp(key,"msq")) {
       p->msq_phi = strtod(value,NULL);
@@ -329,9 +332,9 @@ void get_parameters(char *filename, lattice* l, params *p) {
           p->algorithm_u1link = METROPOLIS;
         }
         set_u1alg = 1;
-      } else if(!strcasecmp(key,"update_links")) {
-        p->update_links = strtol(value,NULL,10);
-        set_update_links = 1;
+      } else if(!strcasecmp(key,"betau1")) {
+          p->betau1 = strtod(value,NULL);
+          set_betau1 = 1;
       }
     #endif
 
@@ -774,7 +777,7 @@ void print_parameters(lattice l, params p) {
 	printf("-------------------------- Lattice parameters --------------------------\n");
 	printf("SU(2) beta %g\n", p.betasu2);
   #ifdef U1
-  printf("U(1) beta %g\n", p.betau1);
+    printf("U(1) beta %g\n", p.betau1);
   #endif
 
   #if (NHIGGS == 2)
@@ -784,9 +787,13 @@ void print_parameters(lattice l, params p) {
     printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 
   #elif (NHIGGS == 1)
-	printf("msq (Higgs) %g, lambda (Higgs) %g, ", p.msq_phi, p.lambda_phi);
-	printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
+	  printf("msq (Higgs) %g, lambda (Higgs) %g, ", p.msq_phi, p.lambda_phi);
+	  printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 	#endif
+
+  #if defined U1 && (NHIGGS > 0)
+    printf("Higgs hypercharge %g\n", higgs_Y);
+  #endif
 
 	#ifdef TRIPLET
 	printf("msq (triplet) %g, b4 %g, ", p.msq_triplet, p.b4);

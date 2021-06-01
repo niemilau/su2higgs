@@ -27,6 +27,7 @@ void setsu2(fields* f, lattice const* l) {
 	}
 }
 
+#ifdef U1
 // set U(1) links to unity
 void setu1(fields* f, lattice const* l) {
 
@@ -36,6 +37,7 @@ void setu1(fields* f, lattice const* l) {
 		}
 	}
 }
+#endif
 
 /* generate a random SU(2) matrix and store it in the argument */
 void random_su2link(double *su2) {
