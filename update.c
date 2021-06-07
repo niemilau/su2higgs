@@ -305,15 +305,18 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 			int par = par_a[j];
 			checkerboard_sweep_su2link(l, f, p, c, par, dir);
 			update_gaugehalo(l, par, f->su2link, SU2LINK, dir);
+		}
 
-			#ifdef U1
+		#ifdef U1
+			for (int j=0; j<NV; j++) {
+				int dir = dir_a[j];
+				int par = par_a[j];
 				checkerboard_sweep_u1link(l, f, p, c, par, dir);
 				// here I use update_halo() instead of update_gaugehalo(), so halo is
 				// actually updated for all directions after updating just one direction.
-				// Could be optimized. (is it OK to update U1 together with SU2 like here?)
 				update_halo(l, par, f->u1link, l->dim);
-			#endif
-		}
+			}
+		#endif
 	} // gauge links done
 
 
@@ -355,10 +358,11 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 				c->higgs_sweeps++;
 			}
 
-			for (int j=0; j<=1; j++) {
-				int par = par_a[j];
+			// first EVEN and ODD for doublet 1, then repeat for doublet 2 etc
+			for (int db=0; db<NHIGGS; db++) {
+				for (int j=0; j<=1; j++) {
+					int par = par_a[j];
 
-				for (int db=0; db<NHIGGS; db++) {
 					accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, db);
 					if (accept) update_halo(l, par, f->su2doublet[db], SU2DB);
 					/* NOTE: if using a non-local multicanonical order parameter that depends
