@@ -17,7 +17,7 @@
 *			 based on the weight change. If rejected, ALL updates in the sweep are undone.
 *			 This will create a bias towards non-minimum configurations.
 *
-*	Additional steps for calculating the weight function, if w.mode == READONLY (== 0)
+*	Additional steps for calculating the weight function, if w.mode != READONLY (== 0)
 *
 *		2. Each time a global muca acc/rej is performed, find the current bin and accumulate
 *			 w.hits in that bin AND its nearby bins (even if update is rejected!). See muca_accumulate_hits().
@@ -128,8 +128,8 @@ void load_weight(lattice const* l, weight *w) {
 	w->b = malloc((w->bins+2) * sizeof(*(w->b)));
 
 	// how often to update the weight?
-	if (w->mode != SLOW) w->update_interval = 8;
-	else w->update_interval = 20000;
+	if (w->mode != SLOW) w->update_interval = 100;
+	else w->update_interval = 5000;
 
 	w->do_acceptance = 1;
 
@@ -532,7 +532,8 @@ int update_weight(weight* w) {
 	return tunnel;
 }
 
-/* Weight update according to the recipe in hep-lat/9804019 */
+/* Weight update according to the recipe in hep-lat/9804019
+* Remember that in my implementation, bin = 0 extends effectively from -infty to w.min */
 void update_weight_slow(weight* w) {
 
 	double w_old[w->bins+2];
@@ -607,12 +608,23 @@ void update_weight_slow(weight* w) {
 	memcpy(w_old, w->W, (w->bins+2) * sizeof(w_old[0]));
 
 	double corr = 0.0;
+
+	/* Again, calculate probability per unit 'length'
+	* Take dmin = width of first bin in the work range.
+	* firstbin does not get overcorrected => overcorrect relative to it.
+	* This preserves relative weights also for bins < firstbin   */
+	if (firstbin == 1) {
+		dmin = w->pos[firstbin+1] - w->pos[firstbin];
+	} else {
+		dmin = w->pos[firstbin+1] - w->pos[firstbin-1];
+	}
+
 	for (int i=firstbin+1; i<w->bins+1; i++) {
 
 		if (i <= lastbin) {
-			// again, calculate probability per unit 'length'
+
 			double diff1 = w->pos[i+1] - w->pos[i-1];
-			corr = c * log( (dmin / diff1) *  w->gsum[i] / w->gsum[firstbin]);
+			corr = c * log( (dmin / diff1) *  w->nsum[i] / w->nsum[firstbin]);
 
 			w->W[i] += corr;
 		} else {
