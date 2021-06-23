@@ -1,15 +1,16 @@
 #!/bin/bash
 
-if [ "$#" -ne 3 ]; then
-    echo "Usage: <script name> <input file> <T> <beta_G>"
+if [ "$#" -ne 4 ]; then
+    echo "Usage: <script name> <input file> <T> <beta_G> <gamma>"
 	exit 1
 fi
 
 inputfile=$1
 T=$2
 beta=$3
+gamma=$4
 
-params_singlet.py $inputfile $T $beta
+params_singlet.py $inputfile $T $beta $gamma
 
 # read the file created by the python script
 
@@ -28,12 +29,16 @@ b4=$(grep b4 $latticefile | awk '{print $2}')
 a1=$(grep a1 $latticefile | awk '{print $2}')
 a2=$(grep a2 $latticefile | awk '{print $2}')
 
+betau1=$(grep betaU1 $latticefile | awk '{print $2}')
+
 
 # write these into the config file (assuming it exists)
 cp config config_bu
 
 sed -i "s/at T = .*/at T = $T, a = $a/g" config
 sed -i "s/betasu2 .*/betasu2 $beta/g" config
+sed -i "s/betau1 .*/betau1 $betau1/g" config
+sed -i "s/gammau1 .*/gammau1 $gamma/g" config
 sed -i "s/msq .*/msq $mphisq/g" config
 sed -i "s/lambda .*/lambda $lambda/g" config
 sed -i "s/msq_s .*/msq_s $mSsq/g" config

@@ -24,17 +24,18 @@ def lin_int(x, b, k):
 
 
 ## read in temperature T and beta_G
-if not len(sys.argv) in [4,5]:
-    sys.stderr.write('Usage: %s <input file> <T> <beta_G> <volume (optional)>\n' %
+if not len(sys.argv) in [5,6]:
+    sys.stderr.write('Usage: %s <input file> <T> <beta_G> <gamma> <volume (optional)>\n' %
                      sys.argv[0])
     sys.exit(1)
 
 datafile = sys.argv[1]
 T = float(sys.argv[2])
 beta = float(sys.argv[3])
+gamma = float(sys.argv[4])
 
-if len(sys.argv) == 5:
-    volume = int(sys.argv[4])
+if len(sys.argv) == 6:
+    volume = int(sys.argv[5])
 
 params = genfromtxt(datafile, names=True)
 
@@ -85,6 +86,11 @@ def write_params(fname, plist, T, islat):
     f.write('T %.16f\n' % T)
     f.write('%s %.16f\n' % (scale_id, scale))
 
+    if (islat):
+        f.write('beta %.16f\n' % beta)
+        f.write('betaU1 %.16f\n' % (1.0/gpsq))
+        f.write('gammaU1 %.16f\n' % gamma)
+
     f.write('gsq %.16f\n' % gsq)
     f.write('gpsq %.16f\n' % gpsq)
     f.write('mphisq %.16f\n' % mphisq)
@@ -110,8 +116,8 @@ def convert_lattice(p_cont):
     delta = 1.942130
     rho = -0.313964
     k1 = 0.958382
-    k2 = 0.25*Sigma**2 - 0.5 * delta - 0.25
-    k3 = 0.751498
+    #k2 = 0.25*Sigma**2 - 0.5 * delta - 0.25
+    #k3 = 0.751498
     k4 = 1.204295
 
     a = 4.0/(gsq * beta)
@@ -119,35 +125,47 @@ def convert_lattice(p_cont):
     ## logarithm that appears frequently, plus zeta
     logPlusZeta = math.log(6.0/(a*RGscale)) + zeta
 
-    ## TODO add U(1) contributions!!
+    ### Counterterms. Note that U(1) gamma here is in the convention used in my code
+
+    ## Higgs mass counterterms. First contributions from SU(2) + Higgs only
+    mphisq_ct1 = -Sigma/(8.0*math.pi*a) * (3*gsq + gpsq + 12*lam);
+
+    mphisq_ct2 = 1.0/(16*math.pi**2.0) * ( \
+        ( -51.0/16.0*gsq**2 + 9.0/8.0*gsq*gpsq \
+        + 5.0/16.0*gpsq**2 - 3*lam * (3.0*gsq + gpsq) \
+        + 12*lam**2) * logPlusZeta \
+        + 3*lam * (3*gsq + gpsq) * (delta - 0.25*Sigma**2) \
+        + gsq**2 * (-15.0/16.0 - 45.0/64.0 *Sigma**2 - math.pi/4.0*Sigma \
+        + 33.0/8.0 *delta + 9.0/2.0*rho - 3*k1 + 3.0/2.0*k4) \
+        + gpsq**2 * (1.0/16.0 - 1.0/64.0*Sigma**2 - 2*math.pi/(3.0*gamma**2)*Sigma \
+        + 1.0/8.0*delta + 0.5*rho) + gsq*gpsq * (3.0/8.0 - 3.0/32.0*Sigma**2 + 3.0/4.0*delta) \
+        )
+
+    ## then contributions from the singlet
+    mphisq_ct1 += -a2*Sigma/(8.0*a*math.pi);
+    mphisq_ct2 += 1.0/(16*math.pi**2.0) * 0.5*a2**2 * logPlusZeta;
+
+    mphisq_lat = (muphisq + mphisq_ct1 + mphisq_ct2) * a**2
+
 
     ## singlet tadpole term
     b1_ct1 = -Sigma/(4.0*a*math.pi) * (b3 + a1);
-    b1_ct2 = (1.0)/(16.0*math.pi**2) * (3.0/8.0 * a1*gsq *(4.0*delta - Sigma**2) \
-        + (2.0*b3*b4 + a1*a2 - 1.5*a1*gsq) * logPlusZeta);
+    b1_ct2 = 1.0/(16.0*math.pi**2) * (  \
+        (2.0*b3*b4 + a1*a2 - 0.5*a1* (3*gsq + gpsq)) * logPlusZeta \
+        + 0.5*a1 * (3*gsq + gpsq)*(delta - Sigma**2 / 4.0) \
+    );
 
     b1_lat = (b1 + b1_ct1 + b1_ct2) * a**(5.0/2.0)
 
     ## singlet mass counterterms
-    mSsq_ct1 = -Sigma/(4.0*a*math.pi) * (2.0*a2 + 3.0*b4);
-    mSsq_ct2 = (1.0)/(16.0*math.pi**2) * (0.75*a2*gsq * (4.0*delta - Sigma**2) \
-        + (2.0*a2**2 + 6.0*b4**2 - 3.0*a2*gsq) * logPlusZeta);
+    mSsq_ct1 = -Sigma/(4.0*a*math.pi) * (2*a2 + 3*b4);
+    mSsq_ct2 = 1.0/(16.0*math.pi**2) * ( \
+        (2*a2**2 + 6*b4**2 - a2* (3*gsq + gpsq)) * logPlusZeta \
+        + a2 * (3*gsq + gpsq)*(delta - Sigma**2 / 4.0) \
+    );
 
     mSsq_lat = (muSsq + mSsq_ct1 + mSsq_ct2) * a**2.0
 
-    ## Higgs mass counterterms. First contributions from SU(2) + Higgs only
-    mphisq_ct1 = -Sigma/(4.0*a*math.pi) * (1.5*gsq + 6.0*lam);
-    mphisq_ct2 = -1.0/(16*math.pi**2.0) * ( (51.0/16.0 * gsq**2 + 9.0*lam*gsq - \
-        12.0*lam**2) * logPlusZeta + 9.0*lam*gsq * (0.25 *Sigma**2 - delta) \
-        + 0.75*gsq**2 * (15.0/16.0 * Sigma**2 + math.pi/3.0 * Sigma + 1.25 \
-        - 7.0/2.0 *delta - 4.0*rho + 4.0*k1 - k2 - k3 - 3.0*k4) );
-
-    ## then contributions from the singlet
-    mphisq_ct1 += -0.5*a2*Sigma/(4.0*a*math.pi);
-    mphisq_ct2 += 1.0/(16*math.pi**2.0) * 0.5*a2**2 * logPlusZeta;
-
-
-    mphisq_lat = (muphisq + mphisq_ct1 + mphisq_ct2) * a**2.0
 
     ## couplings: these are trivial
     gsq_lat = a * gsq
@@ -207,7 +225,7 @@ print('gsq %g, gpsq %g, mphisq %g, lambda %g, mSsq %g, b1 %g, b3 %g, b4 %g, a1 %
 write_params('params_lattice.dat', paramsLat, T, 1)
 
 ### Calculate reweight string if the volume was given ###
-if len(sys.argv) == 5:
+if len(sys.argv) == 6:
 
     ## linearize in T
     T1 = nearest(temps, T-0.1)
@@ -236,4 +254,4 @@ if len(sys.argv) == 5:
 
     #  #n is the nth column in measure file.
 
-## end if len(sys.argv) == 5 ###
+## end if len(sys.argv) == 6 ###
