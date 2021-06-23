@@ -92,6 +92,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
 
 	int set_betasu2 = 0;
   int set_betau1 = 0;
+  int set_gammau1 = 0;
 	// doublet
 	int set_lambda_phi = 0;
 	int set_msq_phi = 0;
@@ -335,6 +336,9 @@ void get_parameters(char *filename, lattice* l, params *p) {
       } else if(!strcasecmp(key,"betau1")) {
           p->betau1 = strtod(value,NULL);
           set_betau1 = 1;
+      } else if(!strcasecmp(key,"gammau1")) {
+          p->gammau1 = strtod(value,NULL);
+          set_gammau1 = 1;
       }
     #endif
 
@@ -531,6 +535,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
   check_set(set_scalar_sweeps, "scalar_sweeps");
   #ifdef U1
   check_set(set_betau1, "betau1");
+  check_set(set_gammau1, "gammau1");
   check_set(set_u1alg, "algorithm_u1link");
   #endif
   // these parameters are attempted to read but the checks are skipped
@@ -777,7 +782,7 @@ void print_parameters(lattice l, params p) {
 	printf("-------------------------- Lattice parameters --------------------------\n");
 	printf("SU(2) beta %g\n", p.betasu2);
   #ifdef U1
-    printf("U(1) beta %g\n", p.betau1);
+    printf("U(1) beta %g, U(1) gamma %g\n", p.betau1, p.gammau1);
   #endif
 
   #if (NHIGGS == 2)

@@ -7,16 +7,15 @@ from pylab import genfromtxt
 
 ## read in temperature T and beta_G
 if not len(sys.argv) in [6]:
-    sys.stderr.write('Usage: %s <x> <y> <z> <gamma> <beta_G>\n' %
+    sys.stderr.write('Usage: %s <beta_G> <lambda> <msq> <beta_U1> <gamma_U1>\n' %
                      sys.argv[0])
     sys.exit(1)
 
-x = float(sys.argv[1])
-y = float(sys.argv[2])
-z = float(sys.argv[3])
-gamma = float(sys.argv[4])
-beta = float(sys.argv[5])
-
+beta = float(sys.argv[1])
+lam = float(sys.argv[2])
+msq = float(sys.argv[3])
+betau1 = float(sys.argv[4])
+gamma = float(sys.argv[5])
 
 # generic constants
 Sigma = 3.17591153625
@@ -24,32 +23,29 @@ zeta = 0.08849
 delta = 1.942130
 rho = -0.313964
 k1 = 0.958382
-#k2 = 0.25*Sigma**2 - 0.5 * delta - 0.25
-#k3 = 0.751498
+k2 = 0.25*Sigma**2 - 0.5 * delta - 0.25
+k3 = 0.751498
 k4 = 1.204295
 
-print('---- Read in: x = %g, y = %g, z = %g, gamma = %g, beta_G = %g ----\n'
-    % (x, y, z, gamma, beta))
+print('---- Read in: beta_G = %g, lambda = %g, msq = %g, beta_U1 = %g, gamma_U1 = %g (gamma is in my convention!) ----\n'
+    % (beta, lam, msq, betau1, gamma))
 
-#### convert to lattice parameters, in units of a.
-# i.e. the standard relations but treat a=1.
+#### convert to x. Note that this is same in continuum and on (unimproved) lattice
 
 gsq = 4.0/beta
-gpsq = gsq * z
+x = lam / gsq
 lam = x * gsq
 
-if (z != 0):
-    betau1 = 1.0 / gpsq
+if (betau1 != 0):
+    gpsq = 1.0 / betau1
 else:
-    betau1 = 0
+    gpsq = 0
+
+z = gpsq / gsq
 
 RGscale = gsq
 
-## mass counterterm in units of a^2.
-# The input U(1) gamma parameter is in convention on hep-lat/9612006.
-# The counterterms are written in my convention, meaning my gamma = 2 * their gamma
-# so convert that here.
-gamma = 2.0 * gamma;
+# The counterterms are written in my convention for gamma
 
 # units of a^2 for the mass
 mass_ct1 = -Sigma/(8.0*math.pi) * (3*gsq + gpsq + 12*lam);
@@ -65,7 +61,8 @@ mass_ct2 = 1.0/(16*math.pi**2.0) * ( \
     + 1.0/8.0*delta + 0.5*rho) + gsq*gpsq * (3.0/8.0 - 3.0/32.0*Sigma**2 + 3.0/4.0*delta) \
     )
 
-msq = gsq**2 * y + mass_ct1 + mass_ct2
+## y in continuum:
+y = 1.0*(msq - mass_ct1 - mass_ct2) / gsq**2
 
-print('---- Lattice parameters: msq = %.12lf, lam = %.12lf, betau1 = %.12lf, my gamma = %.12lf ----\n'
-    % (msq, lam, betau1, gamma))
+print('---- Continuum parameters: x = %g, y = %g, z = %g ----\n'
+    % (x, y, z))

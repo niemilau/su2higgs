@@ -282,12 +282,16 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 
 /* The link variable is u_mu(x) = e^(i alpha_\mu(x)), and my
 * u1link[i][mu] = alpha_\mu at site i. Normalization is so that \alpha_\mu = g' B_\mu
-* when the continuum field B_\mu is canonically normalized. */
+* when the continuum field B_\mu is canonically normalized. This means that
+* the hopping term of a hypercharge-Y field has u_mu(x)^Y. */
+
+/* U(1) Wilson action is S = gamma^2 * betau1 * sum_{x, i<j} (1 - Re p_{ij}^{1/gamma}).
+* My gamma = 2 * gamma of hep-lat/9705003 and hep-lat/9612006.
+*/
 
 /* Calculate plaquette trace in the (dir1, dir2) plane
 *	of U(1) link at lattice site i, i.e. same as su2ptrace()
-* but for U(1). Note that since we take the real part,
-* the result is just a cosine. */
+* but for U(1). */
 double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 
 	double u1 = f->u1link[i][dir1];
@@ -295,7 +299,7 @@ double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 	double u3 = f->u1link[ l->next[i][dir2] ][dir1];
 	double u4 = f->u1link[i][dir2];
 
-	return cos(u1 + u2 - u3 - u4);
+	return u1 + u2 - u3 - u4;
 
 }
 
@@ -303,18 +307,19 @@ double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 * a loop over sites gives the total Wilson action. This is NOT the full Contribution
 * due to a single link, so do NOT use this in update algorithms.
 *  Specifically, calculates:
-* beta_U1 * \Sum_{i < j} [1 - cos(a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x)] */
+* gamma^2 * beta_U1 * \Sum_{i < j} {1 - cos[(a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x) / gamma]} */
 double local_u1wilson(lattice const* l, fields const* f, params const* p, long i) {
 
 	double res = 0.0;
 
 	for (int dir1 = 0; dir1 < l->dim; dir1++) {
 		for (int dir2 = 0; dir2 < dir1; dir2++ ) {
-			res += (1.0 - u1ptrace(l, f, i, dir2, dir1) );
+			double plaq = u1ptrace(l, f, i, dir2, dir1);
+			res += (1.0 - cos(plaq / p->gammau1) );
 		}
 	}
 
-	return p->betau1 * res;
+	return p->gammau1 * p->gammau1 * p->betau1 * res;
 }
 
 
@@ -329,11 +334,11 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 
 	for (int dir2 = 0; dir2<l->dim; dir2++) {
 		if (dir2 != dir) {
-			tot += (1.0 - u1ptrace(l, f, i, dir, dir2));
-			tot += (1.0 - u1ptrace(l, f, l->prev[i][dir2], dir, dir2));
+			tot += (1.0 - cos(u1ptrace(l, f, i, dir, dir2) / p->gammau1));
+			tot += (1.0 - cos(u1ptrace(l, f, l->prev[i][dir2], dir, dir2) / p->gammau1) );
 		}
 	}
-	tot *= p->betau1;
+	tot *= p->betau1 * p->gammau1 * p->gammau1;
 
 	// hopping terms:
 	#if (NHIGGS > 0)
@@ -388,7 +393,7 @@ double hopping_trace(double* phi1, double* u, double* phi2) {
 #ifdef U1
 /* Same as hopping_trace(), but includes hypercharge.
 * Specifically, calculates:
-*		Re Tr \Phi_1^+ U \Phi_2 exp[-i Y alpha sigma_3], where alpha is the u1link */
+*		Re Tr \Phi_1^+ U \Phi_2 exp[-i Y alpha sigma_3], where alpha is stored in u1link */
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 	double s = sin(higgs_Y * a);
 	double c = cos(higgs_Y * a);
@@ -412,7 +417,7 @@ double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
 
 /* Calculate the hopping term for a SU(2) doublet 'phi' at site i,
 * in the "forward" direction. Specifically, calculates
-*		-Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3)
+*		-Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i Y \alpha_j(x) \sigma_3)
 * for j = dir and \alpha_j(x) = 0 if hypercharge is neglected. */
 double hopping_doublet_forward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
 
@@ -435,7 +440,7 @@ double hopping_doublet_forward(lattice const* l, fields const* f, long i, int di
 
 /* Calculate the hopping term for a SU(2) doublet 'phi' at site i,
 * in the "backwards" direction. Specifically, calculates
-*		- Tr \Phi(x-j)^+ U_j(x-j) \Phi(x) exp(-i \alpha_j(x-j) \sigma_3)
+*		- Tr \Phi(x-j)^+ U_j(x-j) \Phi(x) exp(-i Y \alpha_j(x-j) \sigma_3)
 * for j = dir and \alpha_j(x-j) = 0 if hypercharge is neglected. */
 double hopping_doublet_backward(lattice const* l, fields const* f, long i, int dir, int higgs_id) {
 
@@ -462,7 +467,7 @@ double hopping_doublet_backward(lattice const* l, fields const* f, long i, int d
 
 /* Calculate the full covariant derivative for an SU(2) doublet at site i,
 * in the "forward" directions. Specifically, calculates
-*		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i \alpha_j(x) \sigma_3) ] */
+*		\sum_j [ Tr\Phi(x)^+ \Phi(x) - Tr \Phi(x)^+ U_j(x) \Phi(x+j) exp(-i Y \alpha_j(x) \sigma_3) ] */
 double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id) {
 
 	double tot = 0.0;
@@ -482,7 +487,6 @@ double covariant_doublet(lattice const* l, fields const* f, long i, int higgs_id
 * in "forward" and "backwards" directions.
 * Used in metropolis update. */
 double localact_doublet(lattice const* l, fields const* f, params const* p, long i, int higgs_id) {
-
 
 	double tot = 0.0;
 	// Full covariant derivative with the local Tr Phi^+ Phi included,
