@@ -480,6 +480,7 @@ void print_labels_local(lattice const* l, char* fname);
 
 // multicanonical.c
 void load_weight(lattice const* l, weight *w);
+void load_weight_params(int rank, char* fname, weight* w);
 void save_weight(lattice const* l, weight const* w);
 void linearize_weight(weight* w);
 double get_weight(weight const* w, double val);

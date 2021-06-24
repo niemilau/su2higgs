@@ -104,7 +104,7 @@ void save_weight(lattice const* l, weight const* w) {
 
 	 // extra bins not written
 	 for(long i=1; i<w->bins+1; i++) {
-		 fprintf(file, "%ld %ld\n", w->gsum[i], w->nsum[i]);
+		 fprintf(file, "%lf %ld %ld\n", w->pos[i], w->gsum[i], w->nsum[i]);
 	 }
 	 fclose(file);
  }
@@ -174,15 +174,7 @@ void load_weight(lattice const* l, weight *w) {
 		w->max += 0.001 * dbin;
 		w->pos[w->bins + 1] = w->max;
 
-		if (w->mode == SLOW) {
-			for (i=0; i<w->bins+2; i++) {
-				w->gsum[i] = 5; // cannot be 0!!
-				w->nsum[i] = 0;
-			}
-		}
-
 		printf0(*l, "Initialized new weight \n");
-		save_weight(l, w);
 
   } else {
 		// found existing weight, use it instead of the one specified in config
@@ -248,7 +240,7 @@ void load_weight(lattice const* l, weight *w) {
 			w->pos[w->bins+1] = w->max;
 		}
 
-  } // weight loading/initialization OK
+  } // end weight loading
 
 	// sync the virtual bins: constant weight in ranges [-infty, w.min], [w.max, infty]
 	w->pos[0] = w->min - 1000.0 * (w->max - w->min); // "-infinity"
@@ -266,45 +258,57 @@ void load_weight(lattice const* l, weight *w) {
 	if (mode == FAST) printf0(*l, "Fast weight update: starting with delta %.12lf, last_max %d\n", w->delta, w->last_max);
 	if (mode == SLOW) printf0(*l, "Using slow but safe weight updating: parameter file 'weight_params'\n");
 
-
-	if (mode == SLOW) {
-		// read in work arrays from separate file
-		if(access("weight_params", R_OK) != 0) {
-			printf0(*l, "Unable to access parameter file!! initializing new\n");
-			for (i=0; i<w->bins+2; i++) {
-				w->gsum[i] = 5; // cannot be 0!!
-				w->nsum[i] = 0;
-			}
-
-		} else {
-			int bins_read = 0;
-
-			FILE *file = fopen("weight_params", "r");
-			int read = fscanf(file, "%d", &bins_read);
-			if (bins_read != w->bins) {
-				// mismatch!
-				printf0(*l, "Error reading parameter file!! Expected %d bins, got %d\n\n", w->bins, bins_read);
-				die(991);
-			}
-
-			// do not read extra bins
-			for(i=1; i<w->bins+1; i++) {
-	      read = fscanf(file, "%ld %ld", &(w->gsum[i]), &(w->nsum[i]));
-	      if(read != 2) {
-					printf0(*l, "Error reading 'weight_params'!! Got %d values at line %ld\n\n", read, i+1);
-					die(992);
-	      }
-	    }
-
-			fclose(file);
-		}
-	} // arrays for slow weight updating OK
-
 	// restart accumulation of muca hits even if existing weight is loaded
 	w->muca_count = 0;
 	for (i=0; i<w->bins+2; i++) {
 		w->hits[i] = 0;
 		if (w->mode == SLOW) w->hgram[i] = exp(w->W[i]);
+	}
+
+	if (w->mode == SLOW) {
+		/* read in work arrays from separate file */
+		load_weight_params(l->rank, "weight_params", w);
+	}
+
+	save_weight(l, w);
+
+}
+
+/* Read param file required for "slow" weight updating.
+* Here rank is just used for printing errors */
+void load_weight_params(int rank, char* fname, weight* w) {
+
+	if(access(fname, R_OK) != 0) {
+		if (!rank) printf("!!! Unable to access weight parameter file. Initializing new\n");
+		for (int i=0; i<w->bins+2; i++) {
+			// cannot be 0!!
+			w->gsum[i] = 5;
+			w->nsum[i] = 1;
+		}
+	} else {
+
+		FILE *file = fopen(fname, "r");
+
+		int bins_read;
+		int read = fscanf(file, "%d", &bins_read);
+		if (bins_read != w->bins) {
+			// mismatch!
+			if (!rank) printf( "Error reading parameter file!! Expected %d bins, got %d\n\n", w->bins, bins_read);
+			die(991);
+		}
+
+		for(int i=1; i<w->bins+1; i++) {
+			double temp;
+
+			read = fscanf(file, "%lf %ld %ld", &temp, &(w->gsum[i]), &(w->nsum[i]));
+			if(read != 3) {
+				if (!rank) printf("Error reading 'weight_params'!! Got %d values at line %d\n\n", read, i+1);
+				die(992);
+			}
+		}
+
+		fclose(file);
+
 	}
 
 }
