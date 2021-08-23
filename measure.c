@@ -20,6 +20,9 @@ void print_labels() {
 	fprintf(f, "%d muca param\n", k); k++; // multicanonical order parameter value
 	fprintf(f, "%d action\n", k); k++;
 	fprintf(f, "%d SU(2) Wilson\n", k); k++;
+	#ifdef U1
+		fprintf(f, "%d U(1) Wilson\n", k); k++;
+	#endif
 	#if (NHIGGS > 0)
 		fprintf(f, "%d hopping_phi (avg over directions)\n", k); k++;
 		fprintf(f, "%d phi^2\n", k); k++;
@@ -39,9 +42,6 @@ void print_labels() {
 	#endif
 	#if (NHIGGS > 0) && defined TRIPLET
 		fprintf(f, "%d phi^2 Sigma^2\n", k); k++;
-	#endif
-	#ifdef U1
-		fprintf(f, "%d U(1) Wilson\n", k); k++;
 	#endif
 	#ifdef TRIPLET
 		fprintf(f, "%d total magnetic charge density\n", k); k++;
@@ -248,6 +248,9 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 		fprintf(file, "%g %g ",
 			action, wilson/(vol * l->dim)
 		);
+		#ifdef U1
+			fprintf(file, "%g ", u1wilson/ (vol * l->dim) );
+		#endif
 
 		#if (NHIGGS > 0 )
 		for (int db=0; db<NHIGGS; db++) {
@@ -272,9 +275,6 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 				phi2Sigma2/vol
 			);
 			#endif
-		#endif
-		#ifdef U1
-			fprintf(file, "%g ", u1wilson/ (vol * l->dim) );
 		#endif
 		#ifdef TRIPLET
 			// store total magnetic charge density (should be ~0)
