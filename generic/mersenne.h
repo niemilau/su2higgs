@@ -3,40 +3,16 @@
 
 /***************************************************************
  *  mersenne.h
- *  for the inline version of the mersenne generator
+ * This header just declares the Mersenne Twister functions and defines macros.
  */
 
- /* Period parameters */
- #define MERSENNE_N 624
- #define MERSENNE_M 397
- #define MATRIX_A 0x9908b0df   /* constant vector a */
- #define UPPER_MASK 0x80000000 /* most significant w-r bits */
- #define LOWER_MASK 0x7fffffff /* least significant r bits */
+double genrand64_real2(void);
+void init_genrand64(unsigned long long seed);
+unsigned long long genrand64_int64(void);
 
- /* Tempering parameters */
- #define TEMPERING_MASK_B 0x9d2c5680
- #define TEMPERING_MASK_C 0xefc60000
- #define TEMPERING_SHIFT_U(y)  (y >> 11)
- #define TEMPERING_SHIFT_S(y)  (y << 7)
- #define TEMPERING_SHIFT_T(y)  (y << 15)
- #define TEMPERING_SHIFT_L(y)  (y >> 18)
-
-extern int mersenne_i;
-extern int mersenne_i_int;
-extern double mersenne_array[MERSENNE_N];
-extern unsigned int mersenne_array_int[MERSENNE_N];
-
-/* mersenne_generate() produces MERSENNE_N numbers and stores them in mersenne_array. Here I take one such number
-* from the array, unless I already used up all of them, in which case generate new numbers and proceed */
-#define mersenne() ( mersenne_i > 0 ? mersenne_array[--mersenne_i] : mersenne_generate(&mersenne_i) )
-#define mersenne_int() ( mersenne_i_int > 0 ? mersenne_array_int[--mersenne_i_int] : mersenne_generate_int(&mersenne_i_int) )
-
-#define dran() mersenne() /* random double in interval [0,1) */
-#define iran() mersenne_int() /* random integer in interval [0, 2^32−1] */
-
-void seed_mersenne(long a);
-double mersenne_generate(int *);
-unsigned int mersenne_generate_int(int *);
-
+#define seed_mersenne(seed) init_genrand64(seed)
+#define dran() genrand64_real2() /* random double on interval [0,1) */
+#define iran() genrand64_int64() /* random unsigned long long integer on [0, 2^64-1]-interval */
+/* The integer generator is total overkill for my purposes, but whatever */
 
 #endif

@@ -456,4 +456,8 @@ void shuffle(int *arr, int len) {
 			arr[i] = arr[j];
 			arr[j] = temp;
   }
+	/* Note: my integer RNG iran() is based on 64-bit Mersenne Twister,
+	* so 'i' here gets cast to unsigned long long. But since the remainder
+	* is smaller than the divisor, there is no issue in casting the result
+	* back to (unsigned) int  */
 }

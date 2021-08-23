@@ -46,8 +46,11 @@ int main(int argc, char *argv[]) {
 		die(0);
 	}
 
-	/* Initialize random number generator.
-	* The magic numbers for seeding are taken from Kari's setup_basic.c */
+	/* Initialize RNG. The base seed is obtained from time(), which is then shuffled
+	* around to produce different seeds for each node. Strictly speaking this does
+	* not guarantee independent RNG for the nodes though (should use proper parallel RNG).
+	* The magic numbers for shuffling are adapted from lattice code by Kari Rummukainen (setup_basic.c).
+	*/
 	long seed = 0;
   if (l.rank == 0) {
     seed = time(NULL);

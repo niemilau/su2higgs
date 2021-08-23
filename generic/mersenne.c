@@ -1,148 +1,192 @@
-/* A C-program for MT19937: Real number version  (1998/4/6)    */
-/*   genrand() generates one pseudorandom real number (double) */
-/* which is uniformly distributed on [0,1]-interval, for each  */
-/* call. sgenrand(seed) set initial values to the working area */
-/* of 624 words. Before genrand(), sgenrand(seed) must be      */
-/* called once. (seed is any 32-bit integer except for 0).     */
-/* Integer generator is obtained by modifying two lines.       */
-/*   Coded by Takuji Nishimura, considering the suggestions by */
-/* Topher Cooper and Marc Rieffel in July-Aug. 1997.           */
+/*
+   A C-program for MT19937-64 (2004/9/29 version).
+   Coded by Takuji Nishimura and Makoto Matsumoto.
 
-/* This library is free software; you can redistribute it and/or   */
-/* modify it under the terms of the GNU Library General Public     */
-/* License as published by the Free Software Foundation; either    */
-/* version 2 of the License, or (at your option) any later         */
-/* version.                                                        */
-/* This library is distributed in the hope that it will be useful, */
-/* but WITHOUT ANY WARRANTY; without even the implied warranty of  */
-/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.            */
-/* See the GNU Library General Public License for more details.    */
-/* You should have received a copy of the GNU Library General      */
-/* Public License along with this library; if not, write to the    */
-/* Free Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA   */
-/* 02111-1307  USA                                                 */
+   This is a 64-bit version of Mersenne Twister pseudorandom number
+   generator.
 
-/* Copyright (C) 1997 Makoto Matsumoto and Takuji Nishimura.       */
-/* When you use this, send an email to: matumoto@math.keio.ac.jp   */
-/* with an appropriate reference to your work.                     */
+   Before using, initialize the state by using init_genrand64(seed)
+   or init_by_array64(init_key, key_length).
 
-/* REFERENCE                                                       */
-/* M. Matsumoto and T. Nishimura,                                  */
-/* "Mersenne Twister: A 623-Dimensionally Equidistributed Uniform  */
-/* Pseudo-Random Number Generator",                                */
-/* ACM Transactions on Modeling and Computer Simulation,           */
-/* Vol. 8, No. 1, January 1998, pp 3--30.                          */
+   Copyright (C) 2004, Makoto Matsumoto and Takuji Nishimura,
+   All rights reserved.
 
-/** Modified somewhat by L. Niemi 2021: removed global definitions of N and M
-* and moved some definitions to mersenne.h. Included integer generator too. **/
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
 
-#include<stdlib.h>
-#include<stdio.h>
-#include "stddefs.h"
+     1. Redistributions of source code must retain the above copyright
+        notice, this list of conditions and the following disclaimer.
+
+     2. Redistributions in binary form must reproduce the above copyright
+        notice, this list of conditions and the following disclaimer in the
+        documentation and/or other materials provided with the distribution.
+
+     3. The names of its contributors may not be used to endorse or promote
+        products derived from this software without specific prior written
+        permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+   "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+   References:
+   T. Nishimura, ``Tables of 64-bit Mersenne Twisters''
+     ACM Transactions on Modeling and
+     Computer Simulation 10. (2000) 348--357.
+   M. Matsumoto and T. Nishimura,
+     ``Mersenne Twister: a 623-dimensionally equidistributed
+       uniform pseudorandom number generator''
+     ACM Transactions on Modeling and
+     Computer Simulation 8. (Jan. 1998) 3--30.
+
+   Any feedback is very welcome.
+   http://www.math.hiroshima-u.ac.jp/~m-mat/MT/emt.html
+   email: m-mat @ math.sci.hiroshima-u.ac.jp (remove spaces)
+*/
+
+/* Modified August 2021 by L. Niemi: commented out unneeded functions */
 
 
-static unsigned int mt[MERSENNE_N]; /* the array for the state vector  */
-int mersenne_i = -1; /*  < 0 means mt[N] is not initialized */
-int mersenne_i_int = -1;
-double mersenne_array[MERSENNE_N];
-unsigned int mersenne_array_int[MERSENNE_N];
+#include <stdio.h>
 
-/* initializing the array with a NONZERO seed */
-void
-seed_mersenne(long seed)
+#define NN 312
+#define MM 156
+#define MATRIX_A 0xB5026F5AA96619E9ULL
+#define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
+#define LM 0x7FFFFFFFULL /* Least significant 31 bits */
+
+
+/* The array for the state vector */
+static unsigned long long mt[NN];
+/* mti==NN+1 means mt[NN] is not initialized */
+static int mti=NN+1;
+
+/* initializes mt[NN] with a seed */
+void init_genrand64(unsigned long long seed)
 {
-  int mti;
-  mt[0]= seed & 0xffffffffUL;
-  for (mti=1; mti<MERSENNE_N; mti++) {
-    mt[mti] =
-      (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> 30)) + mti);
-    /* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
-    /* In the previous versions, MSBs of the seed affect   */
-    /* only MSBs of the array mt[].                        */
-    /* 2002/01/09 modified by Makoto Matsumoto             */
-    mt[mti] &= 0xffffffffUL;
-    /* for >32 bit machines */
-  }
-  mersenne_i = 0;
-  mersenne_i_int = 0;
+    mt[0] = seed;
+    for (mti=1; mti<NN; mti++)
+        mt[mti] =  (6364136223846793005ULL * (mt[mti-1] ^ (mt[mti-1] >> 62)) + mti);
 }
 
-double /* generating reals */
-/* unsigned int */ /* for integer generation */
-mersenne_generate(int *dummy)
+/* initialize by an array with array-length */
+/* init_key is the array for initializing keys */
+/* key_length is its length */
+void init_by_array64(unsigned long long init_key[],
+		     unsigned long long key_length)
 {
-  register unsigned int y;
-  register int kk;
-  static unsigned int mag01[2]={0x0, MATRIX_A};
-  /* mag01[x] = x * MATRIX_A  for x=0,1 */
+    unsigned long long i, j, k;
+    init_genrand64(19650218ULL);
+    i=1; j=0;
+    k = (NN>key_length ? NN : key_length);
+    for (; k; k--) {
+        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 3935559000370003845ULL))
+          + init_key[j] + j; /* non linear */
+        i++; j++;
+        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
+        if (j>=key_length) j=0;
+    }
+    for (k=NN-1; k; k--) {
+        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 2862933555777941757ULL))
+          - i; /* non linear */
+        i++;
+        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
+    }
 
-  if (mersenne_i < 0) {  /* if sgenrand() has not been called, */
-    printf("!!! Mersenne generator not seeded!\n");
-    exit(0);
-  }
-
-  /* generate MERSENNE_N words at one time */
-
-  for (kk=0;kk<MERSENNE_N - MERSENNE_M;kk++) {
-    y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
-    mt[kk] = mt[kk + MERSENNE_M] ^ (y >> 1) ^ mag01[y & 0x1];
-  }
-  for (;kk<MERSENNE_N - 1;kk++) {
-    y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
-    mt[kk] = mt[kk+(MERSENNE_M - MERSENNE_N)] ^ (y >> 1) ^ mag01[y & 0x1];
-  }
-  y = (mt[MERSENNE_N - 1]&UPPER_MASK)|(mt[0]&LOWER_MASK);
-  mt[MERSENNE_N - 1] = mt[MERSENNE_M - 1] ^ (y >> 1) ^ mag01[y & 0x1];
-
-  for (kk=0; kk<MERSENNE_N; kk++) {
-    y = mt[kk];
-    y ^= TEMPERING_SHIFT_U(y);
-    y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
-    y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
-    y ^= TEMPERING_SHIFT_L(y);
-    mersenne_array[kk] = (double)y * 2.3283064365386963e-10;  /* reals: interval [0,1) */
-  }
-
-  mersenne_i = MERSENNE_N;
-  return ( mersenne_array[--mersenne_i] );
-    /* return y; */ /* for integer generation */
+    mt[0] = 1ULL << 63; /* MSB is 1; assuring non-zero initial array */
 }
 
-/* Sme as above but generates integers instead. Range: [0, 2^32−1] */
-unsigned int mersenne_generate_int(int *dummy)
+/* generates a random number on [0, 2^64-1]-interval */
+unsigned long long genrand64_int64(void)
 {
-  register unsigned int y;
-  register int kk;
-  static unsigned int mag01[2]={0x0, MATRIX_A};
-  /* mag01[x] = x * MATRIX_A  for x=0,1 */
+    int i;
+    unsigned long long x;
+    static unsigned long long mag01[2]={0ULL, MATRIX_A};
 
-  if (mersenne_i_int < 0) {  /* if sgenrand() has not been called, */
-    printf("!!! Mersenne generator not seeded!\n");
-    exit(0);
-  }
+    if (mti >= NN) { /* generate NN words at one time */
 
-  /* generate MERSENNE_N words at one time */
+        /* if init_genrand64() has not been called, */
+        /* a default initial seed is used     */
+        if (mti == NN+1)
+            init_genrand64(5489ULL);
 
-  for (kk=0;kk<MERSENNE_N - MERSENNE_M;kk++) {
-    y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
-    mt[kk] = mt[kk + MERSENNE_M] ^ (y >> 1) ^ mag01[y & 0x1];
-  }
-  for (;kk<MERSENNE_N - 1;kk++) {
-    y = (mt[kk]&UPPER_MASK)|(mt[kk+1]&LOWER_MASK);
-    mt[kk] = mt[kk+(MERSENNE_M - MERSENNE_N)] ^ (y >> 1) ^ mag01[y & 0x1];
-  }
-  y = (mt[MERSENNE_N - 1]&UPPER_MASK)|(mt[0]&LOWER_MASK);
-  mt[MERSENNE_N - 1] = mt[MERSENNE_M - 1] ^ (y >> 1) ^ mag01[y & 0x1];
+        for (i=0;i<NN-MM;i++) {
+            x = (mt[i]&UM)|(mt[i+1]&LM);
+            mt[i] = mt[i+MM] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
+        }
+        for (;i<NN-1;i++) {
+            x = (mt[i]&UM)|(mt[i+1]&LM);
+            mt[i] = mt[i+(MM-NN)] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
+        }
+        x = (mt[NN-1]&UM)|(mt[0]&LM);
+        mt[NN-1] = mt[MM-1] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
 
-  for (kk=0; kk<MERSENNE_N; kk++) {
-    y = mt[kk];
-    y ^= TEMPERING_SHIFT_U(y);
-    y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
-    y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
-    y ^= TEMPERING_SHIFT_L(y);
-    mersenne_array_int[kk] = y; /* integers: interval [0, 2^32−1] */
-  }
+        mti = 0;
+    }
 
-  mersenne_i_int = MERSENNE_N;
-  return ( mersenne_array_int[--mersenne_i_int] );
+    x = mt[mti++];
+
+    x ^= (x >> 29) & 0x5555555555555555ULL;
+    x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
+    x ^= (x << 37) & 0xFFF7EEE000000000ULL;
+    x ^= (x >> 43);
+
+    return x;
 }
+
+/* generates a random number on [0,1)-real-interval */
+double genrand64_real2(void)
+{
+    return (genrand64_int64() >> 11) * (1.0/9007199254740992.0);
+}
+
+
+/*
+// generates a random number on [0, 2^63-1]-interval
+long long genrand64_int63(void)
+{
+    return (long long)(genrand64_int64() >> 1);
+}
+
+// generates a random number on [0,1]-real-interval
+double genrand64_real1(void)
+{
+    return (genrand64_int64() >> 11) * (1.0/9007199254740991.0);
+}
+
+// generates a random number on (0,1)-real-interval
+double genrand64_real3(void)
+{
+    return ((genrand64_int64() >> 12) + 0.5) * (1.0/4503599627370496.0);
+}
+*/
+
+
+/*
+int main(void)
+{
+    int i;
+    unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL}, length=4;
+    init_by_array64(init, length);
+    printf("1000 outputs of genrand64_int64()\n");
+    for (i=0; i<1000; i++) {
+      printf("%20llu ", genrand64_int64());
+      if (i%5==4) printf("\n");
+    }
+    printf("\n1000 outputs of genrand64_real2()\n");
+    for (i=0; i<1000; i++) {
+      printf("%10.8f ", genrand64_real2());
+      if (i%5==4) printf("\n");
+    }
+    return 0;
+}
+*/
