@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 
+## This script reads in 3d continuum parameters from 'input file' at a given temperature,
+## then converts and prints out the corresponding lattice parameters.
+## Logic is such that spacing is fixed by specifying T and beta = 4/(a g_3^2(T)).
+## If also the lattice volume is given, the script also calculates the 'reweight string',
+## which is the temperature dependence of lattice action multiplied by volume (= number of lattice sites).
+## Here also the T-dependence of beta is included, while spacing 'a' is kept fixed.
+
 import sys
 import numpy as np
 from scipy.optimize import fsolve
@@ -31,7 +38,7 @@ if not len(sys.argv) in [5,6]:
 
 datafile = sys.argv[1]
 T = float(sys.argv[2])
-beta = float(sys.argv[3])
+betaIn = float(sys.argv[3])
 gamma = float(sys.argv[4])
 
 if len(sys.argv) == 6:
@@ -106,7 +113,7 @@ def write_params(fname, plist, T, islat):
 
 
 #### convert to lattice parameters
-def convert_lattice(p_cont):
+def convert_lattice(p_cont, spacing):
 
     [gsq, gpsq, muphisq, lam, muSsq, b1, b3, b4, a1, a2, RGscale] = p_cont
 
@@ -120,7 +127,7 @@ def convert_lattice(p_cont):
     #k3 = 0.751498
     k4 = 1.204295
 
-    a = 4.0/(gsq * beta)
+    a = spacing
 
     ## logarithm that appears frequently, plus zeta
     logPlusZeta = math.log(6.0/(a*RGscale)) + zeta
@@ -169,14 +176,17 @@ def convert_lattice(p_cont):
 
     ## couplings: these are trivial
     gsq_lat = a * gsq
+    beta = 4.0 / gsq_lat
     gpsq_lat = a * gpsq
+    betau1 = 1.0 / gpsq_lat
+
     lam_lat = a * lam
     b3_lat = b3 * a**(3.0/2.0)
     b4_lat = b4 * a
     a1_lat = a1 * a**(3.0/2.0)
     a2_lat = a2 * a
 
-    return [gsq_lat, gpsq_lat, mphisq_lat, lam_lat, mSsq_lat, b1_lat, b3_lat, b4_lat, a1_lat, a2_lat, a]
+    return [beta, betau1, mphisq_lat, lam_lat, mSsq_lat, b1_lat, b3_lat, b4_lat, a1_lat, a2_lat, a]
 
 
 ####### end function definitions #########
@@ -212,14 +222,17 @@ print('gsq %g, gpsq %g, mphisq %g, lambda %g, mSsq %g, b1 %g, b3 %g, b4 %g, a1 %
 write_params('params_continuum.dat', inputs, T, 0)
 
 
+## calculate lattice spacing from g_3^2 and beta:
+spacing = 4.0 / (betaIn * gsq)
+
 ## lattice parameters
-paramsLat = convert_lattice(inputs)
-[gsq, gpsq, mphisq, lam, mSsq, b1, b3, b4, a1, a2, a] = paramsLat
+paramsLat = convert_lattice(inputs, spacing)
+[beta, betau1, mphisq, lam, mSsq, b1, b3, b4, a1, a2, a] = paramsLat
 
-print('---- Lattice parameters for beta_G = '+str(beta)+' ----')
+print('---- Lattice parameters for beta_G = '+str(betaIn)+' ----')
 
-print('gsq %g, gpsq %g, mphisq %g, lambda %g, mSsq %g, b1 %g, b3 %g, b4 %g, a1 %g, a2 %g, a %g\n\n'
-                     % (gsq, gpsq, mphisq, lam, mSsq, b1, b3, b4, a1, a2, a))
+print('beta %g, betau1 %g, mphisq %g, lambda %g, mSsq %g, b1 %g, b3 %g, b4 %g, a1 %g, a2 %g, a %g\n\n'
+                     % (beta, betau1, mphisq, lam, mSsq, b1, b3, b4, a1, a2, a))
 
 
 write_params('params_lattice.dat', paramsLat, T, 1)
@@ -237,20 +250,21 @@ if len(sys.argv) == 6:
 
     p1 = getAllParams(T1)
     p2 = getAllParams(T2)
-    p1lat = convert_lattice(p1)
-    p2lat = convert_lattice(p2)
+    ## lattice params at the two temperatures; keep 'a' fixed but beta can change to compensate change in g_3^2(T)
+    p1lat = convert_lattice(p1, spacing)
+    p2lat = convert_lattice(p2, spacing)
 
     k = []
     for i in range(0, len(p1lat)):
     	k.append( 1.0*volume * (p2lat[i]-p1lat[i])/(T2-T1) )
 
     ## k now contains V * d/dT for each parameter in the action (V = number of sites):
-    [gsq, gpsq, mphisq, lam, mSsq, b1, b2, b3, a1, a2, a] = k
+    [beta, betau1, mphisq, lam, mSsq, b1, b2, b3, a1, a2, a] = k ## same ordering as in output of convert_lattice()
 
     print('---- Reweight string ----\n')
-    print('%.16f * #6 + %.16f * #7 + + %.16f * #8 + %.16f * #9 \
-        + %.16f * #10 + %.16f * #11 + %.16f * #12 + %.16f * #13' %
-        (mphisq, lam, b1, mSsq, b3, b4, a1, a2))
+    print(('%.16f * #4 + %.16f * #5 + %.16f * #7 + %.16f * #8 + %.16f * #9 + %.16f * #10'
+        ' + %.16f * #11 + %.16f * #12 + %.16f * #13 + %.16f * #14') %
+        (beta, betau1, mphisq, lam, b1, mSsq, b3, b4, a1, a2))
 
     #  #n is the nth column in measure file.
 
