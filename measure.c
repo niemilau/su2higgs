@@ -19,9 +19,9 @@ void print_labels() {
 	fprintf(f, "%d weight\n", k); k++; // multicanonical weight
 	fprintf(f, "%d muca param\n", k); k++; // multicanonical order parameter value
 	fprintf(f, "%d action\n", k); k++;
-	fprintf(f, "%d SU(2) Wilson\n", k); k++;
+	fprintf(f, "%d SU(2) Wilson (divided by beta)\n", k); k++;
 	#ifdef U1
-		fprintf(f, "%d U(1) Wilson\n", k); k++;
+		fprintf(f, "%d U(1) Wilson (divided by beta)\n", k); k++;
 	#endif
 	#if (NHIGGS > 0)
 		fprintf(f, "%d hopping_phi (avg over directions)\n", k); k++;
@@ -241,15 +241,15 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 	double vol = ((double) l->vol);
 
-	// write to the file from root node. This is very fast performance wise
-	// the ordering here should be the same as in print_labels()
+	// Write to the file from root node. Use same ordering here as in print_labels()
+	// For Wilson gauge actions I divide by their respective beta, which was included in local_su2wilson() etc
 	if (!l->rank) {
 		fprintf(file, "%g %g ", weight, muca_param);
 		fprintf(file, "%g %g ",
-			action, wilson / vol
+			action, wilson / (vol * p->betasu2)
 		);
 		#ifdef U1
-			fprintf(file, "%g ", u1wilson / vol);
+			fprintf(file, "%g ", u1wilson / (vol * p->betau1));
 		#endif
 
 		#if (NHIGGS > 0 )
