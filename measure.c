@@ -246,10 +246,10 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	if (!l->rank) {
 		fprintf(file, "%g %g ", weight, muca_param);
 		fprintf(file, "%g %g ",
-			action, wilson/(vol * l->dim)
+			action, wilson / vol
 		);
 		#ifdef U1
-			fprintf(file, "%g ", u1wilson/ (vol * l->dim) );
+			fprintf(file, "%g ", u1wilson / vol);
 		#endif
 
 		#if (NHIGGS > 0 )
