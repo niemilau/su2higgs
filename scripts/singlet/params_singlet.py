@@ -93,13 +93,15 @@ def write_params(fname, plist, T, islat):
     f.write('T %.16f\n' % T)
     f.write('%s %.16f\n' % (scale_id, scale))
 
+		## for lattice params, the gsq and gpsq are actually beta and betaU1
     if (islat):
         f.write('beta %.16f\n' % beta)
-        f.write('betaU1 %.16f\n' % (1.0/gpsq))
+        f.write('betaU1 %.16f\n' % gpsq)
         f.write('gammaU1 %.16f\n' % gamma)
+    else:
+    	f.write('gsq %.16f\n' % gsq)
+    	f.write('gpsq %.16f\n' % gpsq)
 
-    f.write('gsq %.16f\n' % gsq)
-    f.write('gpsq %.16f\n' % gpsq)
     f.write('mphisq %.16f\n' % mphisq)
     f.write('lambda %.16f\n' % lam)
     f.write('mSsq %.16f\n' % mSsq)
