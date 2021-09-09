@@ -224,6 +224,9 @@ print('gsq %g, gpsq %g, mphisq %g, lambda %g, mSsq %g, b1 %g, b3 %g, b4 %g, a1 %
 write_params('params_continuum.dat', inputs, T, 0)
 
 
+gsq_cont = gsq
+a2_cont = a2
+
 ## calculate lattice spacing from g_3^2 and beta:
 spacing = 4.0 / (betaIn * gsq)
 
@@ -239,8 +242,15 @@ print('beta %g, betau1 %g, mphisq %g, lambda %g, mSsq %g, b1 %g, b3 %g, b4 %g, a
 
 write_params('params_lattice.dat', paramsLat, T, 1)
 
+
+print('Scales (GeV): g^2 T %g, gT %g, a2 T %g, lattice cutoff %g' % (math.sqrt(gsq_cont) * math.sqrt(T), gsq_cont, a2_cont, 1.0/spacing))
+
+
 ### Calculate reweight string if the volume was given ###
 if len(sys.argv) == 6:
+    sidelen = volume**(1.0/3.0)
+    print('Length scales (1/GeV): 1/(g^2 T) %g, lattice side %g' % (1.0/gsq_cont, spacing*sidelen))
+    print('')
 
     ## linearize in T
     T1 = nearest(temps, T-0.1)
