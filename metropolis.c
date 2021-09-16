@@ -52,7 +52,7 @@ int metro_u1link(lattice const* l, fields* f, params const* p, long i, int dir) 
 	double linkact_old = localact_u1link(l, f, p, i, dir);
 
 	// multiply link by a random phase (can adjust the overall number here)
-	f->u1link[i][dir] += 1.0*(dran() - 0.5);
+	f->u1link[i][dir] += 0.95*(dran() - 0.5);
 
 	double linkact_new = localact_u1link(l, f, p, i, dir);
 
