@@ -32,17 +32,20 @@ def lin_int(x, b, k):
 
 ## read in temperature T and beta_G
 if not len(sys.argv) in [5,6]:
-    sys.stderr.write('Usage: %s <input file> <T> <beta_G> <gamma> <volume (optional)>\n' %
+    sys.stderr.write('Usage: %s <input file> <T> <beta_G> <r_u1> <volume (optional)>\n' %
                      sys.argv[0])
     sys.exit(1)
 
 datafile = sys.argv[1]
 T = float(sys.argv[2])
 betaIn = float(sys.argv[3])
-gamma = float(sys.argv[4])
+r_u1 = float(sys.argv[4])
 
 if len(sys.argv) == 6:
     volume = int(sys.argv[5])
+
+if not (r_u1.is_integer()):
+    print("!!! r_u1 = %.16f is not an integer, does not define U(1) irrep\n" % r_u1)
 
 params = genfromtxt(datafile, names=True)
 
@@ -58,7 +61,7 @@ def get_param(name, T):
     par = line[name][0]
     return par
 
-## get all parameters
+## get all parameters from the input file
 def getAllParams(T):
 
     gsq = get_param('gsq', T)
@@ -97,7 +100,7 @@ def write_params(fname, plist, T, islat):
     if (islat):
         f.write('beta %.16f\n' % beta)
         f.write('betaU1 %.16f\n' % gpsq)
-        f.write('gammaU1 %.16f\n' % gamma)
+        f.write('r_U1 %.16f\n' % r_u1)
     else:
     	f.write('gsq %.16f\n' % gsq)
     	f.write('gpsq %.16f\n' % gpsq)
@@ -134,7 +137,8 @@ def convert_lattice(p_cont, spacing):
     ## logarithm that appears frequently, plus zeta
     logPlusZeta = math.log(6.0/(a*RGscale)) + zeta
 
-    ### Counterterms. Note that U(1) gamma here is in the convention used in my code
+    ### Counterterms. Here I assume the U(1) coupling gpsq to be in Y = 1/2 normalization
+
 
     ## Higgs mass counterterms. First contributions from SU(2) + Higgs only
     mphisq_ct1 = -Sigma/(8.0*math.pi*a) * (3*gsq + gpsq + 12*lam);
@@ -146,7 +150,7 @@ def convert_lattice(p_cont, spacing):
         + 3*lam * (3*gsq + gpsq) * (delta - 0.25*Sigma**2) \
         + gsq**2 * (-15.0/16.0 - 45.0/64.0 *Sigma**2 - math.pi/4.0*Sigma \
         + 33.0/8.0 *delta + 9.0/2.0*rho - 3*k1 + 3.0/2.0*k4) \
-        + gpsq**2 * (1.0/16.0 - 1.0/64.0*Sigma**2 - 2*math.pi/(3.0*gamma**2)*Sigma \
+        + gpsq**2 * (1.0/16.0 - 1.0/64.0*Sigma**2 - math.pi*Sigma*r_u1**2 / 6.0 \
         + 1.0/8.0*delta + 0.5*rho) + gsq*gpsq * (3.0/8.0 - 3.0/32.0*Sigma**2 + 3.0/4.0*delta) \
         )
 
@@ -180,7 +184,7 @@ def convert_lattice(p_cont, spacing):
     gsq_lat = a * gsq
     beta = 4.0 / gsq_lat
     gpsq_lat = a * gpsq
-    betau1 = 1.0 / gpsq_lat
+    betau1 = 4.0 / (gpsq_lat * r_u1**2)
 
     lam_lat = a * lam
     b3_lat = b3 * a**(3.0/2.0)
