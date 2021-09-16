@@ -38,7 +38,7 @@ cp config config_bu
 sed -i "s/at T = .*/at T = $T, a = $a/g" config
 sed -i "s/betasu2 .*/betasu2 $beta/g" config
 sed -i "s/betau1 .*/betau1 $betau1/g" config
-sed -i "s/r_u1 .*/gammau1 $r_u1/g" config
+sed -i "s/r_u1 .*/r_u1 $r_u1/g" config
 sed -i "s/msq .*/msq $mphisq/g" config
 sed -i "s/lambda .*/lambda $lambda/g" config
 sed -i "s/msq_s .*/msq_s $mSsq/g" config

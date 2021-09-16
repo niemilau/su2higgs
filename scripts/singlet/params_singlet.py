@@ -247,7 +247,7 @@ print('beta %g, betau1 %g, mphisq %g, lambda %g, mSsq %g, b1 %g, b3 %g, b4 %g, a
 write_params('params_lattice.dat', paramsLat, T, 1)
 
 
-print('Scales (GeV): g^2 T %g, gT %g, a2 T %g, lattice cutoff %g' % (math.sqrt(gsq_cont) * math.sqrt(T), gsq_cont, a2_cont, 1.0/spacing))
+print('Scales (GeV): g^2 T %g, gT %g, a2 T %g, lattice cutoff %g' % (gsq_cont, math.sqrt(gsq_cont) * math.sqrt(T), a2_cont, 1.0/spacing))
 
 
 ### Calculate reweight string if the volume was given ###
