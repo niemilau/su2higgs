@@ -136,9 +136,9 @@ typedef struct {
 
 	// U(1) hypercharge
 	#ifdef U1
-		// Wilson action is S = gamma^2 * betau1 * sum_{x, i<j} (1 - Re p_{ij}^{1/gamma})
-		double betau1; // 1 / (a g'^2) in this code
-		double gammau1; // my gamma = 2 * gamma of hep-lat/9705003 and hep-lat/9612006
+		// Wilson action is S = betau1 * sum_{x, i<j} (1 - Re p_{ij}^r) with r = integer
+		double betau1;
+		double r_u1; // labels irreducible representations of U(1)
 		short algorithm_u1link;
 	#endif
 

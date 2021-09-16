@@ -9,7 +9,7 @@
 
 #include "su2.h"
 
-/* Calculate the total of some quantity over the all sites (in my node!) at location x_dir.
+/* Calculate the total of some quantity over all sites with fixed coordinate in some direction..
 * The first argument is a pointer to the function that is called at each site whose physical coordinate
 * equals x in the direction dir. The function operates on field[site].
 * Note: does not divide by the number of sites */
@@ -35,7 +35,7 @@ double plane_sum(double (*funct)(double*), double** field, lattice* l, long x, i
 
 #if (NHIGGS > 0)
 /* Calculate H(l) = (1/V) \sum_z h(z) h(z+l),
-* where h(z) = \sum_{x,y} Tr\Phi(z)\Phi(z).
+* where h(z) = \sum_{x,y} Tr\he\Phi(z)\Phi(z).
 * Below the argument d = l and dir specifies which direction z lives in. */
 double higgs_correlator(lattice* l, fields const* f, int d, int dir, int higgs_id) {
 
@@ -53,7 +53,7 @@ double higgs_correlator(lattice* l, fields const* f, int d, int dir, int higgs_i
     res += h1 * h2;
   }
 
-  // also: doubletsq measures 0.5 Tr Phi^+ Phi, so multiply by 4 to get H(l)
+  // doubletsq measures 0.5 Tr Phi^+ Phi, so multiply by 4 to get H(l)
   return 4.0*res / ((double) l->vol);
 }
 

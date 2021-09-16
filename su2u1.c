@@ -40,8 +40,8 @@
 *	where the normalization matches what is usually used in continuum for the A[a].
 *
 *	U(1) links are written simply as U_j(x) = exp(i a_j(x)), where a_j(x) is real
-* and stored in u1link[x][j]. We assume "standard" Wilson action, i.e.
-* 	gamma = 1, see doc.
+* and stored in u1link[x][j]. I use a compact formulation (gauge group really is U(1)).
+* Higgs hypercharge is normalized to Y=1 in the code.
 *
 * For 2 Higgs doublets (flag HIGGS2), I assume a doublet basis where the kinetic
 * terms are diagonal and canonically normalized.
@@ -281,12 +281,17 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 ***********************************/
 
 /* The link variable is u_mu(x) = e^(i alpha_\mu(x)), and my
-* u1link[i][mu] = alpha_\mu at site i. Normalization is so that \alpha_\mu = g' B_\mu
-* when the continuum field B_\mu is canonically normalized. This means that
-* the hopping term of a hypercharge-Y field has u_mu(x)^Y. */
+* u1link[i][mu] = alpha_\mu at site i. In compact formulation
+* the alpha's are angular variables, so restrict to  ]-pi, pi] */
 
-/* U(1) Wilson action is S = gamma^2 * betau1 * sum_{x, i<j} (1 - Re p_{ij}^{1/gamma}).
-* My gamma = 2 * gamma of hep-lat/9705003 and hep-lat/9612006.
+/* My U(1) action is S = betau1 * sum_{x, i<j} (1 - Re p_{ij}^r),
+* which is simply a plaquette in r-representation of U(1). r = integer.
+* My r = 1/gamma of hep-lat/9705003 and hep-lat/9612006.
+* Note that all matter fields need to be in irreps of U(1), so that the charge
+* is always an integer. When converting from continuum theory this may require
+* a rescaling of the gauge coupling. For example if Higgs covariant derivative is
+* D_i \phi = partial_i \phi + i g'/2 B_i \phi and there are no other matter fields,
+* then beta_G' = 4 / (a g'^2 r^2) gives the correct continuum action.
 */
 
 /* Calculate plaquette trace in the (dir1, dir2) plane
@@ -304,10 +309,10 @@ double u1ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2) {
 }
 
 /* Calculate Wilson action for a single U(1) link. Construction is so that
-* a loop over sites gives the total Wilson action. This is NOT the full Contribution
+* a loop over sites gives the total gauge action. This is NOT the full contribution
 * due to a single link, so do NOT use this in update algorithms.
 *  Specifically, calculates:
-* gamma^2 * beta_U1 * \Sum_{i < j} {1 - cos[(a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x) / gamma]} */
+* beta_U1 * \Sum_{i < j} {1 - cos[r * (a_i(x) + a_j(x+i) - a_i(x+j) - a_j(x))]} */
 double local_u1wilson(lattice const* l, fields const* f, params const* p, long i) {
 
 	double res = 0.0;
@@ -315,11 +320,11 @@ double local_u1wilson(lattice const* l, fields const* f, params const* p, long i
 	for (int dir1 = 0; dir1 < l->dim; dir1++) {
 		for (int dir2 = 0; dir2 < dir1; dir2++ ) {
 			double plaq = u1ptrace(l, f, i, dir2, dir1);
-			res += (1.0 - cos(plaq / p->gammau1) );
+			res += (1.0 - cos(p->r_u1 * plaq) );
 		}
 	}
 
-	return p->gammau1 * p->gammau1 * p->betau1 * res;
+	return p->betau1 * res;
 }
 
 
@@ -334,11 +339,11 @@ double localact_u1link(lattice const* l, fields const* f, params const* p, long 
 
 	for (int dir2 = 0; dir2<l->dim; dir2++) {
 		if (dir2 != dir) {
-			tot += (1.0 - cos(u1ptrace(l, f, i, dir, dir2) / p->gammau1));
-			tot += (1.0 - cos(u1ptrace(l, f, l->prev[i][dir2], dir, dir2) / p->gammau1) );
+			tot += (1.0 - cos(p->r_u1 * u1ptrace(l, f, i, dir, dir2)));
+			tot += (1.0 - cos(p->r_u1 * u1ptrace(l, f, l->prev[i][dir2], dir, dir2)));
 		}
 	}
-	tot *= p->betau1 * p->gammau1 * p->gammau1;
+	tot *= p->betau1;
 
 	// hopping terms:
 	#if (NHIGGS > 0)
@@ -393,10 +398,11 @@ double hopping_trace(double* phi1, double* u, double* phi2) {
 #ifdef U1
 /* Same as hopping_trace(), but includes hypercharge.
 * Specifically, calculates:
-*		Re Tr \Phi_1^+ U \Phi_2 exp[-i Y alpha sigma_3], where alpha is stored in u1link */
+*		Re Tr \Phi_1^+ U \Phi_2 exp[-i Y alpha sigma_3], where alpha is stored in u1link
+* Here the Higgs hypercharge is normalized as Y = 1 ALWAYS (if changing this, change also staples.c etc)*/
 double hopping_trace_su2u1(double* phi1, double* u, double* phi2, double a) {
-	double s = sin(higgs_Y * a);
-	double c = cos(higgs_Y * a);
+	double s = sin(a);
+	double c = cos(a);
 
 	return c*phi1[0]*phi2[0]*u[0] - s*phi1[3]*phi2[0]*u[0] + c*phi1[1]*phi2[1]*u[0] -
    s*phi1[2]*phi2[1]*u[0] + s*phi1[1]*phi2[2]*u[0] + c*phi1[2]*phi2[2]*u[0] +

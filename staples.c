@@ -163,9 +163,9 @@ void su2link_staple(lattice const* l, fields const* f, params const* p, long i, 
 				// I cos(a) - i sin(a) sigma_3, so in our notation it can be
 				// treated as a doublet field with components
 				// a[0] = sqrt(2) cos(a), a[1] = 0, a[2] = 0, a[3] = -sqrt(2) sin(a).
-				// Hypercharge is contained in a in this example.
-				double s = sin(higgs_Y * f->u1link[i][dir]);
-				double c = cos(higgs_Y * f->u1link[i][dir]);
+				// I assume Higgs hypercharge Y=1.
+				double s = sin(f->u1link[i][dir]);
+				double c = cos(f->u1link[i][dir]);
 				double b[4];
 				for (int k=0; k<SU2DB; k++) b[k] = nextphi[k];
 
@@ -261,8 +261,9 @@ void staple_doublet(double* res, lattice const* l, fields const* f, params const
 			res[2] += -(b[2]*u[0]) - b[3]*u[1] - b[0]*u[2] + b[1]*u[3];
 			res[3] += -(b[3]*u[0]) + b[2]*u[1] - b[1]*u[2] - b[0]*u[3];
 		#else
-			double ss = sin(higgs_Y * f->u1link[i][dir]);
-			double cc = cos(higgs_Y * f->u1link[i][dir]);
+			// hypercharge Y = 1
+			double ss = sin(f->u1link[i][dir]);
+			double cc = cos(f->u1link[i][dir]);
 			res[0] += -(cc*b[0]*u[0]) - ss*b[3]*u[0] + cc*b[1]*u[1] + ss*b[2]*u[1]
 							- ss*b[1]*u[2] + cc*b[2]*u[2] - ss*b[0]*u[3] + cc*b[3]*u[3];
 			res[1] += -(cc*b[1]*u[0]) - ss*b[2]*u[0] - cc*b[0]*u[1] - ss*b[3]*u[1]
@@ -284,8 +285,8 @@ void staple_doublet(double* res, lattice const* l, fields const* f, params const
 			res[2] += -(b[2]*u[0]) + b[3]*u[1] + b[0]*u[2] - b[1]*u[3];
 			res[3] += -(b[3]*u[0]) - b[2]*u[1] + b[1]*u[2] + b[0]*u[3];
 		#else
-			ss = sin(higgs_Y * f->u1link[prev][dir]);
-			cc = cos(higgs_Y * f->u1link[prev][dir]);
+			ss = sin(f->u1link[prev][dir]);
+			cc = cos(f->u1link[prev][dir]);
 			res[0] += -(cc*b[0]*u[0]) + ss*b[3]*u[0] - cc*b[1]*u[1] + ss*b[2]*u[1]
 							- ss*b[1]*u[2] - cc*b[2]*u[2] - ss*b[0]*u[3] - cc*b[3]*u[3];
 			res[1] += -(cc*b[1]*u[0]) + ss*b[2]*u[0] + cc*b[0]*u[1] - ss*b[3]*u[1]

@@ -7,12 +7,6 @@
 #include "su2.h"
 
 
-#ifdef U1
-  // fix hypercharges manually. Note: global constant
-  const double higgs_Y = 0.5;
-#endif
-
-
 /** Helper routine, checks a parameter is set and if not prints error.
  */
 void check_set(int set, char *name) {
@@ -92,7 +86,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
 
 	int set_betasu2 = 0;
   int set_betau1 = 0;
-  int set_gammau1 = 0;
+  int set_r_u1 = 0;
 	// doublet
 	int set_lambda_phi = 0;
 	int set_msq_phi = 0;
@@ -336,9 +330,9 @@ void get_parameters(char *filename, lattice* l, params *p) {
       } else if(!strcasecmp(key,"betau1")) {
           p->betau1 = strtod(value,NULL);
           set_betau1 = 1;
-      } else if(!strcasecmp(key,"gammau1")) {
-          p->gammau1 = strtod(value,NULL);
-          set_gammau1 = 1;
+      } else if(!strcasecmp(key,"r_u1")) {
+          p->r_u1 = strtod(value,NULL);
+          set_r_u1 = 1;
       }
     #endif
 
@@ -535,7 +529,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
   check_set(set_scalar_sweeps, "scalar_sweeps");
   #ifdef U1
   check_set(set_betau1, "betau1");
-  check_set(set_gammau1, "gammau1");
+  check_set(set_r_u1, "gammau1");
   check_set(set_u1alg, "algorithm_u1link");
   #endif
   // these parameters are attempted to read but the checks are skipped
@@ -782,7 +776,7 @@ void print_parameters(lattice l, params p) {
 	printf("-------------------------- Lattice parameters --------------------------\n");
 	printf("SU(2) beta %g\n", p.betasu2);
   #ifdef U1
-    printf("U(1) beta %g, U(1) gamma %g\n", p.betau1, p.gammau1);
+    printf("U(1) beta %g, U(1) r %g\n", p.betau1, p.r_u1);
   #endif
 
   #if (NHIGGS == 2)
@@ -795,10 +789,6 @@ void print_parameters(lattice l, params p) {
 	  printf("msq (Higgs) %g, lambda (Higgs) %g, ", p.msq_phi, p.lambda_phi);
 	  printf("initial phi0 %g, update_su2doublet %d\n",p.phi0, p.update_su2doublet);
 	#endif
-
-  #if defined U1 && (NHIGGS > 0)
-    printf("Higgs hypercharge %g\n", higgs_Y);
-  #endif
 
 	#ifdef TRIPLET
 	printf("msq (triplet) %g, b4 %g, ", p.msq_triplet, p.b4);
