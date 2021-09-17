@@ -135,12 +135,6 @@ void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2,
 	memcpy(u3, f->su2link[ l->next[i][dir2] ][dir1], SU2LINK * sizeof(*u3));
 	memcpy(u4, f->su2link[i][dir2], SU2LINK * sizeof(*u4));
 
-	// conjugate u3 and u4
-	for (int k=1; k<SU2LINK; k++) {
-		u3[k] = -1.0 * u3[k];
-		u4[k] = -1.0 * u4[k];
-	}
-
 	su2rot(u1, u2, 0); // u1 <- u1.u2
 	su2rot(u1, u3, 1); // u1 <- u1.u3^+
 	su2rot(u1, u4, 1); // u1 <- u1.u4^+
@@ -231,19 +225,16 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 	site = l->prev[i][d1]; // x - mu
 	memcpy(u3, f->su2link[site][d2], SU2LINK * sizeof(*u1));
 	memcpy(u4, f->su2link[site][d1], SU2LINK * sizeof(*u1));
-	// take conjugates and multiply
-	for (int k=1; k<SU2LINK; k++) {
-		u2[k] = -1.0*u2[k];
-		u3[k] = -1.0*u3[k];
-	}
-	su2rot(u3, u4, 0);
-	su2rot(u2, u3, 0);
-	su2rot(u1, u2, 0);
+
+	su2rot(u1, u2, 1);
+	su2rot(u1, u3, 1);
+	su2rot(u1, u4, 0);
+
 	for (int k=0; k<SU2LINK; k++) {
 		clover[k] += u1[k];
 	}
 
-	// U^+_mu(x-mu) U^+_nu(x-nu-mu) U_mu(x-mu-nu) U_nu(x-nu
+	// U^+_mu(x-mu) U^+_nu(x-nu-mu) U_mu(x-mu-nu) U_nu(x-nu)
 	site = l->prev[i][d1]; // x - mu
 	memcpy(u1, f->su2link[site][d1], SU2LINK * sizeof(*u1));
 	site = l->prev[site][d2]; // x - nu - mu
@@ -251,14 +242,15 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 	memcpy(u3, f->su2link[site][d1], SU2LINK * sizeof(*u1));
 	site = l->prev[i][d2]; // x - nu
 	memcpy(u4, f->su2link[site][d2], SU2LINK * sizeof(*u1));
-	// take conjugates and multiply
+	// take conjugate and multiply
 	for (int k=1; k<SU2LINK; k++) {
 		u1[k] = -1.0*u1[k];
-		u2[k] = -1.0*u2[k];
 	}
-	su2rot(u3, u4, 0);
-	su2rot(u2, u3, 0);
-	su2rot(u1, u2, 0);
+
+	su2rot(u1, u2, 1);
+	su2rot(u1, u3, 0);
+	su2rot(u1, u4, 0);
+
 	for (int k=0; k<SU2LINK; k++) {
 		clover[k] += u1[k];
 	}
@@ -270,14 +262,15 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 	site = l->next[site][d1]; // x + mu - nu
 	memcpy(u3, f->su2link[site][d2], SU2LINK * sizeof(*u1));
 	memcpy(u4, f->su2link[i][d1], SU2LINK * sizeof(*u1));
-	// take conjugates and multiply
+	// take conjugate and multiply
 	for (int k=1; k<SU2LINK; k++) {
 		u1[k] = -1.0*u1[k];
-		u4[k] = -1.0*u4[k];
 	}
-	su2rot(u3, u4, 0);
-	su2rot(u2, u3, 0);
+
 	su2rot(u1, u2, 0);
+	su2rot(u1, u3, 0);
+	su2rot(u1, u4, 1);
+
 	for (int k=0; k<SU2LINK; k++) {
 		clover[k] += u1[k];
 	}
