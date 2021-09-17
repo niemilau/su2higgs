@@ -580,6 +580,9 @@ void make_blocked_fields(lattice* l, lattice* b, fields const* f_smeared, fields
       for (int db=0; db<NHIGGS; db++)
         transfer_blocked_field(l, b, f_smeared->su2doublet[db], f_blocked->su2doublet[db], SU2DB);
     #endif
+    #ifdef SINGLET
+      transfer_blocked_field(l, b, f_smeared->singlet, f_blocked->singlet, 1);
+    #endif
     #ifdef TRIPLET
       transfer_blocked_field(l, b, f_smeared->su2triplet, f_blocked->su2triplet, SU2TRIP);
     #endif
@@ -644,8 +647,12 @@ void block_fields_ownnode(lattice const* l, lattice const* b, fields const* f_sm
         f_blocked->u1link[site_b][dir] = f_smeared->u1link[site_l][dir];
       #endif
     }
-    #ifdef HIGGS
-      memcpy(f_blocked->su2doublet[site_b], f_smeared->su2doublet[site_l], SU2DB * sizeof(f_blocked->su2doublet[site_b][0]));
+    #if (NHIGGS > 0)
+      for (int db=0; db<NHIGGS; db++)
+        memcpy(f_blocked->su2doublet[db][site_b], f_smeared->su2doublet[db][site_l], SU2DB * sizeof(f_blocked->su2doublet[db][site_b][0]));
+    #endif
+    #ifdef SINGLET
+      memcpy(f_blocked->singlet[site_b], f_smeared->singlet[site_l], 1 * sizeof(f_blocked->singlet[site_b][0]));
     #endif
     #ifdef TRIPLET
       memcpy(f_blocked->su2triplet[site_b], f_smeared->su2triplet[site_l], SU2TRIP * sizeof(f_blocked->su2triplet[site_b][0]));

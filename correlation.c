@@ -9,10 +9,10 @@
 
 #include "su2.h"
 
-/* Calculate the total of some quantity over all sites with fixed coordinate in some direction..
+/* Calculate the sum of some local quantity over all sites with fixed coordinate in some direction.
 * The first argument is a pointer to the function that is called at each site whose physical coordinate
 * equals x in the direction dir. The function operates on field[site].
-* Note: does not divide by the number of sites */
+* Note: no division by area, so this is not the plane average. */
 double plane_sum(double (*funct)(double*), double** field, lattice* l, long x, int dir) {
 
   double res = 0.0;
@@ -29,14 +29,16 @@ double plane_sum(double (*funct)(double*), double** field, lattice* l, long x, i
     }
   }
 
+  // double area = l->vol / l->L[dir];
   res = allreduce(res, l->comm);
   return res;
 }
 
 #if (NHIGGS > 0)
 /* Calculate H(l) = (1/V) \sum_z h(z) h(z+l),
-* where h(z) = \sum_{x,y} Tr\he\Phi(z)\Phi(z).
-* Below the argument d = l and dir specifies which direction z lives in. */
+* where h(z) = \sum_{x,y} 1/2 Tr\he\Phi(z)\Phi(z).
+* Below the argument d = l and dir specifies which direction z lives in.
+* The z-sum means we consider all pairing at fixed distance; this improves statistics somewhat. */
 double higgs_correlator(lattice* l, fields const* f, int d, int dir, int higgs_id) {
 
   double res = 0.0;
@@ -53,11 +55,53 @@ double higgs_correlator(lattice* l, fields const* f, int d, int dir, int higgs_i
     res += h1 * h2;
   }
 
-  // doubletsq measures 0.5 Tr Phi^+ Phi, so multiply by 4 to get H(l)
-  return 4.0*res / ((double) l->vol);
+  return res / l->vol;
+}
+
+double funct(double aa) {
+  return aa;
 }
 
 #endif // if NHIGGS > 0
+
+#ifdef SINGLET
+
+/* Calculate S(x) = (1/V) \sum_z s(z) s(z+d)
+* where s(z) = \sum_{x,y} j(z), and j(z) is the singlet field. */
+double singlet_correlator(lattice* l, fields const* f, int d, int dir) {
+
+  double res = 0.0;
+  for (int z=0; z<l->L[dir]; z++) {
+
+    int zd = (z + d) % l->L[dir];
+
+    double s1 = plane_sum(get_singlet, f->singlet, l, z, dir);
+    double s2 = plane_sum(get_singlet, f->singlet, l, zd, dir);
+
+    res += s1 * s2;
+  }
+
+  return res / l->vol;
+}
+
+/* Same as singlet_correlator, but here j(z) = 1/2 singlet^2 */
+double singletsq_correlator(lattice* l, fields const* f, int d, int dir) {
+
+  double res = 0.0;
+  for (int z=0; z<l->L[dir]; z++) {
+
+    int zd = (z + d) % l->L[dir];
+
+    double s1 = plane_sum(singletsq, f->singlet, l, z, dir);
+    double s2 = plane_sum(singletsq, f->singlet, l, zd, dir);
+
+    res += s1 * s2;
+  }
+
+  return res / l->vol;
+}
+
+#endif // ifdef SINGLET
 
 
 #ifdef TRIPLET
@@ -319,6 +363,10 @@ void print_labels_correlators() {
   #if (NHIGGS > 0)
     fprintf(f, "%d H(l) = sum_z h(z) h(z+l) / V\n", k); k++; // Higgs correlator
   #endif
+  #ifdef SINGLET
+    fprintf(f, "%d S(l) = sum_z s(z) s(z+l) / V\n", k); k++; // singlet correlator
+    fprintf(f, "%d S2(l) = sum_z s^2(z) s^2(z+l) / V\n", k); k++; // singlet^2 correlator
+  #endif
   #ifdef TRIPLET
     fprintf(f, "%d Sigma^2 correlator\n", k); k++;
     fprintf(f, "%d projected photon correlator RE\n", k); k++;
@@ -346,12 +394,16 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
     fprintf(file, "\n =========== Measurement id: %d ===========\n", meas_id);
 	}
 
-  // no point measuring along the full length on a periodic lattice
+  // but no point measuring along the full length on a periodic lattice
   int max_distance = l->L[dir] / 2;
 
   for (int d=0; d<max_distance; d++) {
     #if (NHIGGS > 0)
       double hcorr = higgs_correlator(l, f, d, dir, 0);
+    #endif
+    #ifdef SINGLET
+      double scorr = singlet_correlator(l, f, d, dir);
+      double s2corr = singletsq_correlator(l, f, d, dir);
     #endif
     #ifdef TRIPLET
       double tripcorr = triplet_correlator(l, f, d, dir);
@@ -369,6 +421,9 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
       fprintf(file, "%d ", d);
       #if (NHIGGS > 0)
         fprintf(file, "%g ", hcorr);
+      #endif
+      #ifdef SINGLET
+        fprintf(file, "%g %g", scorr, s2corr);
       #endif
       #ifdef TRIPLET
         fprintf(file, "%g ", tripcorr);
@@ -398,12 +453,6 @@ void measure_blocked_correlators(lattice* l, lattice* b, fields const* f, fields
   }
   fields f_smear;
   alloc_fields(l, &f_smear);
-
-  #if (NHIGGS > 0)
-    printf("Error in correlation.c: Higgs smearing not yet implemented!!!\n");
-    free_fields(l, &f_smear);
-    return;
-  #endif
 
   smear_fields(l, f, &f_smear, block_dir);
   // transfer the smeared fields on the blocked lattice:

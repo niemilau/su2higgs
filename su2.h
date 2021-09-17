@@ -382,14 +382,10 @@ double hopping_triplet_backward(lattice const* l, fields const* f, params const*
 double covariant_triplet(lattice const* l, fields const* f, params const* p, long i);
 double localact_triplet(lattice const* l, fields const* f, params const* p, long i);
 #ifdef SINGLET
+double get_singlet(double* s);
+double singletsq(double* s);
 double localact_singlet(lattice const* l, fields const* f, params const* p, long i);
 double potential_singlet(fields const* f, params const* p, long i);
-#endif
-#ifdef BLOCKING
-// smearing
-void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
-void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
-void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
 #endif
 
 
@@ -499,6 +495,10 @@ void update_weight_slow(weight* w);
 	#if (NHIGGS > 0)
 		double higgs_correlator(lattice* l, fields const* f, int x, int dir, int higgs_id);
 	#endif
+	#ifdef SINGLET
+		double singlet_correlator(lattice* l, fields const* f, int d, int dir);
+		double singletsq_correlator(lattice* l, fields const* f, int d, int dir);
+	#endif
 	#ifdef TRIPLET
 		double triplet_correlator(lattice* l, fields const* f, int d, int dir);
 		complex projected_photon_operator(lattice* l, fields const* f, int z, int dir, int* mom);
@@ -547,6 +547,14 @@ void update_weight_slow(weight* w);
 	void flow_triplet(lattice const* l, fields* flow, fields const* forces, double dt);
 	void remove_counterterms(params* p);
 #endif
+
+// smearing.c
+void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
+void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
+#ifdef SINGLET
+double smear_singlet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
+#endif
+void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
 
 #ifdef BLOCKING
 	// blocking.c

@@ -99,7 +99,9 @@ int main(int argc, char *argv[]) {
 
 	#ifdef BLOCKING
 		// alloc and initialize stuff needed for blocking
-		int block_levels = p.blocks; // original lattice + block_levels more
+		int block_levels = p.blocks;
+		/* p.blocks = 0 means no blocking; just the original lattice,
+		* but calculate the required stuff here still. */
 
 		l.blocklist.sends = 0; l.blocklist.recvs = 0;
 		realloc_comlist(&l.blocklist, RECV);
@@ -127,27 +129,33 @@ int main(int argc, char *argv[]) {
 		}
 		fflush(stdout);
 
-		lattice b[block_levels];
-		fields f_block[block_levels];
+		/* Blocked lattices and fields. If no blocking, define dummy that must not be accessed! */
+		int nb = block_levels;
+		if (block_levels <= 0) nb = 1;
+		lattice b[nb];
+		fields f_block[nb];
 
-		for (int k=0; k<block_levels; k++) {
-			lattice* base = NULL;
-			if (k == 0) {
-				// start from the original lattice
-				base = &l;
-			} else {
-				// use k-1 block level as the base
-				base = &b[k-1];
+		if (block_levels > 0) {
+			for (int k=0; k<block_levels; k++) {
+				lattice* base = NULL;
+				if (k == 0) {
+					// start from the original lattice
+					base = &l;
+				} else {
+					// use k-1 block level as the base
+					base = &b[k-1];
+				}
+
+				b[k].blocklist.sends = 0; b[k].blocklist.recvs = 0;
+				block_lattice(base, &b[k], block_dir);
+				alloc_fields(&b[k], &f_block[k]);
+				b[k].blocking_level = k+1;
 			}
 
-			b[k].blocklist.sends = 0; b[k].blocklist.recvs = 0;
-			block_lattice(base, &b[k], block_dir);
-			alloc_fields(&b[k], &f_block[k]);
-			b[k].blocking_level = k+1;
+			barrier(l.comm);
+			printf0(l, "--- Blocking structs ready ---\n\n");
 		}
 
-		barrier(l.comm);
-		printf0(l, "--- Blocking structs ready ---\n\n");
 	#endif
 
 	end_time = clock();
