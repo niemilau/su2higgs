@@ -182,7 +182,7 @@ void su2link_staple(lattice const* l, fields const* f, params const* p, long i, 
 			 there is another 1/sqrt(2) when we add the scalar staple to the
 			 link staple, so overall we add to the Wilson staple
 			 -0.5 times what su2rot() of two doublets gives us. */
-			su2rot(nextphi, currentphi);
+			su2rot(nextphi, currentphi, 0);
 			for (int k=0; k<SU2LINK; k++) {
 				V[k] -= 0.5 * nextphi[k];
 			}

@@ -23,7 +23,7 @@ int metro_su2link(lattice const* l, fields* f, params const* p, long i, int dir)
 	double newlink[4];
 	random_su2link(newlink);
 
-	su2rot(f->su2link[i][dir], newlink);
+	su2rot(f->su2link[i][dir], newlink, 0);
 
 	double linkact_new = localact_su2link(l, f, p, i, dir);
 

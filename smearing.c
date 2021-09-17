@@ -1,8 +1,7 @@
 /** @file smearing.c
 *
 * Routines for performing smearing transformations on the fields.
-* Used in conjuction with blocking routines in blocking.c,
-* but nothing here strictly requires that blocked lattices are coded in.
+* Used in conjuction with blocking routines in blocking.c.
 */
 
 #include "su2.h"
@@ -14,23 +13,84 @@
 * In all routines here the input
 * smear_dir[j] = 1 if the direction j is to be smeared, 0 otherwise. */
 
+#ifdef BLOCKING
 /* NB! the BLOCKING flag here protects smear_link() in particular, which can fail
 * in parallel implementation if the halo width is just 1 because it needs the
 * staple calculated also at a neighbor site, which may be in halo. in su2.h
 * HALOWIDTH is set to 2 if the BLOCKING flag is defined in makefile */
 
+
 /* Smear the SU(2) link at site i and store in res (link components).
 * This is done by calculating extended staples in the smearing directions,
 * including only pure gauge contributions.
-* See M. Teper, Phys.Lett.B 183 (1987);
-* however Kari seems to use slightly different blocking where he
-* separately calculates two staples:
-* 	U_i(y) = V_i(x) V_i(x+i), where
+* See M. Teper, Phys.Lett.B 183 (1987) and hep-lat/9602006.
+* However Kari seems to use slightly different blocking where he
+* separately calculates two staples, and I don't think this is analytically
+* the same as Teper's method. I have routines for both methods. */
+
+/* Calculate smeared SU(2) link according to Eq. (15) in hep-lat/9602006,
+* but normalize by the number of paths involved. Store in 'res', in SU(2) link parametrization.
+* Note that this requires U_i(x+2i), so for MPI we need halo that extends two lattice spacings. */
+void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
+
+	if (!smear_dir[dir]) {
+		printf("!!! WARNING: smearing gauge link without blocking the lattice dimension (in su2u1.c)\n");
+	}
+
+	int paths = 1;
+	long next = l->next[i][dir];
+
+	long x = i;
+	memcpy(res, f->su2link[x][dir], SU2LINK * sizeof(*f->su2link[x][dir]));
+	su2rot(res, f->su2link[next][dir], 0); // res <- Ui(x).Ui(x+i); now i = dir
+
+	// Staple paths
+	for (int j=0; j<l->dim; j++) {
+		if (j != dir && smear_dir[j]) {
+			double u[SU2LINK];
+			// u <- Uj(x).Ui(x+j).Ui(x+i+j).Uj^+(x+2i)
+			memcpy(u, f->su2link[x][j], SU2LINK * sizeof(*f->su2link[x][j]));
+			next = l->next[x][j];
+			su2rot(u, f->su2link[next][dir], 0);
+			su2rot(u, f->su2link[ l->next[next][dir] ][dir], 0);
+			next = l->next[ l->next[x][dir] ][dir];
+			su2rot(u, f->su2link[next][j], 1);
+
+			// upper staple done.
+			for (int k=0; k<SU2LINK; k++) res[k] += u[k];
+
+			// then the lower staple: u <- Uj^+(x-j).Ui(x-j).Ui(x+i-j).Uj(x+2i-j)
+			long prev = l->prev[x][j];
+			memcpy(u, f->su2link[prev][j], SU2LINK * sizeof(*f->su2link[prev][j]));
+			// conjugate it:
+			for (int k=1; k<SU2LINK; k++) u[k] *= -1.0;
+			// then multiply with the other links
+			su2rot(u, f->su2link[prev][dir], 0);
+			next = l->next[prev][dir];
+			su2rot(u, f->su2link[next][dir], 0);
+			su2rot(u, f->su2link[ l->next[next][dir] ][j], 0);
+
+			// lower staple done.
+			for (int k=0; k<SU2LINK; k++) res[k] += u[k];
+
+			paths += 2;
+		}
+	}
+
+	// normalize and done.
+	for (int k=0; k<SU2LINK; k++) res[k] /= paths;
+
+}
+
+
+/* Kari's method: eq. (6.5)-(6.6) in hep-lat/9612006.
+* The smeared link is
+* U_i(y) = V_i(x) V_i(x+i), where
 *		V_i(x) = U_i(x) + \sum_j U_j(x) U_i(x+j) U_j^+(x+i)
 * with the sum running over blocked directions, including backwards dirs, and j != i.
 * Kari has normalization factor of 1/3 in V_i because for i=1,2, the original link
-* plus a backwards and forward staple contributes. I am using Kari's method here. */
-void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
+* plus a backwards and forward staple contribute in 3D. */
+void smear_link_kari(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
 
 	if (!smear_dir[dir]) {
 		printf("WARNING: smearing gauge link without blocking the lattice dimension (in su2u1.c)\n");
@@ -67,7 +127,7 @@ void smear_link(lattice const* l, fields const* f, int const* smear_dir, double*
 		v2[k] /= ((double) paths);
 	}
 
-	su2rot(res, v2); // res <- V1.V2 = V_dir(x) V_dir(x+dir)
+	su2rot(res, v2, 0); // res <- V1.V2 = V_dir(x) V_dir(x+dir)
 	// in general this is unitary but not necessarily in SU(2). so normalize again:
 	double det = su2sqr(res);
 	det = sqrt(det);
@@ -216,3 +276,5 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
 
   } // end i
 }
+
+#endif // ifdef BLOCKING

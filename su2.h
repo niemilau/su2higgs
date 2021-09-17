@@ -350,7 +350,7 @@ void free_comlist(comlist_struct* comlist);
 
 // su2u1.c
 double su2sqr(double *u);
-void su2rot(double *u1, double *u2);
+void su2rot(double *u1, double const* u2, int conjugate);
 void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2, double* u1);
 double su2ptrace(lattice const* l, fields const* f, long i, int dir1, int dir2);
 long double local_su2wilson(lattice const* l, fields const* f, params const* p, long i);
@@ -548,13 +548,16 @@ void update_weight_slow(weight* w);
 	void remove_counterterms(params* p);
 #endif
 
-// smearing.c
-void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
-void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
-#ifdef SINGLET
-double smear_singlet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
+#ifdef BLOCKING
+	// smearing.c
+	void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
+	void smear_link_kari(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
+	void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
+	#ifdef SINGLET
+	double smear_singlet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
+	#endif
+	void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
 #endif
-void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* block_dir);
 
 #ifdef BLOCKING
 	// blocking.c

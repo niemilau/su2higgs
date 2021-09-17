@@ -449,7 +449,7 @@ void measure_blocked_correlators(lattice* l, lattice* b, fields const* f, fields
       int const* block_dir, int dir, int id) {
 
   if (block_dir[dir] && !l->rank) {
-    printf("Warning: calculating correlation lengths in a blocked direction\n");
+    printf("!!! Warning: calculating correlation lengths in a blocked direction\n");
   }
   fields f_smear;
   alloc_fields(l, &f_smear);

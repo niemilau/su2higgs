@@ -56,13 +56,24 @@ double su2sqr(double *u) {
 }
 
 
-// rotate U1 from the right by U2 and store again in U1: U1 <- U1.U2.
-void su2rot(double *u1, double *u2) {
+/* rotate U1 from the right by U2 and store again in U1: U1 <- U1.U2.
+* If conjugate != 0, take hermitian conjugate of U2 first */
+void su2rot(double *u1, double const* u2, int conjugate) {
 
-	double new1 = u1[0]*u2[0] - u1[1]*u2[1] - u1[2]*u2[2] - u1[3]*u2[3];
-	double new2 = u1[1]*u2[0] + u1[0]*u2[1] + u1[3]*u2[2] - u1[2]*u2[3];
-	double new3 = u1[2]*u2[0] - u1[3]*u2[1] + u1[0]*u2[2] + u1[1]*u2[3];
-	double new4 = u1[3]*u2[0] + u1[2]*u2[1] - u1[1]*u2[2] + u1[0]*u2[3];
+	double new1, new2, new3, new4;
+	if (conjugate == 0) {
+		new1 = u1[0]*u2[0] - u1[1]*u2[1] - u1[2]*u2[2] - u1[3]*u2[3];
+		new2 = u1[1]*u2[0] + u1[0]*u2[1] + u1[3]*u2[2] - u1[2]*u2[3];
+		new3 = u1[2]*u2[0] - u1[3]*u2[1] + u1[0]*u2[2] + u1[1]*u2[3];
+		new4 = u1[3]*u2[0] + u1[2]*u2[1] - u1[1]*u2[2] + u1[0]*u2[3];
+	} else {
+		// Conjugate corresponds to flipping signs of u2[k] for k != 0
+		// mini-optimize by hardcoding the result (as we can't modify u2 here)
+		new1 = u1[0]*u2[0] + u1[1]*u2[1] + u1[2]*u2[2] + u1[3]*u2[3];
+		new2 = u1[1]*u2[0] - u1[0]*u2[1] - u1[3]*u2[2] + u1[2]*u2[3];
+		new3 = u1[2]*u2[0] + u1[3]*u2[1] - u1[0]*u2[2] - u1[1]*u2[3];
+		new4 = u1[3]*u2[0] - u1[2]*u2[1] + u1[1]*u2[2] - u1[0]*u2[3];
+	}
 	u1[0] = new1;
 	u1[1] = new2;
 	u1[2] = new3;
@@ -130,9 +141,9 @@ void su2plaquette(lattice const* l, fields const* f, long i, int dir1, int dir2,
 		u4[k] = -1.0 * u4[k];
 	}
 
-	su2rot(u3, u4); // u3 <- u3.u4
-	su2rot(u2, u3); // u2 <- u2.u3
-	su2rot(u1, u2); // u1 <- u1.u2
+	su2rot(u1, u2, 0); // u1 <- u1.u2
+	su2rot(u1, u3, 1); // u1 <- u1.u3^+
+	su2rot(u1, u4, 1); // u1 <- u1.u4^+
 }
 
 
@@ -180,7 +191,7 @@ double localact_su2link(lattice const* l, fields const* f, params const* p, long
 	double V[4];
 	memcpy(V, f.su2link[i][dir], SU2LINK*sizeof(double));
 	su2staple_wilson(f, i, dir, staple);
-	su2rot(V,staple);
+	su2rot(V,staple, 0);
 
 	tot = p.betasu2 * (1.0 * p.dim * 0.5 - 0.5*2*V[0]);
 	*/
@@ -225,9 +236,9 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 		u2[k] = -1.0*u2[k];
 		u3[k] = -1.0*u3[k];
 	}
-	su2rot(u3, u4);
-	su2rot(u2, u3);
-	su2rot(u1, u2);
+	su2rot(u3, u4, 0);
+	su2rot(u2, u3, 0);
+	su2rot(u1, u2, 0);
 	for (int k=0; k<SU2LINK; k++) {
 		clover[k] += u1[k];
 	}
@@ -245,9 +256,9 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 		u1[k] = -1.0*u1[k];
 		u2[k] = -1.0*u2[k];
 	}
-	su2rot(u3, u4);
-	su2rot(u2, u3);
-	su2rot(u1, u2);
+	su2rot(u3, u4, 0);
+	su2rot(u2, u3, 0);
+	su2rot(u1, u2, 0);
 	for (int k=0; k<SU2LINK; k++) {
 		clover[k] += u1[k];
 	}
@@ -264,9 +275,9 @@ void clover_su2(lattice const* l, fields const* f, long i, int d1, int d2, doubl
 		u1[k] = -1.0*u1[k];
 		u4[k] = -1.0*u4[k];
 	}
-	su2rot(u3, u4);
-	su2rot(u2, u3);
-	su2rot(u1, u2);
+	su2rot(u3, u4, 0);
+	su2rot(u2, u3, 0);
+	su2rot(u1, u2, 0);
 	for (int k=0; k<SU2LINK; k++) {
 		clover[k] += u1[k];
 	}

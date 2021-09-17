@@ -93,10 +93,7 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 
 	// new link value is obtained by rotating this from the right
 	// with hermitian conjugate of the normalized staple.
-	V[1] = -V[1];
-	V[2] = -V[2];
-	V[3] = -V[3];
-	su2rot(f->su2link[i][dir], V);
+	su2rot(f->su2link[i][dir], V, 1);
 
 	#ifdef TRIPLET
 		double newact = 0.0;
