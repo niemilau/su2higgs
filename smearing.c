@@ -26,12 +26,67 @@
 * See M. Teper, Phys.Lett.B 183 (1987) and hep-lat/9602006.
 * However Kari seems to use slightly different blocking where he
 * separately calculates two staples, and I don't think this is analytically
-* the same as Teper's method. I have routines for both methods. */
+* the same as Teper's method (Kari involves more links). I have routines for both methods. */
+
+
+/* Kari's method: eq. (6.5)-(6.6) in hep-lat/9612006.
+* The smeared link is
+* U_i(y) = V_i(x) V_i(x+i), where
+*		V_i(x) = U_i(x) + \sum_j U_j(x) U_i(x+j) U_j^+(x+i)
+* with the sum running over blocked directions, including backwards dirs, and j != i.
+* Kari has normalization factor of 1/3 in V_i because for i=1,2, the original link
+* plus a backwards and forward staple contribute in 3D. */
+void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
+
+	if (!smear_dir[dir]) {
+		printf("WARNING: smearing gauge link without blocking the lattice dimension (in su2u1.c)\n");
+	}
+
+	double stap[SU2LINK] = { 0.0 };
+	memcpy(res, f->su2link[i][dir], SU2LINK * sizeof(*f->su2link[i][dir])); // will first construct res = V_dir(x)
+
+	double v2[SU2LINK]; // v2 = V_dir(x+dir)
+	memcpy(v2, f->su2link[ l->next[i][dir] ][dir], SU2LINK * sizeof(*f->su2link[i][dir]));
+
+	int paths = 1; // how many "paths" are involved in smearing
+	for (int j=0; j<l->dim; j++) {
+		if (j != dir && smear_dir[j]) {
+			// staples, but with the usual direction reversed (so take Hermitian conjugate)
+			su2staple_wilson_onedir(l, f, i, dir, j, 1, stap);
+			for (int k=0; k<SU2LINK; k++) {
+				res[k] += stap[k];
+			}
+
+			// repeat for site x+dir
+			su2staple_wilson_onedir(l, f, l->next[i][dir], dir, j, 1, stap);
+			for (int k=0; k<SU2LINK; k++) {
+				v2[k] += stap[k];
+			}
+
+			paths += 2; // counterwise and clockwise staples
+		}
+	}
+
+	// normalize
+	for (int k=0; k<SU2LINK; k++) {
+		res[k] /= ((double) paths);
+		v2[k] /= ((double) paths);
+	}
+
+	su2rot(res, v2, 0); // res <- V1.V2 = V_dir(x) V_dir(x+dir)
+	// in general this is unitary but not necessarily in SU(2). so normalize again:
+	double det = su2sqr(res);
+	det = sqrt(det);
+	for (int k=0; k<SU2LINK; k++) {
+		res[k] /= det;
+	}
+}
+
 
 /* Calculate smeared SU(2) link according to Eq. (15) in hep-lat/9602006,
 * but normalize by the number of paths involved. Store in 'res', in SU(2) link parametrization.
 * Note that this requires U_i(x+2i), so for MPI we need halo that extends two lattice spacings. */
-void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
+void smear_link_other(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
 
 	if (!smear_dir[dir]) {
 		printf("!!! WARNING: smearing gauge link without blocking the lattice dimension (in su2u1.c)\n");
@@ -77,57 +132,9 @@ void smear_link(lattice const* l, fields const* f, int const* smear_dir, double*
 		}
 	}
 
-	// normalize and done.
+	// normalize
 	for (int k=0; k<SU2LINK; k++) res[k] /= paths;
 
-}
-
-
-/* Kari's method: eq. (6.5)-(6.6) in hep-lat/9612006.
-* The smeared link is
-* U_i(y) = V_i(x) V_i(x+i), where
-*		V_i(x) = U_i(x) + \sum_j U_j(x) U_i(x+j) U_j^+(x+i)
-* with the sum running over blocked directions, including backwards dirs, and j != i.
-* Kari has normalization factor of 1/3 in V_i because for i=1,2, the original link
-* plus a backwards and forward staple contribute in 3D. */
-void smear_link_kari(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
-
-	if (!smear_dir[dir]) {
-		printf("WARNING: smearing gauge link without blocking the lattice dimension (in su2u1.c)\n");
-	}
-
-	double stap[SU2LINK] = { 0.0 };
-	memcpy(res, f->su2link[i][dir], SU2LINK * sizeof(*f->su2link[i][dir])); // will first construct res = V_dir(x)
-
-	double v2[SU2LINK]; // v2 = V_dir(x+dir)
-	memcpy(v2, f->su2link[ l->next[i][dir] ][dir], SU2LINK * sizeof(*f->su2link[i][dir]));
-
-	int paths = 1; // how many "paths" are involved in smearing
-	for (int j=0; j<l->dim; j++) {
-		if (j != dir && smear_dir[j]) {
-			// staples, but with the usual direction reversed (so take Hermitian conjugate)
-			su2staple_wilson_onedir(l, f, i, dir, j, 1, stap);
-			for (int k=0; k<SU2LINK; k++) {
-				res[k] += stap[k];
-			}
-
-			// repeat for site x+dir
-			su2staple_wilson_onedir(l, f, l->next[i][dir], dir, j, 1, stap);
-			for (int k=0; k<SU2LINK; k++) {
-				v2[k] += stap[k];
-			}
-
-			paths += 2; // counterwise and clockwise staples
-		}
-	}
-
-	// normalize
-	for (int k=0; k<SU2LINK; k++) {
-		res[k] /= ((double) paths);
-		v2[k] /= ((double) paths);
-	}
-
-	su2rot(res, v2, 0); // res <- V1.V2 = V_dir(x) V_dir(x+dir)
 	// in general this is unitary but not necessarily in SU(2). so normalize again:
 	double det = su2sqr(res);
 	det = sqrt(det);
@@ -137,10 +144,114 @@ void smear_link_kari(lattice const* l, fields const* f, int const* smear_dir, do
 
 }
 
+#ifdef U1
+/* U1: smear analogously to SU(2) links in hep-lat/9612006*/
+void smear_u1(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir) {
 
-// TODO doublet
-void smear_doublet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i) {
+	complex u1;
+	u1.re = cos(f->u1link[i][dir]);
+	u1.im = sin(f->u1link[i][dir]);
+
+	long next = l->next[i][dir];
+	complex u2;
+	u2.re = cos(f->u1link[next][dir]);
+	u2.im = sin(f->u1link[next][dir]);
+
+	int paths = 1; // how many "paths" are involved in smearing
+	for (int j=0; j<l->dim; j++) {
+		if (j != dir && smear_dir[j]) {
+
+			// staples, but with the usual direction reversed (so take Hermitian conjugate)
+			complex staple;
+			staple = u1staple_wilson_onedir(l, f, i, dir, j, 1);
+			u1.re += staple.re;
+			u1.im += staple.im;
+
+			// repeat for site x+dir
+			staple = u1staple_wilson_onedir(l, f, next, dir, j, 1);
+			u2.re += staple.re;
+			u2.im += staple.im;
+
+			paths += 2; // counterwise and clockwise staples
+		}
+	}
+
+	// normalize
+	u1.re /= paths; u1.im /= paths;
+	u2.re /= paths; u2.im /= paths;
+
+	// and multiply to get the smeared link. then store the phase in 'res'
+	u1 = cmult(u1, u2);
+
+	*res = cphase(u1);
 }
+
+#endif
+
+
+#if (NHIGGS > 0)
+/* Smear Higgs doublet. Eq. (6.4) in hep-lat/9612006:
+* Phi_new(y) = \Phi(x) + \sum_{i=+/- 1,2} U_i(x) \Phi(x+i) e^{-i Y \alpha_i(x) sigma_3}
+* where Y = 1. */
+void smear_doublet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int db) {
+
+	int sites = 1; // how many sites are involved in smearing
+	for (int k=0; k<SU2DB; k++) {
+		res[k] = f->su2doublet[db][i][k];
+	}
+
+	for (int dir=0; dir<l->dim; dir++) {
+		if (smear_dir[dir]) {
+
+			long next = l->next[i][dir];
+			long prev = l->prev[i][dir];
+			// Forward direction
+			double* u = f->su2link[i][dir];
+			double* a = f->su2doublet[db][next];
+			double ss = 0.0; double cc = 1.0;
+			#ifdef U1
+				ss = sin(f->u1link[i][dir]);
+				cc = cos(f->u1link[i][dir]);
+			#endif
+			res[0] += cc*a[0]*u[0] + ss*a[3]*u[0] - cc*a[1]*u[1] - ss*a[2]*u[1]
+								+ ss*a[1]*u[2] - cc*a[2]*u[2] + ss*a[0]*u[3] - cc*a[3]*u[3];
+
+			res[1] += cc*a[1]*u[0] + ss*a[2]*u[0] + cc*a[0]*u[1] + ss*a[3]*u[1]
+								+ ss*a[0]*u[2] - cc*a[3]*u[2] - ss*a[1]*u[3] + cc*a[2]*u[3];
+
+			res[2] += -(ss*a[1]*u[0]) + cc*a[2]*u[0] - ss*a[0]*u[1] + cc*a[3]*u[1]
+								+ cc*a[0]*u[2] + ss*a[3]*u[2] - cc*a[1]*u[3] - ss*a[2]*u[3];
+
+			res[3] += -(ss*a[0]*u[0]) + cc*a[3]*u[0] + ss*a[1]*u[1] - cc*a[2]*u[1]
+								+ cc*a[1]*u[2] + ss*a[2]*u[2] + cc*a[0]*u[3] + ss*a[3]*u[3];
+
+			// Backward direction (links get conjugated; it's included in expressions below)
+			u = f->su2link[prev][dir];
+			a = f->su2doublet[db][prev];
+			ss = 0.0; cc = 1.0;
+			#ifdef U1
+				ss = sin(f->u1link[prev][dir]);
+				cc = cos(f->u1link[prev][dir]);
+			#endif
+			res[0] += cc*a[0]*u[0] - ss*a[3]*u[0] + cc*a[1]*u[1] - ss*a[2]*u[1]
+								+ ss*a[1]*u[2] + cc*a[2]*u[2] + ss*a[0]*u[3] + cc*a[3]*u[3];
+
+			res[1] += cc*a[1]*u[0] - ss*a[2]*u[0] - cc*a[0]*u[1] + ss*a[3]*u[1]
+								+ ss*a[0]*u[2] + cc*a[3]*u[2] - ss*a[1]*u[3] - cc*a[2]*u[3];
+
+			res[2] += ss*a[1]*u[0] + cc*a[2]*u[0] - ss*a[0]*u[1] - cc*a[3]*u[1]
+								- cc*a[0]*u[2] + ss*a[3]*u[2] + cc*a[1]*u[3] - ss*a[2]*u[3];
+
+			res[3] += ss*a[0]*u[0] + cc*a[3]*u[0] + ss*a[1]*u[1] + cc*a[2]*u[1]
+								- cc*a[1]*u[2] + ss*a[2]*u[2] - cc*a[0]*u[3] + ss*a[3]*u[3];
+
+			sites += 2; // involves 2 nearest neighbors
+		}
+	}
+	for (int k=0; k<SU2DB; k++) res[k] /= sites;
+
+}
+#endif
 
 #ifdef SINGLET
 
@@ -251,7 +362,7 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
         if (block_dir[dir]) {
           smear_link(l, f, block_dir, f_b->su2link[i][dir], i, dir);
           #ifdef U1
-
+						smear_u1(l, f, block_dir, &f_b->u1link[i][dir], i, dir);
           #endif
         } else {
           memcpy(f_b->su2link[i][dir], f->su2link[i][dir], SU2LINK * sizeof(*f->su2link[i][dir]));
@@ -263,7 +374,9 @@ void smear_fields(lattice const* l, fields const* f, fields* f_b, int const* blo
 
       // scalars
       #if (NHIGGS > 0)
-
+				for (int db=0; db<NHIGGS; db++) {
+					smear_doublet(l, f, block_dir, f_b->su2doublet[db][i], i, db);
+				}
       #endif
 			#ifdef SINGLET
 				smear_singlet(l, f, block_dir, f_b->singlet[i], i);

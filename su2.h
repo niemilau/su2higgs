@@ -8,10 +8,6 @@
 	#define NHIGGS 0
 #endif
 
-#ifdef U1
-	// nasty global for Higgs hypercharge
-	extern const double higgs_Y; // set Y=1/2 in parameters.c
-#endif
 
 /* Struct "lattice": contains info on lattice dimensions, lookup tables for
 * sites and everything related to parallelization. */
@@ -395,6 +391,7 @@ void su2staple_clockwise(double* V, double* u1, double* u2, double* u3);
 void su2staple_wilson(lattice const* l, fields const* f, long i, int dir, double* V);
 void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger, double* res);
 void su2link_staple(lattice const* l, fields const* f, params const* p, long i, int dir, double* V);
+complex u1staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger);
 void staple_doublet(double* res, lattice const* l, fields const* f, params const* p, long i, int higgs_id);
 
 
@@ -551,7 +548,11 @@ void update_weight_slow(weight* w);
 #ifdef BLOCKING
 	// smearing.c
 	void smear_link(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
-	void smear_link_kari(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
+	void smear_link_other(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
+	#ifdef U1
+		void smear_u1(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int dir);
+	#endif
+	void smear_doublet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i, int db);
 	void smear_triplet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);
 	#ifdef SINGLET
 	double smear_singlet(lattice const* l, fields const* f, int const* smear_dir, double* res, long i);

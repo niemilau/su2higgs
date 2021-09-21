@@ -179,15 +179,17 @@ double localact_su2link(lattice const* l, fields const* f, params const* p, long
 		}
 	}
 	tot *= p->betasu2;
-	/*
-	//same using staples, for debugging. Both work.
-	double staple[4];
-	double V[4];
-	memcpy(V, f.su2link[i][dir], SU2LINK*sizeof(double));
-	su2staple_wilson(f, i, dir, staple);
-	su2rot(V,staple, 0);
 
-	tot = p.betasu2 * (1.0 * p.dim * 0.5 - 0.5*2*V[0]);
+	/* Could do the same using su2link_staple(), both give the same result up to the constant,
+	* and the change in action agrees with what the full action_local() gives (tested) */
+	/*
+	double staple[4];
+	su2link_staple(l, f, p, i, dir, staple);
+	// multiply original link and take trace
+	double uu[4];
+	memcpy(uu, f->su2link[i][dir], SU2LINK * sizeof(double));
+	su2rot(uu, staple, 0);
+	tot = 2.0 * uu[0]; // trace
 	*/
 
 	// hopping terms:

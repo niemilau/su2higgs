@@ -233,13 +233,56 @@ void su2staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, 
 	}
 }
 
+#ifdef U1
+/* ----- U(1) links ----- */
+
+/* Same as su2staple_wilson_onedir(), but for U(1) links
+* Remember: my u1link[dir] is actually the phase. */
+complex u1staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu, int nu, int dagger) {
+
+	complex res;
+	res.re = 1.0; res.im = 0.0;
+
+	if (mu == nu) {
+		return res;
+	}
+
+	// "upper" staple U_nu(x+mu) U_mu(x+nu)^+ U_nu(x)^+
+	double a1 = f->u1link[ l->next[i][mu] ][nu];
+	double a2 = f->u1link[ l->next[i][nu] ][mu];
+	double a3 = f->u1link[i][nu];
+
+	double staple_phase = a1 + a2 + a3;
+	if (dagger) staple_phase *= -1.0;
+
+	res.re = cos(staple_phase);
+	res.im = sin(staple_phase);
+
+	// "lower" staple U_nu(x+mu-nu)^+ U_mu(x-nu)^+ U_nu(x-nu)
+	long site = l->next[i][mu];
+	site = l->prev[site][nu];
+	a1 = f->u1link[site][nu];
+	a2 = f->u1link[ l->prev[i][nu] ][mu];
+	a3 = f->u1link[ l->prev[i][nu] ][nu];
+
+	staple_phase = a1 + a2 + a3;
+	if (dagger) staple_phase *= -1.0;
+
+	res.re += cos(staple_phase);
+	res.im += sin(staple_phase);
+
+	return res;
+}
+
+#endif
+
 /* ----- SU(2) doublets ----- */
 
 #if (NHIGGS > 0)
 /* Phi(x) = 1/sqrt(2) (f[0] I + i f[i]*sig[i]),
 * --> calculate s[a] so that S[Phi(x)] = f[a] s[a] + O(f^2)
 * but include only hopping terms (there can be other, local additions from the potential).
-* Hopping is -\sum_i Re Tr Phi^+ U_i Phi(x+i), and minus sign is included here. */
+* Hopping is -\sum_i Re Tr Phi^+ U_i Phi(x+i) e^{-i Y alpha_i(x) sigma_3}, and minus sign is included here. */
 void staple_doublet(double* res, lattice const* l, fields const* f, params const* p, long i, int higgs_id) {
 
 	for (int k=0; k<SU2DB; k++) res[k] = 0.0;

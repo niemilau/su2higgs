@@ -457,6 +457,7 @@ void measure_blocked_correlators(lattice* l, lattice* b, fields const* f, fields
   smear_fields(l, f, &f_smear, block_dir);
   // transfer the smeared fields on the blocked lattice:
   make_blocked_fields(l, b, &f_smear, f_b);
+
   // then measure correlators along dir
   char fname[100];
   sprintf(fname, "correl%d", b->blocking_level);

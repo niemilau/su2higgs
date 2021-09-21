@@ -29,8 +29,6 @@
 	#warning !!! SINGLET with N>1 Higgs doublets not implemented !!!
 #elif ( (NHIGGS > 0) || defined (SINGLET)) && defined (GRADFLOW)
 	#warning !!! Gradient flow not implemented for all fields !!!
-#elif ( (NHIGGS > 0) || defined (SINGLET)) && defined (BLOCKING)
-	#warning !!! Blocking not implemented for all fields !!!
 #endif
 
 /* If using blocking, need larger halos because of link smearing in su2u1.c */
@@ -96,6 +94,12 @@ inline complex cmult(complex z1, complex z2) {
 	res.re = z1.re*z2.re - z1.im*z2.im;
 	res.im = z2.re*z1.im + z1.re*z2.im;
 	return res;
+}
+
+// phase of a complex number
+inline double cphase(complex z) {
+	if (z.re == 0.0) return M_PI;
+	return atan2(z.im, z.re);
 }
 
 #endif // ifndef STDDEFS_H
