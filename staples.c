@@ -252,7 +252,7 @@ complex u1staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu
 	double a2 = f->u1link[ l->next[i][nu] ][mu];
 	double a3 = f->u1link[i][nu];
 
-	double staple_phase = a1 + a2 + a3;
+	double staple_phase = a1 - a2 - a3;
 	if (dagger) staple_phase *= -1.0;
 
 	res.re = cos(staple_phase);
@@ -265,7 +265,7 @@ complex u1staple_wilson_onedir(lattice const* l, fields const* f, long i, int mu
 	a2 = f->u1link[ l->prev[i][nu] ][mu];
 	a3 = f->u1link[ l->prev[i][nu] ][nu];
 
-	staple_phase = a1 + a2 + a3;
+	staple_phase = -1.0*a1 - a2 + a3;
 	if (dagger) staple_phase *= -1.0;
 
 	res.re += cos(staple_phase);
