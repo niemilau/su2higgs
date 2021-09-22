@@ -491,6 +491,9 @@ void update_weight_slow(weight* w);
 // correlation.c
 	#if (NHIGGS > 0)
 		double higgs_correlator(lattice* l, fields const* f, int x, int dir, int higgs_id);
+		double w3_operator(lattice* l, fields const* f, long site, int dir, int higgs_id);
+		double w3_plane_sum(lattice* l, fields const* f, int z, int j, int i, int higgs_id);
+		double w3_correlator(lattice* l, fields const* f, int d, int dir, int higgs_id);
 	#endif
 	#ifdef SINGLET
 		double singlet_correlator(lattice* l, fields const* f, int d, int dir);

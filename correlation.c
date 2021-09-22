@@ -58,9 +58,82 @@ double higgs_correlator(lattice* l, fields const* f, int d, int dir, int higgs_i
   return res / l->vol;
 }
 
-double funct(double aa) {
-  return aa;
+/* Locally gauge-invariant vector operator in SU(2) x U(1) + Higgs theory.
+* Eq. (6.8) in hep-lat/9612006, and in continuum notation in eq. (2.11).
+* Note that w3_i(z) in eq. (6.8) is similar to the forward Higgs hopping term,
+* but the trace has additional sigma3. */
+double w3_operator(lattice* l, fields const* f, long site, int dir, int higgs_id) {
+
+  // i Tr \Phi(x)^+ U_i(x) \Phi(x+i) exp[-i Y alpha_i sigma_3]sigma_3 (i included to make it real)
+  double* p1 = f->su2doublet[higgs_id][site];
+  double* p2 = f->su2doublet[higgs_id][ l->next[site][dir] ];
+  double* u = f->su2link[site][dir];
+  double cc = 1.0; double ss = 0.0;
+  #ifdef U1
+    int Y = 1; // Higgs hypercharge
+    cc = cos(Y * f->u1link[site][dir]);
+    ss = sin(Y * f->u1link[site][dir]);
+  #endif
+
+  return ss*p1[0]*p2[0]*u[0] + cc*p1[3]*p2[0]*u[0] + ss*p1[1]*p2[1]*u[0] +
+   cc*p1[2]*p2[1]*u[0] - cc*p1[1]*p2[2]*u[0] + ss*p1[2]*p2[2]*u[0] -
+   cc*p1[0]*p2[3]*u[0] + ss*p1[3]*p2[3]*u[0] + ss*p1[1]*p2[0]*u[1] +
+   cc*p1[2]*p2[0]*u[1] - ss*p1[0]*p2[1]*u[1] - cc*p1[3]*p2[1]*u[1] +
+   cc*p1[0]*p2[2]*u[1] - ss*p1[3]*p2[2]*u[1] - cc*p1[1]*p2[3]*u[1] +
+   ss*p1[2]*p2[3]*u[1] - cc*p1[1]*p2[0]*u[2] + ss*p1[2]*p2[0]*u[2] -
+   cc*p1[0]*p2[1]*u[2] + ss*p1[3]*p2[1]*u[2] - ss*p1[0]*p2[2]*u[2] -
+   cc*p1[3]*p2[2]*u[2] - ss*p1[1]*p2[3]*u[2] - cc*p1[2]*p2[3]*u[2] -
+   cc*p1[0]*p2[0]*u[3] + ss*p1[3]*p2[0]*u[3] + cc*p1[1]*p2[1]*u[3] -
+   ss*p1[2]*p2[1]*u[3] + ss*p1[1]*p2[2]*u[3] + cc*p1[2]*p2[2]*u[3] -
+   ss*p1[0]*p2[3]*u[3] - cc*p1[3]*p2[3]*u[3];
 }
+
+/* w3_i operator summed over a plane at fixed x_j = z */
+double w3_plane_sum(lattice* l, fields const* f, int z, int j, int i, int higgs_id) {
+  double res = 0.0;
+  long x_node = z - l->offset[j]; // coordinate in my node
+  int skip = 0;
+
+  if (x_node < 0 || x_node >= l->sliceL[j]) {
+    skip = 1; // out of bounds, so my node does not contribute
+  }
+  if (!skip) {
+    for (long iter=0; iter<l->sites_per_coord[j]; iter++) {
+      long site = l->sites_at_coord[j][x_node][iter];
+      res += w3_operator(l, f, site, i, higgs_id);
+    }
+  }
+
+  res = allreduce(res, l->comm);
+  return res;
+}
+
+
+/* W3 correlation function, Eq. (6.10) in hep-lat/9612006.
+* Here dir = direction along which I calculate the correlator */
+double w3_correlator(lattice* l, fields const* f, int d, int dir, int higgs_id) {
+
+  double res = 0.0;
+  for (int z=0; z<l->L[dir]; z++) {
+
+    int zd = (z + d) % l->L[dir];
+
+    // compute w3_i(z) and w3_i(z+d) in the plane orthogonal to 'dir'
+    for (int mu=0; mu<l->dim; mu++) {
+      if (mu != dir) {
+        double w3z = w3_plane_sum(l, f, z, dir, mu, higgs_id);
+        double w3zd = w3_plane_sum(l, f, zd, dir, mu, higgs_id);
+
+        res += w3z * w3zd;
+      }
+    }
+
+  } // end z
+
+  double norm = 1.0 * (l->dim - 1) * l->vol;
+  return res / norm;
+}
+
 
 #endif // if NHIGGS > 0
 
@@ -102,6 +175,12 @@ double singletsq_correlator(lattice* l, fields const* f, int d, int dir) {
 }
 
 #endif // ifdef SINGLET
+
+
+
+#ifdef U1
+
+#endif
 
 
 #ifdef TRIPLET
@@ -362,6 +441,7 @@ void print_labels_correlators() {
   fprintf(f, "%d distance\n", k); k++;
   #if (NHIGGS > 0)
     fprintf(f, "%d H(l) = sum_z h(z) h(z+l) / V\n", k); k++; // Higgs correlator
+    fprintf(f, "%d W3(l) = sum_z sum_{i=1,2} w3_i(z) w3_i(z+l) / (2V)\n", k); k++;
   #endif
   #ifdef SINGLET
     fprintf(f, "%d S(l) = sum_z s(z) s(z+l) / V\n", k); k++; // singlet correlator
@@ -400,6 +480,7 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
   for (int d=0; d<max_distance; d++) {
     #if (NHIGGS > 0)
       double hcorr = higgs_correlator(l, f, d, dir, 0);
+      double w3corr = w3_correlator(l, f, d, dir, 0);
     #endif
     #ifdef SINGLET
       double scorr = singlet_correlator(l, f, d, dir);
@@ -421,6 +502,7 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
       fprintf(file, "%d ", d);
       #if (NHIGGS > 0)
         fprintf(file, "%g ", hcorr);
+        fprintf(file, "%g ", w3corr);
       #endif
       #ifdef SINGLET
         fprintf(file, "%g %g", scorr, s2corr);
