@@ -44,8 +44,13 @@ r_u1 = float(sys.argv[4])
 if len(sys.argv) == 6:
     volume = int(sys.argv[5])
 
+print("\n")
+
 if not (r_u1.is_integer()):
-    print("!!! r_u1 = %.16f is not an integer, does not define U(1) irrep\n" % r_u1)
+    print("!!! r_u1 = %.16f is not an integer, does not define U(1) irrep" % r_u1)
+
+if (r_u1 == 0):
+    print("!!! Got r_u1 = 0; turning off U(1)")
 
 params = genfromtxt(datafile, names=True)
 
@@ -139,6 +144,9 @@ def convert_lattice(p_cont, spacing):
 
     ### Counterterms. Here I assume the U(1) coupling gpsq to be in Y = 1/2 normalization
 
+    if (r_u1 == 0):
+        gpsq = 0; ## disable U(1) contributions
+
 
     ## Higgs mass counterterms. First contributions from SU(2) + Higgs only
     mphisq_ct1 = -Sigma/(8.0*math.pi*a) * (3*gsq + gpsq + 12*lam);
@@ -184,7 +192,11 @@ def convert_lattice(p_cont, spacing):
     gsq_lat = a * gsq
     beta = 4.0 / gsq_lat
     gpsq_lat = a * gpsq
-    betau1 = 4.0 / (gpsq_lat * r_u1**2)
+
+    if (r_u1 != 0):
+        betau1 = 4.0 / (gpsq_lat * r_u1**2)
+    else:
+        betau1 = 0.0
 
     lam_lat = a * lam
     b3_lat = b3 * a**(3.0/2.0)
