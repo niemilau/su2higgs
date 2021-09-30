@@ -137,6 +137,102 @@ double w3_correlator(lattice* l, fields const* f, int d, int dir, int higgs_id) 
 
 #endif // if NHIGGS > 0
 
+
+#ifdef U1
+
+/* Operator for describing the photon.
+* Eq. (6.11) in hep-lat/9612006.
+* NB: this routine is very similar to projected_photon_operator() below. */
+complex u1_plane_sum(lattice* l, fields const* f, int z, int dir, int* mom) {
+  // momentum is quantized in all directions, (k1, k2, k3) = 2pi(n1/L1, n2/L2, n3/L3)
+  // with n_i being integers. the input mom[i] = n_i
+
+  complex res;
+  res.re = 0.0; res.im = 0.0;
+
+  if (l->dim != 3 && l->rank) {
+    printf("!!! Warning: photon correlation function only sensible in 3 dimensions\n");
+    return res;
+  }
+
+  int dir1, dir2;
+  if (dir == 0) {
+    dir1 = 1; dir2 = 2;
+  } else if (dir == 1) {
+    dir1 = 0; dir2 = 2;
+  } else if (dir == 2) {
+    dir1 = 0; dir2 = 1;
+  }
+
+  long z_node = z - l->offset[dir]; // coordinate on my node
+  int skip = 0;
+
+  if (z_node < 0 || z_node >= l->sliceL[dir]) {
+    skip = 1; // out of bounds, so my node does not contribute
+  }
+  if (!skip) {
+    for (long xy=0; xy<l->sites_per_coord[dir]; xy++) {
+      long site = l->sites_at_coord[dir][z_node][xy];
+
+      // the operator at zero-momentum: Im p_12(x)
+      double op = sin( u1ptrace(l, f, site, dir1, dir2) );
+      // multiply by exp(ip.k):
+      double px = 0.0;
+      for (int momdir=0; momdir<l->dim; momdir++) {
+        if (mom[momdir] != 0) {
+          px += ((double) (mom[momdir] * l->coords[site][momdir])) / ( (double)(l->L[momdir]) );
+        }
+      }
+      res.re += op * cos(2.0*M_PI * px);
+      res.im += op * sin(2.0*M_PI * px);
+    }
+  } // end else
+
+
+  res.re = allreduce(res.re, l->comm);
+  res.im = allreduce(res.im, l->comm);
+  return res;
+}
+
+
+/* Correlator for the U(1) operator: eq. (6.13) */
+complex u1_correlator(lattice* l, fields const* f, int d, int dir) {
+
+  /* Use first non-zero momentum channel in a transverse direction */
+  int mom[l->dim];
+  for (int dir0=0; dir0<l->dim; dir0++) mom[dir0] = 0;
+
+  for (int dir0=0; dir0<l->dim; dir0++) {
+    if (dir0 != dir) mom[dir0] = 1;
+    break;
+  }
+
+  complex res;
+  res.re = 0.0; res.im = 0.0;
+  for (int z=0; z<l->L[dir]; z++) {
+
+    int zd = (z + d) % l->L[dir];
+
+    complex oz = u1_plane_sum(l, f, z, dir, mom);
+    complex ozd = u1_plane_sum(l, f, zd, dir, mom);
+
+    // <O(z)O*(z+d)>
+    ozd.im *= -1.0;
+
+    oz = cmult(oz, ozd);
+    res.re += oz.re;
+    res.im += oz.im;
+  } // end z
+
+  res.re /= l->vol;
+  res.im /= l->vol;
+
+  return res;
+}
+
+#endif
+
+
 #ifdef SINGLET
 
 /* Calculate S(x) = (1/V) \sum_z s(z) s(z+d)
@@ -175,12 +271,6 @@ double singletsq_correlator(lattice* l, fields const* f, int d, int dir) {
 }
 
 #endif // ifdef SINGLET
-
-
-
-#ifdef U1
-
-#endif
 
 
 #ifdef TRIPLET
@@ -443,6 +533,10 @@ void print_labels_correlators() {
     fprintf(f, "%d H(l) = sum_z h(z) h(z+l) / V\n", k); k++; // Higgs correlator
     fprintf(f, "%d W3(l) = sum_z sum_{i=1,2} w3_i(z) w3_i(z+l) / (2V)\n", k); k++;
   #endif
+  #ifdef U1
+    fprintf(f, "%d U(1) correlator RE (p=1)\n", k); k++;
+    fprintf(f, "%d U(1) correlator IM (p=1)\n", k); k++;
+  #endif
   #ifdef SINGLET
     fprintf(f, "%d S(l) = sum_z s(z) s(z+l) / V\n", k); k++; // singlet correlator
     fprintf(f, "%d S2(l) = sum_z s^2(z) s^2(z+l) / V\n", k); k++; // singlet^2 correlator
@@ -482,6 +576,9 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
       double hcorr = higgs_correlator(l, f, d, dir, 0);
       double w3corr = w3_correlator(l, f, d, dir, 0);
     #endif
+    #ifdef U1
+      complex u1corr = u1_correlator(l, f, d, dir);
+    #endif
     #ifdef SINGLET
       double scorr = singlet_correlator(l, f, d, dir);
       double s2corr = singletsq_correlator(l, f, d, dir);
@@ -503,6 +600,9 @@ void measure_correlators(char* fname, lattice* l, fields const* f, params const*
       #if (NHIGGS > 0)
         fprintf(file, "%g ", hcorr);
         fprintf(file, "%g ", w3corr);
+      #endif
+      #ifdef U1
+        fprintf(file, "%g %g ", u1corr.re, u1corr.im);
       #endif
       #ifdef SINGLET
         fprintf(file, "%g %g", scorr, s2corr);

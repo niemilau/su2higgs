@@ -495,6 +495,10 @@ void update_weight_slow(weight* w);
 		double w3_plane_sum(lattice* l, fields const* f, int z, int j, int i, int higgs_id);
 		double w3_correlator(lattice* l, fields const* f, int d, int dir, int higgs_id);
 	#endif
+	#ifdef U1
+		complex u1_plane_sum(lattice* l, fields const* f, int z, int dir, int* mom);
+		complex u1_correlator(lattice* l, fields const* f, int d, int dir);
+	#endif
 	#ifdef SINGLET
 		double singlet_correlator(lattice* l, fields const* f, int d, int dir);
 		double singletsq_correlator(lattice* l, fields const* f, int d, int dir);
