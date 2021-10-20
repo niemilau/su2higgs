@@ -528,6 +528,9 @@ void update_weight_slow(weight* w);
 
 #ifdef TRIPLET
 	// magfield.c
+
+	/* temporary global variable for counting monopoles with charge > 1*/
+	long count_large_monopoles[4];
 	void matmat(double *in1, double *in2, int dag);
 	void projector(double *proj, double *adjoint);
 	void project_u1(lattice const* l, fields const* f, long i, int dir, double* pro);

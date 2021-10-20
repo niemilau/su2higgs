@@ -126,8 +126,6 @@ void get_parameters(char *filename, lattice* l, params *p) {
 
   int i;
 
-
-
   FILE *config;
 
   if(strlen(filename) == 1 && filename[0] == '-') {

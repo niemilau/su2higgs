@@ -287,6 +287,11 @@ int main(int argc, char *argv[]) {
 	int correlator_id = 1; // only used for correlators
 	int traj_id = 1; // only used for heatbath trajectories
 
+
+	#ifdef TRIPLET
+		count_large_monopoles[0] = 0; count_large_monopoles[1] = 0; count_large_monopoles[2] = 0;
+	#endif
+
 	// main iteration loop
 	while (iter <= p.iterations) {
 
@@ -351,10 +356,22 @@ int main(int argc, char *argv[]) {
 
 			Global_total_time += timing;
 			c.iter = iter; // store for I/O
+
+			#ifdef TRIPLET
+		    long monocount_tot = reduce_sum_long(count_large_monopoles[0], l.comm);
+				long monocount2 = reduce_sum_long(count_large_monopoles[1], l.comm);
+				long monocount3 = reduce_sum_long(count_large_monopoles[2], l.comm);
+				long monocount4 = reduce_sum_long(count_large_monopoles[3], l.comm);
+			#endif
 			if (!l.rank) {
 				printf("\nCheckpointing at iteration %lu. Total time: %.1lfs, %.2lf%% comms.\n",
 							iter, Global_total_time, 100.0*Global_comms_time/Global_total_time);
 				print_acceptance(p, c);
+				#ifdef TRIPLET
+					printf("\nM=2 monopoles: %ld (%lf%%), M=3 monopoles: %ld (%lf%%), M>=4 monopoles: %ld (%lf%%)\n",
+						monocount2, 100.0 * (double) monocount2/monocount_tot, monocount3, 100.0 * (double) monocount3/monocount_tot,
+						monocount4, 100.0 * (double) monocount4/monocount_tot);
+				#endif
 				fflush(stdout);
 			}
 

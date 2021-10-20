@@ -11,6 +11,9 @@
 *
 * These routines were originally adapted from David Weir's SCONE code.
 *
+********** IMPORTANT: this calculates the magnetic field in d SPATIAL dimensions , ie.
+********** and not in (d-1) spatial, 1 time dimensions. I.E. electric fields don't exist!
+********** This is the case of interest for dimensionally reduced theories.
 */
 
 // do nothing if the adjoint is not present
@@ -217,7 +220,8 @@ double alpha_proj(lattice const* l, fields const* f, params const* p, long i, in
 
 /* Calculate magnetic field B_i(x) at a given site and direction,
 * eq. 3.4 in hep-lat/0512006 (B_i(x) = 0.5 * eps_{ijk} alpha_{jk}).
-* Should work in arbitrary p.dim dimensions. */
+* Should work in arbitrary p.dim dimensions,
+* but note that here all my directions are spatial!! -> there are only magnetic fields. */
 double magfield(lattice const* l, fields const* f, params const* p, long i, int dir) {
 
 	/* Two loops over the directions, with always d1 < d2.
@@ -258,7 +262,8 @@ double magfield(lattice const* l, fields const* f, params const* p, long i, int 
 
 /* Calculate magnetic charge density (dimensionless) in a hypercube running
 * in the positive directions from lattice site i. Eq. (3.5) in hep-lat/0512006.
-*/
+* Note again that all directions are included here, whereas in theories with spatial+temporal
+* directions we would calculate the divergence only in the spatial directions. */
 double magcharge_cube(lattice const* l, fields const* f, params const* p, long i) {
 
 	double res = 0.0;
@@ -268,13 +273,18 @@ double magcharge_cube(lattice const* l, fields const* f, params const* p, long i
 		res += B2 - B1;
 	}
 
-  /*
+  /* TEST: check if we ever have more than one monopole in the unit cube */
+  count_large_monopoles[0]++; // how many local measurements in total
 	// this should be quantized in units of 4pi/g:
   double integer = res / (2.0*M_PI*sqrt(p->betasu2));
-  if (fabs(integer) > 1e-4) {
-	   printf("Charge density at site %ld: %lf\n", i, integer );
+  integer = fabs(integer);
+  if (fabs(2.0 - integer) < 1e-3) {
+	   count_large_monopoles[1]++;
+  } else if (fabs(3.0 - integer) < 1e-3) {
+	   count_large_monopoles[2]++;
+  } else if (integer > 3.0 + 1e-3) {
+     count_large_monopoles[3]++; // local charge > 3
   }
-  */
 
 	return res;
 }
