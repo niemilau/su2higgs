@@ -394,6 +394,7 @@ int main(int argc, char *argv[]) {
 			free_fields(&b[k], &f_block[k]);
 			free_lattice(&b[k]);
 		}
+		free(block_dir);
 	#endif
 
 	barrier(l.comm);
