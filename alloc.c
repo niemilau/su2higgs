@@ -311,6 +311,7 @@ void free_lattice(lattice *l) {
     free_latticetable(l->site_at_z);
   #endif
 
+  free(l->offset);
 	// slicing:
 	free(l->sliceL);
 	free(l->nslices);

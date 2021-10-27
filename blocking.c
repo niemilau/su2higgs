@@ -220,7 +220,9 @@ void make_blocklists(lattice* l, lattice* b, int const* block_dir) {
   long tot = 0; // keep track of how many sites have been mapped
 
   /* For each node on the new lattice, collect their coordinate tables */
-  long** blocked_coords = alloc_latticetable(b->dim, b->sites);
+
+  // needs to be block_sites instead of b->sites, the latter is 1 for standby nodes
+  long** blocked_coords = alloc_latticetable(b->dim, block_sites);
 
   // loop over MPI ranks on the blocked lattice
   for (int r=0; r<b->size; r++) {
@@ -289,7 +291,7 @@ void make_blocklists(lattice* l, lattice* b, int const* block_dir) {
             // site found
             tot++;
             /* add to send blocklist in my node, store their site index */
-            addto_comlist(&l->blocklist, r, i, SEND, l->parity[i], b->sites);
+            addto_comlist(&l->blocklist, r, i, SEND, l->parity[i], l->sites);
             recvlist[sends] = j;
             #ifdef MPI
               sites_buf[r][sends] = j;
@@ -421,11 +423,14 @@ void standby_layout(lattice* l) {
   }
 
   l->longest_dir = 0;
-  l->sites_per_coord = malloc(1 * sizeof(*l->sites_per_coord));
-  l->sites_per_coord[0] = 1;
-  l->sites_at_coord = malloc(1 * sizeof(*l->sites_at_coord));
-  l->sites_at_coord[0] = alloc_latticetable(l->sites_per_coord[0], l->sliceL[0]);
-
+  l->sites_per_coord = malloc(l->dim * sizeof(*l->sites_per_coord));
+  l->sites_at_coord = malloc(l->dim * sizeof(*l->sites_at_coord));
+  // need to dummy alloc for all directions, otherwise free_latticetable() breaks
+  for (int dir=0; dir<l->dim; dir++) {
+    l->sites_per_coord[dir] = 1;
+    l->sites_at_coord[dir] = alloc_latticetable(l->sites_per_coord[dir], l->sliceL[dir]);
+  }
+  
   #ifdef MEASURE_Z
     l->sites_per_z = 1;
     l->z_dir = 0;
