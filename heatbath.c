@@ -9,7 +9,9 @@
 
 /*
 * Update a single SU(2) link using KP heatbath.
-*/
+* Local contribution to the action is S[U] = Re Tr U.V, where V is the (generalized) staple.
+* NOTE!! This routine assumes that the staple can be parametrized as V = v_0 I + i v_a * sigma_a,
+* with REAL parameters v_0, v_a (ie. V is in our SU(2) parametrization but has non-unit determinant).  */
 int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int dir) {
 
 	// only used if accept/reject step is needed
@@ -25,21 +27,23 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 	#endif
 
 
-	// calculate the staple and its determinant
+	// calculate the staple and its determinant, det V = v_0^2 + v_a^2 
 	double V[4];
 	su2link_staple(l, f, p, i, dir, V);
 
 	double a = sqrt( su2sqr(V) );
 
-	// normalize V to produce an SU(2) matrix
+	// normalize V to produce an SU(2) matrix.
 	for (int k=0; k<4; k++) {
-		V[k] *= -1.0/a; // minus sign here because the weight is exp(-Tr U.S), S=full staple
-	}
+		V[k] *= -1.0/a; // minus sign here because the weight is exp(-S) = exp(-Tr U.V), V=full staple
+	} 
+	// Now V = matrix u from K-P paper
 
 	// normalization factor alpha for K-P algorithm.
-	// factor of 2 here since Tr U = 2 a_0
+	// alpha = 2*xi = 2* sqrt(det V)
 	a *= 2.0;
 
+	// Generate a_0 according to the K-P algorithm
 	double a0 = 0.0;
 
 	double r1,r2,r3,d;
@@ -48,10 +52,10 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 	int maxloops = 200;
 	do {
 		r1 = -1.0*log(1.0 - dran())/a; //dran() is between [0.0, 1.0)
-	  r2 = -1.0*log(1.0 - dran())/a;
-	  r3 = cos(2*M_PI*dran());
-	  r3 *= r3;
-	  d = r1*r3 + r2; // this is the delta in K-P paper
+		r2 = -1.0*log(1.0 - dran())/a;
+		r3 = cos(2*M_PI*dran());
+		r3 *= r3;
+		d = r1*r3 + r2; // this is the delta in K-P paper
 		r3 = 1.0 - dran();
 
 		loop++;
@@ -70,7 +74,7 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 	double rad = 1.0 - a0*a0;
 	if (rad < 0.0) {
 		fprintf(stderr,
-	  "Negative radius in SU(2) heatbath update, value %g\n", rad);
+	  		"Negative radius in SU(2) heatbath update, value %g\n", rad);
 		return 0;
 	}
 	rad = sqrt(rad);
@@ -91,8 +95,8 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 	f->su2link[i][dir][2] = r2*rad*d;
 	f->su2link[i][dir][3] = r3*rad*d;
 
-	// new link value is obtained by rotating this from the right
-	// with hermitian conjugate of the normalized staple.
+	// Now f.su2link = matrix a from K-P paper. New link value is obtained 
+	// by rotating this from the right with u^+, and u now is stored in V
 	V[1] = -V[1];
 	V[2] = -V[2];
 	V[3] = -V[3];
