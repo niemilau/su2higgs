@@ -11,7 +11,19 @@
 
 #include "su2.h"
 #include "comms.h"
+#include "generic/stddefs.h"
 
+
+/* Formatted printing to stdout from root node only. */
+void printf0(char *msg, ...) {
+  va_list fmtargs;
+  va_start(fmtargs, msg);
+
+  if(!myRank) {
+    vprintf(msg, fmtargs);
+		fflush(stdout);
+	}
+}
 
 /* Add a site to the sitelist in comlist.send or comlist.recv.
 * First checks if the given node already has an associated sendrecv structure;
@@ -871,6 +883,11 @@ void bcast_double(double *res, MPI_Comm comm) {
 // Broadcast an array of integers
 void bcast_int_array(int *arr, int size, MPI_Comm comm) {
   MPI_Bcast(arr, size, MPI_INTEGER, 0, comm);
+}
+
+// Broadcast a string (=array of chars)
+void bcast_string(char *str, int len, MPI_Comm comm) {
+  MPI_Bcast(str, len, MPI_CHAR, 0, comm);
 }
 
 // barrier a given MPI commutator

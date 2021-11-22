@@ -46,7 +46,7 @@ void layout(lattice *l, int do_prints, int run_checks) {
 	// ordering OK and self halos gone.
 
 	if (do_prints)
-		printf0(*l, "Each node needs %lu additional halo sites ; using halo of width %d.\n", l->halos, HALOWIDTH);
+		printf0("Each node needs %lu additional halo sites ; using halo of width %d.\n", l->halos, HALOWIDTH);
 
 	// site parity:
 	set_parity(l);
@@ -94,7 +94,7 @@ void layout(lattice *l, int do_prints, int run_checks) {
 		time = ((double) (end - start)) / CLOCKS_PER_SEC;
 
 		if (do_prints) {
-			printf0(*l, "All tests OK! Time taken: %lf seconds.\n", time);
+			printf0("All tests OK! Time taken: %lf seconds.\n", time);
 		}
 	}
 
@@ -121,7 +121,7 @@ void make_slices(lattice *l, int do_prints) {
 	// to factorize in the given number of nodes (MPI processes)
 	int nodes = l->size;
 	if (l->vol % nodes != 0) {
-		printf0(*l, "Can\'t lay out %lu sites using %d nodes!\n", l->vol, nodes);
+		printf0("Can\'t lay out %lu sites using %d nodes!\n", l->vol, nodes);
 		die(100);
 	}
 
@@ -144,7 +144,7 @@ void make_slices(lattice *l, int do_prints) {
   }
 	if(i != 1) {
 		// this can happen if we don't have listed enough primes
-    printf0(*l, "Can\'t factorize %d nodes with primes up to %d! List more primes in layout.c.\n",
+    printf0("Can\'t factorize %d nodes with primes up to %d! List more primes in layout.c.\n",
 	      l->vol, prime[n_primes-1]);
 
     die(101);
@@ -167,7 +167,7 @@ void make_slices(lattice *l, int do_prints) {
 	#ifdef WALL
 		// for wall profiling, ONLY slice the last direction! (OUTDATED, works with general slices now)
 		if (l->L[l->dim-1] % nodes != 0) {
-			printf0(*l, "Wall routines failed: cannot split z-direction into %d pieces! in layout.c\n", nodes);
+			printf0("Wall routines failed: cannot split z-direction into %d pieces! in layout.c\n", nodes);
 			die(419);
 		}
 		firstdim = l->dim-1;
@@ -228,7 +228,7 @@ void make_slices(lattice *l, int do_prints) {
 	}
 	halosites = halosites - sites;
 	if (do_prints)
-		printf0(*l, " = %lu.\n",sites);
+		printf0(" = %lu.\n",sites);
 
 	l->sites = sites;
 	// these will be modified later when we remove unneeded halos:
@@ -639,23 +639,6 @@ void test_neighbors(lattice const* l) {
 
 }
 
-/** Formatted printing function, root node only.
- *
- * Drop-in replacement for `fprintf(stderr,...)` that only
- * prints stuff if called by the master node, rank 0.
- *
- * Taken from David.
- */
-void printf0(lattice l, char *msg, ...) {
-  va_list fmtargs;
-  va_start(fmtargs, msg);
-
-  if(!l.rank) {
-    vprintf(msg, fmtargs);
-		fflush(stdout);
-	}
-}
-
 
 /** Call `MPI_Finalize` and quit.
  *
@@ -770,14 +753,6 @@ void set_parity(lattice *l) {
 	}
 
 	free(x);
-}
-
-
-void printf0(lattice l, char *msg, ...) {
-  va_list fmtargs;
-  va_start(fmtargs, msg);
-
-  vprintf(msg, fmtargs);
 }
 
 void die(int howbad) {

@@ -147,7 +147,7 @@ void load_lattice(lattice* l, fields* f, counters* c, char* fname) {
 
 	if (!read) {
 		// did not read anything...
-		printf0(*l, "Error reading latticefile!\n");
+		printf0("Error reading latticefile!\n");
 		die(500);
 	}
 
@@ -164,17 +164,17 @@ void load_lattice(lattice* l, fields* f, counters* c, char* fname) {
 	}
 
 	if (!ok) {
-		printf0(*l, "Dimensions in latticefile do not match! Got:\n");
-		printf0(*l, " 	MPI size %d, dimension %d, volume ", size, dim);
+		printf0("Dimensions in latticefile do not match! Got:\n");
+		printf0(" 	MPI size %d, dimension %d, volume ", size, dim);
 		for (int d=0; d<dim; d++) {
-			printf0(*l, "%d x ", L[d]);
+			printf0("%d x ", L[d]);
 		}
-		printf0(*l, "\b\b \b\n\nWas supposed to be: \n");
-		printf0(*l, "	MPI size %d, dimension %d, volume ", l->size, l->dim);
+		printf0("\b\b \b\n\nWas supposed to be: \n");
+		printf0("	MPI size %d, dimension %d, volume ", l->size, l->dim);
 		for (int d=0; d<l->dim; d++) {
-			printf0(*l, "%d x ", l->L[d]);
+			printf0("%d x ", l->L[d]);
 		}
-		printf0(*l, "\b\b \b\n");
+		printf0("\b\b \b\n");
 		die(501);
 	}
 
@@ -350,7 +350,7 @@ void read_field(lattice const* l, FILE *file, double *field, int size) {
 	long read = fread(field, sizeof(*field), max, file);
 
 	if (read != max) {
-		printf0(*l, "Error reading field!\n");
+		printf0("Error reading field!\n");
 		die(505);
 	}
 

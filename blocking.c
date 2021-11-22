@@ -48,7 +48,7 @@ void block_lattice(lattice* l, lattice* b, int const* block_dir) {
   * and not exactly 2 because then the blocking would remove that dimension altogether */
   for (int dir=0; dir<l->dim; dir++) {
     if (block_dir[dir] && (l->L[dir] % 2 != 0 || l->L[dir] <= 2) ) {
-      printf0(*l, "Can't perform any more blocking in direction %d !!\n", dir+1);
+      printf0("Can't perform any more blocking in direction %d !!\n", dir+1);
       return;
     }
   }

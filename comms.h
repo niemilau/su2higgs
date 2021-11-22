@@ -4,7 +4,6 @@
 #define SEND 0
 #define RECV 1
 
-
 typedef struct {
   int node;               /* node index to send to/received from */
   long even, odd, sites;   /* number of sites to be sent or received */

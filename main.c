@@ -26,23 +26,27 @@ int main(int argc, char *argv[]) {
 
 
 	#ifdef MPI
+		MPI_Init(&argc, &argv);
+		MPI_Comm_rank(MPI_COMM_WORLD, &l.rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &l.size); // how many MPI threads
 
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &l.rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &l.size); // how many MPI threads
+		// MPI_COMM_WORLD is used when need to communicate across all nodes.
+		// Blocked lattices etc use different communicators (see blocking.c)
+		l.comm = MPI_COMM_WORLD; 
+		// MPI_Comm_dup(MPI_COMM_WORLD, &l.comm); // duplicate WORLD, use the duplicate instead (why??)
 
-	MPI_Comm_dup(MPI_COMM_WORLD, &l.comm); // duplicate WORLD, use the duplicate instead
-
-	printf0(l, "\nStarting %d MPI processes\n", l.size);
+		if (l.rank == 0) printf("\nStarting %d MPI processes\n", l.size);
 
 	#else // no MPI
-	l.rank = 0;
-	l.size = 1;
+		l.rank = 0;
+		l.size = 1;
 	#endif
+	// Also store the rank as a global constant
+	myRank = l.rank;
 
 	// print usage if the arguments are invalid
 	if (argc != 2) {
-		printf0(l, "Usage: ./<program name> <config file>\n");
+		printf0("Usage: ./<program name> <config file>\n");
 		die(0);
 	}
 
@@ -52,12 +56,12 @@ int main(int argc, char *argv[]) {
 	* The magic numbers for shuffling are adapted from lattice code by Kari Rummukainen (setup_basic.c).
 	*/
 	long seed = 0;
-  if (l.rank == 0) {
-    seed = time(NULL);
-    seed = seed^(seed<<26)^(seed<<9);
-    printf("Seed in root node: %ld\n", seed);
-  }
-  bcast_long(&seed, l.comm);
+	if (l.rank == 0) {
+		seed = time(NULL);
+		seed = seed^(seed<<26)^(seed<<9);
+		printf("Seed in root node: %ld\n", seed);
+	}
+	bcast_long(&seed, l.comm);
 
 	if (l.rank != 0) {
 	  // other nodes get different seeds
@@ -65,12 +69,12 @@ int main(int argc, char *argv[]) {
 	  seed = l.rank ^ ((532*l.rank)<<18);
 	}
 
-  seed_mersenne(seed); // seeding done
+  	seed_mersenne(seed); // seeding done
 
 	// read in the config file.
 	// This needs to be done before allocating anything since we don't know the dimensions otherwise
-	get_parameters(argv[1], &l, &p); // allocs p.L
-	// print parameters from master node only (master = rank 0)
+	get_parameters(argv[1], &l, &p); // also allocs p.L and calculates volume
+	// print parameters from root node only
 	if (!l.rank) {
 		print_parameters(l, p);
 	}
@@ -82,11 +86,11 @@ int main(int argc, char *argv[]) {
 	start_time = clock();
 
 	int do_prints = 1;
-  layout(&l, do_prints, p.run_checks); // allocs all tables and comlist
+  	layout(&l, do_prints, p.run_checks); // allocs all tables and comlist
 
 	#ifdef MEASURE_Z
 		print_z_labels(&l, &p);
-		printf0(l, "Measuring profiles along direction %d every %d iterations\n", l.z_dir+1, p.meas_interval_z);
+		printf0("Measuring profiles along direction %d every %d iterations\n", l.z_dir+1, p.meas_interval_z);
 	#endif
 
 	#ifdef CORRELATORS
@@ -109,19 +113,19 @@ int main(int argc, char *argv[]) {
 		// block which directions? default: everything except the longest direction
 		int* block_dir = calloc(l.dim, sizeof(*block_dir));
 
-		printf0(l, "\n--- Using blocking in directions: ");
+		printf0("\n--- Using blocking in directions: ");
 		for (int dir=0; dir<l.dim; dir++) {
 			if (dir != l.longest_dir) {
 				block_dir[dir] = 1;
-				printf0(l, "%d ", dir);
+				printf0("%d ", dir);
 			}
 		}
 
-		printf0(l, ", up to %d levels ---\n", block_levels);
+		printf0(", up to %d levels ---\n", block_levels);
 
 		int max_level = max_block_level(&l, block_dir);
 		if (max_level < block_levels) {
-			printf0(l, "Warning: unable to block to %d levels; max is %d. Using %d levels instead.\n",
+			printf0("Warning: unable to block to %d levels; max is %d. Using %d levels instead.\n",
 										block_levels, max_level, max_level);
 			block_levels = max_level;
 		}
@@ -147,7 +151,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		barrier(l.comm);
-		printf0(l, "--- Blocking structs ready ---\n\n");
+		printf0("--- Blocking structs ready ---\n\n");
 	#endif
 
 	end_time = clock();
@@ -156,7 +160,7 @@ int main(int argc, char *argv[]) {
 	// initialize accept/reject/etc counters
 	init_counters(&c);
 
-	printf0(l, "Initialization done! Took %lf seconds.\n", timing);
+	printf0("Initialization done! Took %lf seconds.\n", timing);
 	fflush(stdout);
 
 	// initialize all fields
@@ -167,11 +171,11 @@ int main(int argc, char *argv[]) {
 	// check if p.latticefile exists and load it; if not, call setfields()
 	if (access(p.latticefile,R_OK) == 0) {
 		// ok
-		printf0(l, "\nLoading latticefile: %s\n", p.latticefile);
+		printf0("\nLoading latticefile: %s\n", p.latticefile);
 		load_lattice(&l, &f, &c, p.latticefile); // also calls sync_halos()
-		printf0(l, "Fields loaded succesfully.\n");
+		printf0("Fields loaded succesfully.\n");
 	} else {
-		printf0(l, "No latticefile found; starting with cold configuration.\n");
+		printf0("No latticefile found; starting with cold configuration.\n");
 		setfields(&f, &l, &p);
 		sync_halos(&l, &f);
 		p.reset = 1;
@@ -205,17 +209,17 @@ int main(int argc, char *argv[]) {
 		calc_orderparam(&l, &f, &p, &w, EVEN);
 		calc_orderparam(&l, &f, &p, &w, ODD);
 		if (w.mode == READONLY) {
-			printf0(l, "Read-only run, will not modify weight. \n");
+			printf0("Read-only run, will not modify weight. \n");
 		}
 	}
 
 	#ifdef HB_TRAJECTORY
 		if (p.do_trajectory) {
-			printf0(l, "\nReal time simulation: reading file \"realtime_config\"\n");
+			printf0("\nReal time simulation: reading file \"realtime_config\"\n");
 			read_realtime_config("realtime_config", &traj);
 			if (!l.rank) print_realtime_params(p, traj);
 			if (!p.multicanonical) {
-				printf0(l, "\nError: Need multicanonical for heatbath trajectories!! Exiting...\n");
+				printf0("\nError: Need multicanonical for heatbath trajectories!! Exiting...\n");
 				die(-44);
 			}
 			// write header
@@ -230,8 +234,8 @@ int main(int argc, char *argv[]) {
 
 	#ifdef GRADFLOW
 		if (p.do_flow) {
-			printf0(l, "\n----- Gradient flow every %d iterations -----\n", p.flow_interval);
-			printf0(l, "dt %lf	t_max %lf		meas_interval %d \n", p.flow_dt, p.flow_t_max, p.flow_meas_interval);
+			printf0("\n----- Gradient flow every %d iterations -----\n", p.flow_interval);
+			printf0("dt %lf	t_max %lf		meas_interval %d \n", p.flow_dt, p.flow_t_max, p.flow_meas_interval);
 		}
 	#endif
 
@@ -246,7 +250,7 @@ int main(int argc, char *argv[]) {
 			w.mode = READONLY;
 		}
 
-		printf0(l, "\nThermalizing %ld iterations\n", p.n_thermalize);
+		printf0("\nThermalizing %ld iterations\n", p.n_thermalize);
 		fflush(stdout);
 		start_time = clock();
 		while (iter <= p.n_thermalize) {
@@ -257,7 +261,7 @@ int main(int argc, char *argv[]) {
 
 		end_time = clock();
 		timing = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
-		printf0(l, "Thermalization done, took %lf seconds.\n", timing);
+		printf0("Thermalization done, took %lf seconds.\n", timing);
 		Global_total_time += timing;
 
 		// now reset iteration and time counters and turn weight updating back on if necessary
@@ -268,10 +272,10 @@ int main(int argc, char *argv[]) {
 			init_last_max(&w);
 		}
 
-		printf0(l, "\nStarting new simulation!\n");
+		printf0("\nStarting new simulation!\n");
 	} else {
 		iter = c.iter + 1;
-		printf0(l, "\nContinuing from iteration %ld!\n", iter-1);
+		printf0("\nContinuing from iteration %ld!\n", iter-1);
 	}
 
 	// make sure weight is not written before all nodes get the initial weight.
@@ -360,7 +364,7 @@ int main(int argc, char *argv[]) {
 
 			save_lattice(&l, f, c, p.latticefile);
 			// update max iterations etc if the config file has been changed by the user
-			read_updated_parameters(argv[1], &l, &p, &w);
+			read_updated_parameters(argv[1], &l, &p);
 		} // end checkpoint
 
 		iter++;
@@ -400,7 +404,7 @@ int main(int argc, char *argv[]) {
 	barrier(l.comm);
 
 	//printf("Node %d ready, time spent waiting: %.1lfs \n", p.rank, waittime);
-	printf0(l, "\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n",
+	printf0("\nReached end! Total time taken: %.1lfs, of which %.2lf%% comms. time per iteration: %.6lfs \n",
 				Global_total_time, 100.0*Global_comms_time/Global_total_time, Global_total_time/p.iterations);
 	#ifdef MPI
   MPI_Finalize();

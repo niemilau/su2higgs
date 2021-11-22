@@ -118,7 +118,7 @@ void save_weight(lattice const* l, weight const* w) {
 * DO NOT call this more than once per run. */
 void load_weight(lattice const* l, weight *w) {
 
-	printf0(*l, "\nLoading weightfile: %s\n", w->weightfile);
+	printf0("\nLoading weightfile: %s\n", w->weightfile);
 
 	// alloc arrays, accounting for the two 'virtual' bins
   w->pos = malloc( (w->bins+2)* sizeof(*(w->pos)));
@@ -146,14 +146,14 @@ void load_weight(lattice const* l, weight *w) {
   if( read_ok != 0) {
 
 		// no weight found; initialize a flat weight according to config file
-    printf0(*l, "Unable to access weightfile!!\n");
+    printf0("Unable to access weightfile!!\n");
 		if (w->mode == READONLY) {
-			printf0(*l, "No multicanonical weight given for a read-only run! Exiting...\n");
+			printf0("No multicanonical weight given for a read-only run! Exiting...\n");
 			die(20);
 		}
 
 		if (w->bins <= 0) {
-			printf0(*l, "\n!!!!! Multicanonical error: bins <= 0\n");
+			printf0("\n!!!!! Multicanonical error: bins <= 0\n");
 			die(-1141);
 		}
 		// create equally sized bins. last (extra) bin in weight file STARTS at w.max:
@@ -174,7 +174,7 @@ void load_weight(lattice const* l, weight *w) {
 		w->max += 0.001 * dbin;
 		w->pos[w->bins + 1] = w->max;
 
-		printf0(*l, "Initialized new weight \n");
+		printf0("Initialized new weight \n");
 
   } else {
 		// found existing weight, use it instead of the one specified in config
@@ -189,14 +189,14 @@ void load_weight(lattice const* l, weight *w) {
 			&w->last_max, &w->wrk_min, &w->wrk_max);
 
 		if (read != 5) {
-			printf0(*l, "Error reading first line of weightfile! \n");
+			printf0("Error reading first line of weightfile! \n");
 			die(22);
 		}
 
 		// override initial options with the values read from the actual weightfile
 		w->bins = bins_read;
 		if (w->bins <= 0) {
-			printf0(*l, "\n!!!!! Multicanonical error: bins <= 0\n");
+			printf0("\n!!!!! Multicanonical error: bins <= 0\n");
 			die(-1141);
 		}
 
@@ -217,7 +217,7 @@ void load_weight(lattice const* l, weight *w) {
     for(i=1; i<w->bins+2; i++) {
       read = fscanf(wfile, "%lf %lf", &(w->pos[i]), &(w->W[i]));
       if(read != 2) {
-				printf0(*l, "Error reading weightfile! Got %d values at line %ld\n", read, i+1);
+				printf0("Error reading weightfile! Got %d values at line %ld\n", read, i+1);
 				die(22);
       }
     }
@@ -228,7 +228,7 @@ void load_weight(lattice const* l, weight *w) {
 		w->max = w->pos[w->bins+1];
 
 		if (!w->mode != READONLY && (w->wrk_min < w->min || w->wrk_max > w->max)) {
-			printf0(*l, "\n!!! Multicanonical error: weight update range [%lf, %lf] larger than binning range [%lf, %lf] !!!\n\n",
+			printf0("\n!!! Multicanonical error: weight update range [%lf, %lf] larger than binning range [%lf, %lf] !!!\n\n",
 			 		w->wrk_min, w->wrk_max, w->min, w->max);
 			die(233);
 		}
@@ -250,13 +250,13 @@ void load_weight(lattice const* l, weight *w) {
 	// prepare w->b and w->slope
 	linearize_weight(w);
 
-	printf0(*l, "Using weight function with %d bins in range %lf, %lf\n", w->bins, w->min, w->max);
-	printf0(*l, "Global multicanonical check %d times per even/odd update sweep\n", w->checks_per_sweep);
+	printf0("Using weight function with %d bins in range %lf, %lf\n", w->bins, w->min, w->max);
+	printf0("Global multicanonical check %d times per even/odd update sweep\n", w->checks_per_sweep);
 
 	int mode = w->mode;
-	if (mode != READONLY) printf0(*l, "Will modify weight in range %lf, %lf\n", w->wrk_min, w->wrk_max);
-	if (mode == FAST) printf0(*l, "Fast weight update: starting with delta %.12lf, last_max %d\n", w->delta, w->last_max);
-	if (mode == SLOW) printf0(*l, "Using slow but safe weight updating: parameter file 'weight_params'\n");
+	if (mode != READONLY) printf0("Will modify weight in range %lf, %lf\n", w->wrk_min, w->wrk_max);
+	if (mode == FAST) printf0("Fast weight update: starting with delta %.12lf, last_max %d\n", w->delta, w->last_max);
+	if (mode == SLOW) printf0("Using slow but safe weight updating: parameter file 'weight_params'\n");
 
 	// restart accumulation of muca hits even if existing weight is loaded
 	w->muca_count = 0;
@@ -366,7 +366,7 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 
 	// if we call this function while w->do_acceptance is 0 then something went wrong
 	if (!w->do_acceptance) {
-		printf0(*l, "Should not get here!! in multicanonical.c\n");
+		printf0("Should not get here!! in multicanonical.c\n");
 		die(-1000);
 	}
 
@@ -409,7 +409,7 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 				int tunnel = update_weight(w);
 				save_weight(l, w);
 				if (tunnel) {
-					printf0(*l, "\nReducing weight update factor! Now %.12lf \n", w->delta);
+					printf0("\nReducing weight update factor! Now %.12lf \n", w->delta);
 				}
 
 			} else if (w->mode == SLOW) {

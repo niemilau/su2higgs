@@ -9,15 +9,18 @@
 #include <stdarg.h>
 #include <time.h>
 
+#include "mersenne.h"
+
 #ifdef MPI
 	#include <mpi.h>
 #else
 	// No MPI, define dummy communicator (not actually used in serial)
 	typedef struct {} MPI_Comm;
+	MPI_Comm MPI_COMM_WORLD = {};
 #endif
 
-#include "mersenne.h"
-
+// Globals
+int myRank; // MPI rank. Also 'rank' in lattice struct 
 
 /* Check compatibility of makefile flags */
 
@@ -68,7 +71,8 @@
 #define FAST 1
 #define SLOW 2 // these are protected by the SLOW_MUCA flag
 
-// nasty globals for keeping track of evaluation time
+// Some convenient global variables:
+// Keeping track of evaluation time
 double waittime;
 double Global_comms_time, Global_total_time;
 double Global_current_action; // for debugging gradient flows etc
@@ -80,6 +84,8 @@ typedef struct {
 
 
 /* inlines */
+
+// Flip parity
 inline char otherparity(char parity) {
 	if (parity == EVEN)
 		return ODD;
