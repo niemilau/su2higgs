@@ -21,6 +21,7 @@
 
 // Globals
 int myRank; // MPI rank. Also 'rank' in lattice struct 
+int MPISize; // also 'l.size'
 
 /* Check compatibility of makefile flags */
 
