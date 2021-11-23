@@ -79,13 +79,13 @@
 * 	w.pos[i] w.W[i]
 *
 * Note that w.hits is NOT stored! */
-void save_weight(lattice const* l, weight const* w) {
+void save_weight(weight const* w) {
 
 	// for read only run, do nothing
 	if (w->mode == READONLY)
 		return;
 
-	if(!l->rank) {
+	if(!myRank) {
 		FILE *wfile = fopen(w->weightfile, "w");
 
 		fprintf(wfile, "%d %.12lf %d %lf %lf\n", w->bins, w->delta, w->last_max, w->wrk_min, w->wrk_max);
@@ -97,18 +97,17 @@ void save_weight(lattice const* l, weight const* w) {
 		fclose(wfile);
 	}
 
- if (w->mode == SLOW && !l->rank) {
-	 // store arrays needed for 'slow' updating in a separate file
-	 FILE *file = fopen("weight_params", "w");
-	 fprintf(file, "%d \n", w->bins);
+	if (w->mode == SLOW && !myRank) {
+		// store arrays needed for 'slow' updating in a separate file
+		FILE *file = fopen("weight_params", "w");
+		fprintf(file, "%d \n", w->bins);
 
-	 // extra bins not written
-	 for(long i=1; i<w->bins+1; i++) {
-		 fprintf(file, "%lf %ld %ld\n", w->pos[i], w->gsum[i], w->nsum[i]);
-	 }
-	 fclose(file);
- }
-
+		// extra bins not written (why?)
+		for(long i=1; i<w->bins+1; i++) {
+			fprintf(file, "%lf %ld %ld\n", w->pos[i], w->gsum[i], w->nsum[i]);
+		}
+		fclose(file);
+	}
 }
 
 /* Load multicanonical weight from weightfile.
@@ -116,13 +115,11 @@ void save_weight(lattice const* l, weight const* w) {
 * Assumes that bins, min and max have been read from config file,
 * but overrides these if an existing weight file is found.
 * DO NOT call this more than once per run. */
-void load_weight(lattice const* l, weight *w) {
-
-	printf0(*l, "\nLoading weightfile: %s\n", w->weightfile);
+void load_weight(weight *w) {
 
 	// alloc arrays, accounting for the two 'virtual' bins
-  w->pos = malloc( (w->bins+2)* sizeof(*(w->pos)));
-  w->W = malloc((w->bins+2) * sizeof(*(w->W)));
+	w->pos = malloc( (w->bins+2)* sizeof(*(w->pos)));
+	w->W = malloc((w->bins+2) * sizeof(*(w->W)));
 	w->hits = malloc((w->bins+2) * sizeof(*(w->hits)));
 	w->slope = malloc((w->bins+2) * sizeof(*(w->slope)));
 	w->b = malloc((w->bins+2) * sizeof(*(w->b)));
@@ -134,36 +131,39 @@ void load_weight(lattice const* l, weight *w) {
 	w->do_acceptance = 1;
 
 	if (w->mode == SLOW) {
-		// slow but safer weight calculation, affects only runs with mode = SLOW
+		// slow but safer(?) weight calculation, affects only runs with mode = SLOW
 		w->hgram = malloc((w->bins+2) * sizeof(*w->hgram));
 		w->gsum = malloc((w->bins+2) * sizeof(*w->gsum));
 		w->nsum = malloc((w->bins+2) * sizeof(*w->nsum));
 	}
 
-  long i;
+  	long i;
+	
+	printf0("\nLoading weightfile: %s\n", w->weightfile);
 
-	int read_ok = access(w->weightfile, R_OK); // 0 if OK, -1 otherwise
-  if( read_ok != 0) {
+	FILE *wfile;
+	int read_ok = OpenRead(w->weightfile, &wfile);
+  	
+	if(!read_ok) {
 
 		// no weight found; initialize a flat weight according to config file
-    printf0(*l, "Unable to access weightfile!!\n");
 		if (w->mode == READONLY) {
-			printf0(*l, "No multicanonical weight given for a read-only run! Exiting...\n");
+			printf0("No multicanonical weight given for a read-only run! Exiting...\n");
 			die(20);
 		}
 
 		if (w->bins <= 0) {
-			printf0(*l, "\n!!!!! Multicanonical error: bins <= 0\n");
+			printf0("\n!!!!! Multicanonical error: bins <= 0\n");
 			die(-1141);
 		}
 		// create equally sized bins. last (extra) bin in weight file STARTS at w.max:
 		double dbin = (w->max - w->min)/((double) (w->bins));
 
 		// initialize all bins except for bin=0
-    for(i=0; i<w->bins+1; i++) {
-      w->pos[i+1] = w->min + ((double) i) * dbin;
-      w->W[i+1] = 0.0;
-    }
+		for(i=0; i<w->bins+1; i++) {
+			w->pos[i+1] = w->min + ((double) i) * dbin;
+			w->W[i+1] = 0.0;
+		}
 		w->last_max = 0; // assume starting from min (but see init_last_max())
 
 		/* Assume that weight update range is the same as weighting range, but to avoid
@@ -174,31 +174,39 @@ void load_weight(lattice const* l, weight *w) {
 		w->max += 0.001 * dbin;
 		w->pos[w->bins + 1] = w->max;
 
-		printf0(*l, "Initialized new weight \n");
+		printf0("Initialized new weight \n");
 
-  } else {
+  	} else {
 		// found existing weight, use it instead of the one specified in config
-		FILE *wfile = fopen(w->weightfile, "r");
+		// NB! file is open in root node only
 
 		// read = how many elements read per in a line
 		int read;
 		int bins_read;
 
-		// first line: bins, delta, last_max and range for weight updating
-		read = fscanf(wfile, "%d %lf %d %lf %lf", &bins_read, &w->delta,
-			&w->last_max, &w->wrk_min, &w->wrk_max);
+		if (!myRank) {
+			// first line: bins, delta, last_max and range for weight updating
+			read = fscanf(wfile, "%d %lf %d %lf %lf", &bins_read, &w->delta,
+				&w->last_max, &w->wrk_min, &w->wrk_max);
 
-		if (read != 5) {
-			printf0(*l, "Error reading first line of weightfile! \n");
-			die(22);
-		}
+			if (read != 5) {
+				printf0("Error reading first line of weightfile! \n");
+				die(22);
+			}
 
-		// override initial options with the values read from the actual weightfile
-		w->bins = bins_read;
-		if (w->bins <= 0) {
-			printf0(*l, "\n!!!!! Multicanonical error: bins <= 0\n");
-			die(-1141);
+			// override initial options with the values read from the actual weightfile
+			w->bins = bins_read;
+			if (w->bins <= 0) {
+				printf0("\n!!!!! Multicanonical error: bins <= 0\n");
+				die(-1141);
+			}
 		}
+		// broadcast to others
+		bcast_int(&w->bins, MPI_COMM_WORLD);
+		bcast_int(&w->last_max, MPI_COMM_WORLD);
+		bcast_double(&w->delta, MPI_COMM_WORLD);
+		bcast_double(&w->wrk_min, MPI_COMM_WORLD);
+		bcast_double(&w->wrk_max, MPI_COMM_WORLD);
 
 		// realloc accounting for the 2 virtual bins
 		w->pos = realloc(w->pos, (w->bins+2) * sizeof(*(w->pos)));
@@ -213,22 +221,27 @@ void load_weight(lattice const* l, weight *w) {
 			w->nsum = realloc(w->nsum, (w->bins+2) * sizeof(*(w->nsum)));
 		}
 
-		// read bins
-    for(i=1; i<w->bins+2; i++) {
-      read = fscanf(wfile, "%lf %lf", &(w->pos[i]), &(w->W[i]));
-      if(read != 2) {
-				printf0(*l, "Error reading weightfile! Got %d values at line %ld\n", read, i+1);
-				die(22);
-      }
-    }
-		fclose(wfile);
+		// Now read the bins
+		if (!myRank) {
+			for(i=1; i<w->bins+2; i++) {
+				read = fscanf(wfile, "%lf %lf", &(w->pos[i]), &(w->W[i]));
+				if(read != 2) {
+					printf0("Error reading weightfile! Got %d values at line %ld\n", read, i+1);
+					die(22);
+				}
+			}
+
+			fclose(wfile); // read done, can close
+		}	
+		bcast_double_array(w->pos, w->bins+2, MPI_COMM_WORLD);
+		bcast_double_array(w->W, w->bins+2, MPI_COMM_WORLD);
 
 		// sync min and max, although these shouldn't be needed after this routine finishes
 		w->min = w->pos[1];
 		w->max = w->pos[w->bins+1];
 
 		if (!w->mode != READONLY && (w->wrk_min < w->min || w->wrk_max > w->max)) {
-			printf0(*l, "\n!!! Multicanonical error: weight update range [%lf, %lf] larger than binning range [%lf, %lf] !!!\n\n",
+			printf0("\n!!! Multicanonical error: weight update range [%lf, %lf] larger than binning range [%lf, %lf] !!!\n\n",
 			 		w->wrk_min, w->wrk_max, w->min, w->max);
 			die(233);
 		}
@@ -240,7 +253,7 @@ void load_weight(lattice const* l, weight *w) {
 			w->pos[w->bins+1] = w->max;
 		}
 
-  } // end weight loading
+ 	} // end weight reading
 
 	// sync the virtual bins: constant weight in ranges [-infty, w.min], [w.max, infty]
 	w->pos[0] = w->min - 1000.0 * (w->max - w->min); // "-infinity"
@@ -250,13 +263,13 @@ void load_weight(lattice const* l, weight *w) {
 	// prepare w->b and w->slope
 	linearize_weight(w);
 
-	printf0(*l, "Using weight function with %d bins in range %lf, %lf\n", w->bins, w->min, w->max);
-	printf0(*l, "Global multicanonical check %d times per even/odd update sweep\n", w->checks_per_sweep);
+	printf0("Using weight function with %d bins in range %lf, %lf\n", w->bins, w->min, w->max);
+	printf0("Global multicanonical check %d times per even/odd update sweep\n", w->checks_per_sweep);
 
 	int mode = w->mode;
-	if (mode != READONLY) printf0(*l, "Will modify weight in range %lf, %lf\n", w->wrk_min, w->wrk_max);
-	if (mode == FAST) printf0(*l, "Fast weight update: starting with delta %.12lf, last_max %d\n", w->delta, w->last_max);
-	if (mode == SLOW) printf0(*l, "Using slow but safe weight updating: parameter file 'weight_params'\n");
+	if (mode != READONLY) printf0("Will modify weight in range %lf, %lf\n", w->wrk_min, w->wrk_max);
+	if (mode == FAST) printf0("Fast weight update: starting with delta %.12lf, last_max %d\n", w->delta, w->last_max);
+	if (mode == SLOW) printf0("Using slow but safe weight updating: parameter file 'weight_params'\n");
 
 	// restart accumulation of muca hits even if existing weight is loaded
 	w->muca_count = 0;
@@ -267,51 +280,58 @@ void load_weight(lattice const* l, weight *w) {
 
 	if (w->mode == SLOW) {
 		/* read in work arrays from separate file */
-		load_weight_params(l->rank, "weight_params", w);
+		load_weight_params("weight_params", w);
 	}
 
-	save_weight(l, w);
+	save_weight(w);
 
 }
 
-/* Read param file required for "slow" weight updating.
-* Here rank is just used for printing errors */
-void load_weight_params(int rank, char* fname, weight* w) {
+/* Read param file required for "slow" weight updating. */
+void load_weight_params(char* fname, weight* w) {
 
-	if(access(fname, R_OK) != 0) {
-		if (!rank) printf("!!! Unable to access weight parameter file. Initializing new\n");
+	FILE* file = NULL;
+	int ok = OpenRead(fname, &file);
+	if (!ok) {
+
+		printf0("!!! Unable to access weight parameter file. Initializing new\n");
 		for (int i=0; i<w->bins+2; i++) {
 			// cannot be 0!!
 			w->gsum[i] = 5;
 			w->nsum[i] = 1;
 		}
-	} else {
-
-		FILE *file = fopen(fname, "r");
-
+		return;
+	} 
+	
+	// Now access is OK, read in root node and broadcast 
+	if (!myRank) {
 		int bins_read;
 		int read = fscanf(file, "%d", &bins_read);
+		// first check:
 		if (bins_read != w->bins) {
 			// mismatch!
-			if (!rank) printf( "Error reading parameter file!! Expected %d bins, got %d\n\n", w->bins, bins_read);
+			printf0( "Error reading parameter file!! Expected %d bins, got %d\n\n", w->bins, bins_read);
 			die(991);
 		}
 
+		// What happens to extra bins here? Need to revisit this!
 		for(int i=1; i<w->bins+1; i++) {
 			double temp;
 
 			read = fscanf(file, "%lf %ld %ld", &temp, &(w->gsum[i]), &(w->nsum[i]));
 			if(read != 3) {
-				if (!rank) printf("Error reading 'weight_params'!! Got %d values at line %d\n\n", read, i+1);
+				printf0("Error reading 'weight_params'!! Got %d values at line %d\n\n", read, i+1);
 				die(992);
 			}
 		}
 
 		fclose(file);
+	} // if (!myRank)
 
-	}
-
+	bcast_long_array(w->gsum, w->bins+2, MPI_COMM_WORLD);
+	bcast_long_array(w->nsum, w->bins+2, MPI_COMM_WORLD);
 }
+
 
 // Make arrays 'slope' and 'b' such that W(R) = b + R*slope in each bin
 void linearize_weight(weight* w) {
@@ -366,7 +386,7 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 
 	// if we call this function while w->do_acceptance is 0 then something went wrong
 	if (!w->do_acceptance) {
-		printf0(*l, "Should not get here!! in multicanonical.c\n");
+		printf0("Should not get here!! in multicanonical.c\n");
 		die(-1000);
 	}
 
@@ -407,14 +427,14 @@ int multicanonical_acceptance(lattice const* l, weight* w, double oldval, double
 
 			if (w->mode == FAST) {
 				int tunnel = update_weight(w);
-				save_weight(l, w);
+				save_weight(w);
 				if (tunnel) {
-					printf0(*l, "\nReducing weight update factor! Now %.12lf \n", w->delta);
+					printf0("\nReducing weight update factor! Now %.12lf \n", w->delta);
 				}
 
 			} else if (w->mode == SLOW) {
 				update_weight_slow(w);
-				save_weight(l, w);
+				save_weight(w);
 			}
 
 			w->muca_count = 0;

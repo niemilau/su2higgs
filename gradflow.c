@@ -131,7 +131,7 @@ void grad_flow(lattice* l, fields const* f, params* p,
 
       // debug
       if (Global_current_action > oldact) {
-        printf0(*l, "WARNING: gradient flow did not reduce action!! old act = %lf, new act = %lf\n", oldact, Global_current_action);
+        printf0("WARNING: gradient flow did not reduce action!! old act = %lf, new act = %lf\n", oldact, Global_current_action);
       }
 
     }
