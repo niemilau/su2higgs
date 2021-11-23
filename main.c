@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
 	#endif
 	// Also store the rank as a global constant
 	myRank = l.rank;
+	MPISize = l.size;
 
 	// print usage if the arguments are invalid
 	if (argc != 2) {
@@ -80,7 +81,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// read stuff for multicanonical. if non-multicanonical run, just sets dummy weight
-	get_weight_parameters(argv[1], &l, &p, &w);
+	get_weight_parameters(argv[1], &p, &w);
 
 	// initialize parallel layout and lookup tables
 	start_time = clock();
@@ -204,7 +205,7 @@ int main(int argc, char *argv[]) {
 
 	if (p.multicanonical) {
 		// initialize multicanonical. Needs to come after field initializations
-		load_weight(&l, &w);
+		load_weight(&w);
 		alloc_muca_backups(&l, &w);
 		calc_orderparam(&l, &f, &p, &w, EVEN);
 		calc_orderparam(&l, &f, &p, &w, ODD);

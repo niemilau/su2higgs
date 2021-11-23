@@ -885,6 +885,15 @@ void bcast_int_array(int *arr, int size, MPI_Comm comm) {
   MPI_Bcast(arr, size, MPI_INTEGER, 0, comm);
 }
 
+// Broadcast an array of long integers
+void bcast_long_array(long *arr, int size, MPI_Comm comm) {
+  MPI_Bcast(arr, size, MPI_LONG, 0, comm);
+}
+
+void bcast_double_array(double *arr, int size, MPI_Comm comm) {
+	MPI_Bcast(arr, size, MPI_DOUBLE, 0, comm);
+}
+
 // Broadcast a string (=array of chars)
 void bcast_string(char *str, int len, MPI_Comm comm) {
   MPI_Bcast(str, len, MPI_CHAR, 0, comm);
@@ -928,6 +937,18 @@ void bcast_long(long *res, MPI_Comm comm) {
 }
 
 void bcast_int_array(int *arr, int size, MPI_Comm comm) {
+  return;
+}
+
+void bcast_long_array(long *arr, int size, MPI_Comm comm) {
+  return;
+}
+
+void bcast_double_array(double *arr, int size, MPI_Comm comm) {
+	return;
+}
+
+void bcast_string(char *str, int len, MPI_Comm comm) {
   return;
 }
 

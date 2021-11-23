@@ -290,6 +290,8 @@ void bcast_int(int *res, MPI_Comm comm);
 void bcast_long (long *res, MPI_Comm comm);
 void bcast_double(double *res, MPI_Comm comm);
 void bcast_int_array(int *arr, int size, MPI_Comm comm);
+void bcast_long_array(long *arr, int size, MPI_Comm comm);
+void bcast_double_array(double *arr, int size, MPI_Comm comm);
 void bcast_string(char *str, int len, MPI_Comm comm);
 void barrier(MPI_Comm comm);
 // gauge links:
@@ -460,8 +462,9 @@ void save_lattice(lattice const* l, fields f, counters c, char* fname);
 void load_lattice(lattice* l, fields* f, counters* c, char* fname);
 
 // parameters.c
+int OpenRead(char* fname, FILE** file);
 void get_parameters(char *filename, lattice* l, params *p);
-void get_weight_parameters(char *filename, lattice const* l, params *p, weight* w);
+void get_weight_parameters(char *filename, params *p, weight* w);
 void print_parameters(lattice l, params p);
 void read_updated_parameters(char *filename, lattice const* l, params *p);
 void FindFromFile(FILE* fileIn, char* label, char* result);
@@ -480,9 +483,9 @@ void measure_local(char* fname, lattice const* l, fields const* f, params const*
 void print_labels_local(lattice const* l, char* fname);
 
 // multicanonical.c
-void load_weight(lattice const* l, weight *w);
-void load_weight_params(int rank, char* fname, weight* w);
-void save_weight(lattice const* l, weight const* w);
+void load_weight(weight *w);
+void load_weight_params(char* fname, weight* w);
+void save_weight(weight const* w);
 void linearize_weight(weight* w);
 double get_weight(weight const* w, double val);
 void muca_accumulate_hits(weight* w, double val);

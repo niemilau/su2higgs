@@ -6,6 +6,24 @@
 
 const int maxLineLen = 200;
 
+/* Open file for reading in root node only. 
+* Return value is 1 if access is OK, 0 otherwise.
+* Need to pass address of the FILE* pointer that we want to open. */
+int OpenRead(char* fname, FILE** file) {
+  int success = 1;
+  if (!myRank) {
+    if(access(fname, R_OK) != 0) {
+      printf("!!! Unable to access file %s\n", fname);
+      success = 0;
+    } else {
+      // Note syntax: need to change the real pointer, not the pointer pointing to it
+      *file = fopen(fname, "r"); 
+    }
+  }
+  bcast_int(&success, MPI_COMM_WORLD);
+  return success;
+}
+
 /* Read file line-by-line until a matching label is found.
 * Assumes that the lines to be read are of form "label value".
 * The resulting value (string) is stored in 'result'.  */
@@ -20,6 +38,13 @@ void FindFromFile(FILE* fileIn, char* label, char* result) {
   int isEOF = 0;
 
   // only read if file is already open
+  if (!myRank && fileIn == NULL) {
+    printf("!!! ERROR: file not open, cannot read...\n");
+    ok = 0; 
+  } 
+  bcast_int(&ok, MPI_COMM_WORLD);
+  if (!ok) die(3);
+
   if (!myRank) {
 
     while(!feof(fileIn)) {
@@ -131,20 +156,10 @@ int GetUpdateAlgorithm(FILE* fileIn, char* label) {
 * Do NOT call this more than once at runtime!! */
 void get_parameters(char *filename, lattice* l, params *p) {
 
-  FILE* config;
-  int ok = 1;
-
-  // Open file for reading in root node only
-  if (!myRank) {
-    if(access(filename, R_OK) != 0) {
-      printf("!!! Unable to access config file %s\n", filename);
-      ok = 0;
-    } else {
-      config = fopen(filename, "r");
-    }
-  }
-  bcast_int(&ok, MPI_COMM_WORLD);
-  if (!ok) die(2);
+  FILE* config = NULL;
+  // Open config file, root node only
+  int ok = OpenRead(filename, &config);
+  if (!ok) die(1);
 
   // Start reading params. First lattice dimension:
   l->dim = GetInt(config, "dim");
@@ -321,7 +336,7 @@ void get_parameters(char *filename, lattice* l, params *p) {
 /* Just like get_parameters(), but reads params related to
 * multicanonical weighting.
 */
-void get_weight_parameters(char *filename, lattice const* l, params *p, weight* w) {
+void get_weight_parameters(char *filename, params *p, weight* w) {
 
 	if (!p->multicanonical) {
 		// no multicanonical, so just set dummy values
@@ -335,20 +350,9 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
 		strcpy(w->weightfile,"weight");
 	} else {
 		// multicanonical run, read from config
-    FILE* config;
-    int ok = 1;
-
-    // Open file for reading in root node only
-    if (!myRank) {
-      if(access(filename, R_OK) != 0) {
-        printf("!!! Unable to access config file %s\n", filename);
-        ok = 0;
-      } else {
-        config = fopen(filename, "r");
-      }
-    }
-    bcast_int(&ok, MPI_COMM_WORLD);
-    if (!ok) die(3);
+    FILE* config = NULL;
+    int ok = OpenRead(filename, &config);
+    if (!ok) die(2);
 
     GetString(config, "weightfile", w->weightfile);
 
@@ -379,7 +383,6 @@ void get_weight_parameters(char *filename, lattice const* l, params *p, weight* 
       res = PHISQ;
     }
     w->orderparam = res;
-
 
 
     if (w->mode != READONLY && w->mode != FAST && w->mode != SLOW) {
@@ -450,25 +453,19 @@ void print_parameters(lattice l, params p) {
 /* Read config file again and update certain values. This is called at every checkpoint to
 * see if the iterations limit has been changed by the user. */
 void read_updated_parameters(char *filename, lattice const* l, params *p) {
-
-	FILE *config;
+  
 	long new;
 	char key[maxLineLen];
   char value[maxLineLen];
 	char total[maxLineLen];
-  int ok = 1;
 
-  // Open file for reading in root node only
-  if (!myRank) {
-    if(access(filename, R_OK) != 0) {
-      printf("!!! Warning: Unable to access config file %s at checkpoint; skipping read...\n", filename);
-      ok = 0;
-    } else {
-      config = fopen(filename, "r");
-    }
+  FILE* config = NULL;
+  // Open config file, root node only
+  int ok = OpenRead(filename, &config);
+  if (!ok) {
+    printf("!!! Warning: Unable to access config file %s at checkpoint; skipping read...\n", filename);
+    return;
   }
-  bcast_int(&ok, MPI_COMM_WORLD);
-  if (!ok) return;
 
   new = GetLong(config, "iterations");
   if (p->iterations != new) {
