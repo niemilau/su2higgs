@@ -79,21 +79,23 @@ int heatbath_su2link(lattice const* l, fields* f, params const* p, long i, int d
 	}
 	rad = sqrt(rad);
 
-	// careful with the a[i] here, they can be zero
-	d = 0.0;
-	while (!(d > 0.0)) {
-		r1 = 1.0 - 2.0*dran();
-		r2 = 1.0 - 2.0*dran();
-		r3 = 1.0 - 2.0*dran();
-		d = sqrt(r1*r1 + r2*r2 + r3*r3);
-	}
-	d = 1.0/d;
+    d = 2.0;
+    while (d > 1.0 || d == 0.0) {
+        r1 = 2.0*dran() - 1.0; // range [-1, 1) 
+        r2 = 2.0*dran() - 1.0;
+        r3 = 2.0*dran() - 1.0;
+        d = r1*r1 + r2*r2 + r3*r3;
+    }
+    d = sqrt(d);
+    // normalize these so that the vector r has length 'rad'
+    r1 *= rad / d;
+    r2 *= rad / d;
+    r3 *= rad / d;
 
-
-	f->su2link[i][dir][0] = a0;
-	f->su2link[i][dir][1] = r1*rad*d;
-	f->su2link[i][dir][2] = r2*rad*d;
-	f->su2link[i][dir][3] = r3*rad*d;
+    f->su2link[i][dir][0] = a0;
+	f->su2link[i][dir][1] = r1;
+	f->su2link[i][dir][2] = r2;
+	f->su2link[i][dir][3] = r3;
 
 	// Now f.su2link = matrix a from K-P paper. New link value is obtained 
 	// by rotating this from the right with u^+, and u now is stored in V
