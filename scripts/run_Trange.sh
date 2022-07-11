@@ -21,7 +21,8 @@ do
   		echo 'Error: No directory' $DIRNAME 
 	else
 		cd $DIRNAME
-		mpirun -np 1 su2 config > log & 
+		condor_submit submit.job
+		sleep 0.1
 		cd .. 
 	fi
 

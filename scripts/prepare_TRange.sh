@@ -2,8 +2,8 @@
 
 ## this script creates folders for separate simulations in a given temperature range
 
-if [ "$#" -ne 4 ]; then
-    echo "Usage: <script name> Tmin Tmax dT betaG"
+if [ "$#" -ne 5 ]; then
+    echo "Usage: <script name> Tmin Tmax dT beta_SU2 r_U1"
 	exit 1
 fi
 
@@ -11,6 +11,7 @@ Tmin=$1
 Tmax=$2
 dT=$3
 beta=$4
+ru1=$5
 
 
 
@@ -21,28 +22,16 @@ do
 
 	if [ ! -d "$DIRNAME" ]; then
   		mkdir $DIRNAME
-		cp su2 $DIRNAME
-		./write_config.sh input_couplings $T $beta
+		write_config_singlet.sh ../input_couplings $T $beta $ru1
 		cp config $DIRNAME
 		mv params_lattice.dat $DIRNAME
-		mv params_MSbar.dat $DIRNAME
+		mv params_continuum.dat $DIRNAME
+		#sed -i "s/--job-name=.*/--job-name=T$T/g" submit.job
+		cp submit.job $DIRNAME
 	else
 		echo 'Error: directory' $DIRNAME 'exists.'
 	fi
 
-	echo '#!/bin/bash 
-# 
-#SBATCH --job-name=T-'$T'
-#SBATCH --output=out 
-#SBATCH -e errorLog 
-#SBATCH -n 16 
-#SBATCH -p short
-#SBATCH --nodes=1 
-#SBATCH --ntasks-per-node=16 
-#SBATCH -t 1:00:00 
-
-module load OpenMPI 
-mpirun ./h2dmmulti 3200 > log' > $DIRNAME/T-$T.job
 
 done
 

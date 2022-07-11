@@ -184,7 +184,8 @@ def convert_lattice(p_cont, spacing):
     gsq_lat = a * gsq
     beta = 4.0 / gsq_lat
     gpsq_lat = a * gpsq
-    betau1 = 4.0 / (gpsq_lat * r_u1**2)
+    betau1 = 4.0 / (gpsq_lat * r_u1**2) 
+    ## factor 4 appears here because I want to convert continuum Higgs hypercharge Y = 1/2 to Y = 1 on lattice
 
     lam_lat = a * lam
     b3_lat = b3 * a**(3.0/2.0)
