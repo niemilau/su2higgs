@@ -1,6 +1,6 @@
 # parallel makefile, requires MPI
 
-CC := mpicc -g -O3 -march=native
+CC := mpicc -g -O3
 
 #CC := mpicc -ggdb3 -g -O3 -D MPI
 
@@ -8,7 +8,7 @@ CC := mpicc -g -O3 -march=native
  
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET #-D U1
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET
-CFLAGS := -D MPI -D NHIGGS=1 -D U1
+CFLAGS := -D MPI -D NHIGGS=1 -D SINGLET -D U1
 #CFLAGS := -D MPI -D TRIPLET -D CORRELATORS -D BLOCKING -D GRADFLOW
 
 LIBS := -lm
