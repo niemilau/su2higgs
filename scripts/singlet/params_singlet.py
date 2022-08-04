@@ -13,6 +13,10 @@ import math
 from pylab import genfromtxt
 
 
+## print to stderr
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
 ## Find index of nearest value in array
 def nearest_indexOf(array, value):
     array = np.asarray(array)
@@ -28,6 +32,17 @@ def nearest(array, value):
 
 def lin_int(x, b, k):
 	return b + k*x
+
+
+## Check that the input file has sufficiently many T-values that interpolations/derivatives can be done
+## The checks are done near temperature=T, so call this every time when reading a set of parameters at new T
+def CheckInputCouplings(paramList, T):
+    temps = paramList["T"]
+    index = nearest_indexOf(temps, T)
+    if (index-1 < 0 or index+1 >= len(temps)):
+        eprint("!!! Found too few T-values around T=%g, cannot calculate T-dependence. Use a file with broader T-range." % T)
+        exit(11)
+
 
 
 ## Find parameter labeled 'name' in the input array at given T. Will interpolate if needed
@@ -53,6 +68,9 @@ def get_param(paramList, name, T):
 ## get all parameters from the input file. Returns a dictionary
 def getAllParams(paramList, T):
     
+    ## Check that we have sufficiently many T values in the input file
+    CheckInputCouplings(paramList, T)
+
     res = {}
     res["T"] = T
     res["gsq"] = get_param(paramList, 'gsq', T)
@@ -232,11 +250,6 @@ def main():
     if (bInterpolate):
         print('\n   ! No direct match for the temperature found; interpolating...\n')
 
-    index = nearest_indexOf(temperatures, T)
-    if (index-1 < 0 or index+1 >= len(temperatures)):
-        print("!!! Found too few T-values around T=%g, cannot calculate T-derivatives. Use a file with broader T-range." % T)
-        exit(11)
-
     ## Read the continuum parameters
     params_cont = getAllParams(paramList, T)
 
@@ -297,4 +310,6 @@ def main():
 
 
 
-main()
+## Don't run the main function if imported to another file
+if __name__ == "__main__":
+    main()
