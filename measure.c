@@ -24,12 +24,12 @@ void print_labels() {
 		fprintf(f, "%d U(1) Wilson (divided by beta)\n", k); k++;
 	#endif
 	#if (NHIGGS > 0)
-		fprintf(f, "%d hopping_phi (avg over directions)\n", k); k++;
+		fprintf(f, "%d 2*(phi^2 - phi^+(x+i) U_i(x) phi(x)) (avg over directions)\n", k); k++;
 		fprintf(f, "%d phi^2\n", k); k++;
 		fprintf(f, "%d phi^4\n", k); k++;
 	#endif
 	#if (NHIGGS == 2)
-		fprintf(f, "%d hopping_phi2 (avg over directions)\n", k); k++;
+		fprintf(f, "%d 2*(phi^2 - phi^+(x+i) U_i(x) phi(x)) for phi_2 (avg over directions)\n", k); k++;
 		fprintf(f, "%d phi2^2\n", k); k++;
 		fprintf(f, "%d phi2^4\n", k); k++;
 		fprintf(f, "%d R = Re phi1^+ phi2\n", k); k++;
@@ -48,6 +48,7 @@ void print_labels() {
 		fprintf(f, "%d number of magnetic monopoles\n", k); k++;
 	#endif
 	#ifdef SINGLET
+		fprintf(f, "%d S^2 - S(x)S(x+i) (avg over directions)\n", k); k++;
 		fprintf(f, "%d S\n", k); k++;
 		fprintf(f, "%d S^2\n", k); k++;
 		fprintf(f, "%d S^3\n", k); k++;
@@ -78,7 +79,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 	#if (NHIGGS > 0)
 		// Higgs doublets:
-		double hopping_phi[NHIGGS] = {0.0};
+		double covariant_phi[NHIGGS] = {0.0};
 		double phi2[NHIGGS] = {0.0};
 		double phi4[NHIGGS] = {0.0};
 	#endif
@@ -97,6 +98,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	double mag_charge_abs = 0.0;
 
 	// singlet
+	double singlet_covariant = 0.0;
 	double singlet = 0.0;
 	double singlet2 = 0.0;
 	double singlet3 = 0.0;
@@ -119,9 +121,8 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 			for (int db=0; db<NHIGGS; db++) {
 
 				mod = doubletsq(f->su2doublet[db][i]);
-				for (int dir=0; dir<l->dim; dir++) {
-					hopping_phi[db] += hopping_doublet_forward(l, f, i, dir, db);
-				}
+				// Covariant derivative, includes all directions
+				covariant_phi[db] += covariant_doublet(l, f, i, db);
 				phi2[db] += mod;
 				phi4[db] += mod*mod;
 			}
@@ -156,6 +157,10 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 		#ifdef SINGLET
 			double S = f->singlet[i][0];
+			for (int dir=0; dir<l->dim; dir++) {
+				double S_next = f->singlet[ l->next[i][dir] ][0]; 
+				singlet_covariant += S*S - S*S_next;
+			}
 			singlet += S;
 			singlet2 += S*S;
 			singlet3 += S*S*S;
@@ -191,7 +196,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 
 	#if (NHIGGS > 0)
 	for (int db=0; db<NHIGGS; db++) {
-		hopping_phi[db] = reduce_sum(hopping_phi[db], l->comm);
+		covariant_phi[db] = reduce_sum(covariant_phi[db], l->comm);
 		phi2[db] = reduce_sum(phi2[db], l->comm);
 		phi4[db] = reduce_sum(phi4[db], l->comm);
 	}
@@ -216,6 +221,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 	#endif
 
 	#ifdef SINGLET
+		singlet_covariant = reduce_sum(singlet_covariant, l->comm);
 		singlet = reduce_sum(singlet, l->comm);
 		singlet2 = reduce_sum(singlet2, l->comm);
 		singlet3 = reduce_sum(singlet3, l->comm);
@@ -255,7 +261,7 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 		#if (NHIGGS > 0 )
 		for (int db=0; db<NHIGGS; db++) {
 			fprintf(file, "%g %g %g ",
-				hopping_phi[db]/(vol * l->dim), phi2[db]/vol, phi4[db]/vol
+				covariant_phi[db]/(vol * l->dim), phi2[db]/vol, phi4[db]/vol
 			);
 		}
 		#endif
@@ -283,6 +289,9 @@ void measure(FILE* file, lattice const* l, fields const* f, params const* p, wei
 		#endif
 
 		#ifdef SINGLET
+			fprintf(file, "%g ",
+				singlet_covariant / (vol * l->dim)
+			);
 			fprintf(file, "%g %g %g %g ",
 				singlet/vol, singlet2/vol, singlet3/vol, singlet4/vol
 			);
