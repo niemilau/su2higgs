@@ -12,6 +12,10 @@ import numpy as np
 import math
 from pylab import genfromtxt
 
+import argparse 
+
+import subprocess
+import re ## regex
 
 ## print to stderr
 def eprint(*args, **kwargs):
@@ -215,7 +219,8 @@ def convert_lattice(p_cont, spacing, r_u1):
         "b4" : b4_lat,
         "a1" : a1_lat,
         "a2" : a2_lat,
-        "T" : p_cont["T"]
+        "T" : p_cont["T"],
+        "aT" : p_cont["T"] * a
     }
 
     return res
@@ -224,22 +229,34 @@ def convert_lattice(p_cont, spacing, r_u1):
 ####### Begin main #########
 
 def main(): 
-    ## read in temperature T and beta_G
-    if not len(sys.argv) in [5,6]:
-        sys.stderr.write('Usage: %s <input file> <T> <beta_G> <r_u1> <volume (optional)>\n' %
-                        sys.argv[0])
-        sys.exit(1)
 
-    datafile = sys.argv[1]
-    T = float(sys.argv[2])
-    betaIn = float(sys.argv[3])
-    r_u1 = float(sys.argv[4])
 
-    if len(sys.argv) == 6:
-        volume = int(sys.argv[5])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('infile', type=str, help="File containing the continuum couplings as functions of temperature")
+    parser.add_argument('T', type=float, help="The temperature")
+    parser.add_argument('aT', type=float, help="Lattice spacing in units of T. Use option -b if beta = 4/(ag_3^2) is used as input instead.")
+    parser.add_argument('r_u1', type=int, help="Representation of U(1) group")
+    ## Optional args
+    parser.add_argument('--volume', '-v', type=int, default=None,
+        help="""Volume in lattice units. Used to print out the 'reweight string'.""")
+    parser.add_argument('--beta', '-b', type=float, default=None,
+        help="""Fix the lattice spacing from beta = 4/(ag_3^2) instead of aT. Using this option will override the value given for aT.""")
+    parser.add_argument('--write', '-w', type=str, default=None,
+        help="""Write the lattice parameters directly to a config file, filename specified by the string. Takes backup of the file first.""")
 
+
+    global args
+    args = parser.parse_args()
+
+    datafile = args.infile
+    T = args.T
+    aT = args.aT
+    r_u1 = args.r_u1
+
+    '''
     if not (r_u1.is_integer()):
         print("!!! r_u1 = %.16f is not an integer, does not define U(1) irrep\n" % r_u1)
+    '''
 
     paramList = genfromtxt(datafile, names=True)
 
@@ -262,15 +279,22 @@ def main():
     ## Calculate lattice spacing here, keep fixed when computing T-derivatives
     gsq_cont = params_cont["gsq"]
 
+    spacing = None
+    if (args.beta != None):
+        eprint(" === Using beta = %g and g3^2 = %g to fix lattice spacing ===" % (args.beta, gsq_cont))
+        spacing = 4.0 / (args.beta * gsq_cont)
+        aT = T * spacing
+    else:
+        ## just use aT to fix the physical spacing
+        spacing = aT / T
 
-    spacing = 4.0 / (betaIn * gsq_cont)
-
+    
     
     ## lattice parameters
     params_lat = convert_lattice(params_cont, spacing, r_u1)
 
 
-    print('\n---- Lattice parameters for beta_G = '+str(betaIn)+' ----')
+    print('\n---- Lattice parameters for aT = '+str(aT)+' ----')
     print(params_lat)
     write_params('params_lattice.dat', params_lat)
 
@@ -278,8 +302,8 @@ def main():
     print('\nScales (GeV): g^2 T %g, gT %g, a2 T %g, lattice cutoff %g' % (gsq_cont, math.sqrt(gsq_cont) * math.sqrt(T), params_cont["a2"], math.pi/spacing))
 
     ### Calculate reweight string if the volume was given ###
-    if len(sys.argv) == 6:
-        sidelen = volume**(1.0/3.0)
+    if (args.volume != None):
+        sidelen = args.volume**(1.0/3.0)
         print('Length scales (1/GeV): 1/(g^2 T) %g, lattice side %g' % (1.0/gsq_cont, spacing*sidelen))
         print('\n')
 
@@ -300,14 +324,48 @@ def main():
 
         ## reweight string is dS/dT, but we measure volume averages instead of sums of type sum_x O(x) => multiple by volume here
         print('---- Reweight string ----\n')
-        print( """%g * ( %.16g*#4 + %.16g*#5 + %.16g*#7 + %.16g*#8 +%.16g*#9 + %.16g*#10 + %.16g*#11 + %.16g*#12 + %.16g*#13 + %.16g*#14)""" % 
-            (volume, dpdT["beta"], dpdT["betaU1"], dpdT["mphisq"], dpdT["lambda"], dpdT["b1"], dpdT["mSsq"], 
-                dpdT["b3"], dpdT["b4"], dpdT["a1"], dpdT["a2"]))
+        print( """%g * ( %.16g*#4 + %.16g*#5 + %.16g*#7 + %.16g*#8 +%.16g*#10 + %.16g*#11 + %.16g*#12 + %.16g*#13 + %.16g*#14 + %.16g*#15)""" % 
+            (args.volume, dpdT["beta"], dpdT["betaU1"], dpdT["mphisq"], dpdT["lambda"], dpdT["b1"], 0.5*dpdT["mSsq"], 
+                1.0/3.0*dpdT["b3"], 0.25*dpdT["b4"], 0.5*dpdT["a1"], 0.5*dpdT["a2"]))
 
         #  #n is the nth column in measure file.
+    ## end if args.volume
 
-    ## end if len(sys.argv) == 6 ###
 
+    if (args.write != None):
+        eprint("\nWriting lattice parameters to file %s" % args.write)
+        ## Write the lattice parameters directly to config file. first backup:
+        subprocess.run("cp %s %s.bu" % (args.write, args.write), shell=True)
+        ## Then read the file once and store the contents, then replace line by line
+        file = open(args.write, "rt")
+        lines = file.read()
+
+        ## Pattern match to find lines containg key, value pairs (value = int or float) 
+        regex_float = "[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)"
+        # "header"
+        lines = re.sub("## at T = %s, a = %s" % (regex_float, regex_float), "## at T = %.15g, a = %.15g" % (params_lat["T"],params_lat['spacing']), lines)
+
+        lines = re.sub("betasu2 %s" % (regex_float), "betasu2 %.15g" % params_lat["beta"], lines)
+        lines = re.sub("betau1 %s" % (regex_float), "betau1 %.15g" % params_lat["betaU1"], lines)
+        lines = re.sub("r_u1 %s" % (regex_float), "r_u1 %.15g" % params_lat["r_U1"], lines)
+
+        lines = re.sub("msq %s" % (regex_float), "msq %.15g" % params_lat["mphisq"], lines)
+        lines = re.sub("lambda %s" % (regex_float), "lambda %.15g" % params_lat["lambda"], lines)
+        
+        lines = re.sub("msq_s %s" % (regex_float), "msq_s %.15g" % params_lat["mSsq"], lines)
+        lines = re.sub("b1_s %s" % (regex_float), "b1_s %.15g" % params_lat["b1"], lines)
+        lines = re.sub("b3_s %s" % (regex_float), "b3_s %.15g" % params_lat["b3"], lines)
+        lines = re.sub("b4_s %s" % (regex_float), "b4_s %.15g" % params_lat["b4"], lines)
+        lines = re.sub("a1_s %s" % (regex_float), "a1_s %.15g" % params_lat["a1"], lines)
+        lines = re.sub("a2_s %s" % (regex_float), "a2_s %.15g" % params_lat["a2"], lines)
+
+
+        file.close()
+        
+        ## now write it all, replacing the old file
+        file = open(args.write, "wt")
+        file.write(lines)
+        file.close()
 
 
 ## Don't run the main function if imported to another file
