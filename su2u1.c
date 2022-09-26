@@ -19,7 +19,7 @@
 *
 *	SU(2) doublet scalars are parametrized as:
 * 	\Phi = 1/sqrt(2) ( a0 I + i ( a1 sig1 + a2 sig2 + a3 sig3 ) ),
-* We have then that Tr \Phi^+ \Phi = 2*(a[i]^2), i=0,1,2,3.
+* We have then that Tr \Phi^+ \Phi = a[i]^2, i=0,1,2,3.
 *	Higgs potential is \frac12 m^2 Tr \Phi^+ \Phi + \frac14 \lambda (Tr \Phi^+ \Phi)^2.
 *
 *	The normalizations of the ai components are now the same as usually in continuum.
