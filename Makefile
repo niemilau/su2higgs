@@ -1,6 +1,6 @@
 # parallel makefile, requires MPI
 
-CC := mpicc -g -O3
+CC := mpicc -O3
 
 #CC := mpicc -ggdb3 -g -O3 -D MPI
 
