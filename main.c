@@ -193,7 +193,7 @@ int main(int argc, char *argv[]) {
 		// Will we be doing separate measurements along the z axis?
 		if (p.do_z_meas) {
 			print_z_labels(&l, &p);
-			measure_along_z(&l, &f, &p, 0); // initial measurements
+			// measure_along_z(&l, &f, &p, 0); // initial measurements
 		}  
 	#endif
 

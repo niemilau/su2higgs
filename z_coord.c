@@ -227,15 +227,17 @@ void measure_along_z(lattice const* l, fields const* f, params const* p, long id
   for (long z=0; z<z_slice; z++) {
 
     for (long x=0; x<l->sites_per_z; x++) {
-      int k = 0;
-      
+
+      // NB: in print_z_labels(), k=0 is the z coord, but that was not counted in n_meas_z so I start the measurements from k=0 here
+      int k = 0; 
+
       long i = l->site_at_z[z][x];
 
       // Store measurements using the physical, full z coordinate. 
       // Also, use same ordering here as in print_z_labels().
       long z_phys = z + l->offset_z;
 
-      #if (NGHIGGS >= 1)
+      #if (NHIGGS > 0)
         // phi^2
         meas[z_phys][k] += doubletsq(f->su2doublet[0][i]);
         k++;
