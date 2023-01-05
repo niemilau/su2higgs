@@ -186,11 +186,15 @@ int main(int argc, char *argv[]) {
 	p.random_sweeps = 0;
 
 	#ifdef MEASURE_Z
-		if (p.reset) {
-			// setup wall. This overrides any other field initializations!!
-			prepare_wall(&l, &f, &p); // halos re-synced here
-			measure_along_z(&l, &f, &p, 0); // initial measurements, identifier=0
+		if (p.reset && p.setup_wall) {
+			// setup phase interface. This overrides any other field initializations!!
+			prepare_wall(&l, &f, &p); // does halo re-sync
 		}
+		// Will we be doing separate measurements along the z axis?
+		if (p.do_z_meas) {
+			print_z_labels(&l, &p);
+			measure_along_z(&l, &f, &p, 0); // initial measurements
+		}  
 	#endif
 
 	// labels for results file
@@ -300,7 +304,7 @@ int main(int argc, char *argv[]) {
 			measure(p.resultsfile, &l, &f, &p, &w);
 		}
 		#ifdef MEASURE_Z
-			if (iter % p.meas_interval_z == 0) {
+			if (p.do_z_meas && iter % p.meas_interval_z == 0) {
 				measure_along_z(&l, &f, &p, iter / p.meas_interval_z);
 			}
 		#endif

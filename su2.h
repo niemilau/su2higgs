@@ -160,6 +160,9 @@ typedef struct {
 	#ifdef MEASURE_Z
 		int n_meas_z; // how many quantities to measure along z
 		int meas_interval_z; // read in from config file in get_parameters()
+		int do_z_meas;
+		// Prepare an initial configuration with phase interface ("wall")?
+		int setup_wall; 
 	#endif
 
 	#ifdef GRADFLOW

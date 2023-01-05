@@ -22,7 +22,7 @@ iterations 200000
 n_thermalize 200
 
 # how often to write measurements
-interval 4
+interval 5
 
 # how often to write lattice configuration to file 
 checkpoint 10000
@@ -40,7 +40,9 @@ latticefile lattice
 ## at T = 122.3, a = 0.008240436430478594
 # gauge couplings
 betasu2 8.0
-#betau1 8.0
+betau1 8.0
+## U(1) representation parameter (integer)
+r_u1 1 
 
 # doublet
 msq -0.194549221785
@@ -99,6 +101,7 @@ update_triplet 1
 update_links 1
 
 ## ---- Multicanonical ---- ##
+
 multicanonical 0
 bins 80
 min 0.418
@@ -113,7 +116,7 @@ checks_per_sweep 1
 orderparam phisq
 
 ## Options for weight updating: 0 = read only, 1 = fast & dirty, 2 = slow & safe
-muca_mode 2
+muca_mode 1
 
 # initial weight update factor (if weight exists, uses the value there instead)
 muca_delta 0.3
@@ -133,3 +136,14 @@ measure_local 0
 do_correlators 0
 correlator_interval 10
 blocks 4
+
+
+## ---- Measurements along z-direction ---- ##
+
+do_z_meas 1
+
+# How often to do the z-measurements
+interval_z 100
+
+# Prepare an initial configuration with phase boundary?
+setup_wall 1

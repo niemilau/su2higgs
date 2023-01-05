@@ -82,12 +82,17 @@ void print_z_labels(lattice const* l, params* p) {
   	FILE* f = fopen("labels_z", "w+");
 
     fprintf(f, "%d z\n", k); k++;
-  	#ifdef HIGGS
+  	#if (NHIGGS > 0)
   		fprintf(f, "%d phi^2\n", k); k++;
   	#endif
   	#ifdef TRIPLET
   		fprintf(f, "%d Sigma^2\n", k); k++;
   	#endif
+    #ifdef SINGLET
+  		fprintf(f, "%d S\n", k); k++;
+      fprintf(f, "%d S^2\n", k); k++;
+  	#endif
+
 
   	fclose(f);
   }
@@ -104,6 +109,7 @@ void print_z_labels(lattice const* l, params* p) {
 * TODO optimize communications, should be faster to send the whole arrays
 * instead of reducing sums in each element separately.
 */
+/*
 void measure_along_z_old(lattice const* l, fields const* f, params const* p, long id) {
   long z_max = l->L[l->z_dir];
   long z_slice = l->sliceL[l->z_dir];
@@ -113,8 +119,9 @@ void measure_along_z_old(lattice const* l, fields const* f, params const* p, lon
   if (p->n_meas_z <= 0) {
     return; // nothing to measure
   }
-  /* arrays for storing the observables as functions of z
-  * Can be understood as a field with z_max sites and n_meas_z DOFs */
+
+  // Arrays for storing the observables as functions of z
+  // Can be understood as a field with z_max sites and n_meas_z DOFs
   double** meas = make_field(z_max, p->n_meas_z);
   // initialize to 0. will remain 0 outside the range of z in my node
   for (z=0; z<z_max; z++) {
@@ -139,8 +146,8 @@ void measure_along_z_old(lattice const* l, fields const* f, params const* p, lon
       #endif
     } // end area loop
 
-    /* store using the physical, full z coordinate.
-    * Use same ordering here as in labels_z() */
+    // store using the physical, full z coordinate.
+    // Use same ordering here as in labels_z()
     k = 0;
     #ifdef HIGGS
       meas[z + l->offset_z][k] = phisq; k++;
@@ -189,74 +196,94 @@ void measure_along_z_old(lattice const* l, fields const* f, params const* p, lon
 
   free_field(meas);
 }
+*/
 
-
-
+/* Measure stuff along the z axis.
+* Each node works on arrays of size p.L[z] (full lattice, not slice!),
+* and fills in only the elements in their own z range. These are then
+* combined using reduce_sum(). We do p.n_meas_z different measurements
+* so there are p.n_meas_z such arrays on each node. */
 void measure_along_z(lattice const* l, fields const* f, params const* p, long id) {
   long z_max = l->L[l->z_dir];
   long z_slice = l->sliceL[l->z_dir];
   FILE* file;
-  int k; long z;
+  long z;
 
-  int n_meas_z = 2;
+  // how many things to measure. This is set by print_z_labels()
+  int n_meas_z = p->n_meas_z;
 
-  #if (NHIGGS >= 2)
 
   /* arrays for storing the observables as functions of z
   * Can be understood as a field with z_max sites and n_meas_z DOFs */
   double** meas = make_field(z_max, n_meas_z);
   // initialize to 0. will remain 0 outside the range of z in my node
   for (z=0; z<z_max; z++) {
-    for (k=0; k<n_meas_z; k++) {
+    for (int k=0; k<n_meas_z; k++) {
       meas[z][k] = 0.0;
     }
   }
 
-  // measure something at each z
+  // measure stuff at each z
   for (long z=0; z<z_slice; z++) {
-    double phisq = 0.0;
-    double phi2sq = 0.0;
 
     for (long x=0; x<l->sites_per_z; x++) {
+      int k = 0;
+      
       long i = l->site_at_z[z][x];
 
-        phisq += doubletsq(f->su2doublet[0][i]);
-        phi2sq += doubletsq(f->su2doublet[1][i]);
+      // Store measurements using the physical, full z coordinate. 
+      // Also, use same ordering here as in print_z_labels().
+      long z_phys = z + l->offset_z;
+
+      #if (NGHIGGS >= 1)
+        // phi^2
+        meas[z_phys][k] += doubletsq(f->su2doublet[0][i]);
+        k++;
+      #endif
+
+      #ifdef TRIPLET
+        meas[z_phys][k] += tripletsq(f->su2triplet[i]);
+        k++;
+      #endif
+
+      #ifdef SINGLET
+        // S
+        double s = f->singlet[i][0];
+        meas[z_phys][k] += s;
+        k++;
+
+        // S^2
+        meas[z_phys][k] += s*s;
+        k++;
+        
+      #endif
     } // end area loop
-
-    /* store using the physical, full z coordinate.
-    * Use same ordering here as in labels_z() */
-    k = 0;
-
-    meas[z + l->offset_z][k] = phisq; k++;
-    meas[z + l->offset_z][k] = phi2sq; k++;
 
   } // end z loop
 
   if (!l->rank) {
     file = fopen("measure_z", "a");
     // write header for the current set of measurements
-    fprintf(file, "\nMeasurement %ld:\n", id);
+    //fprintf(file, "\nMeasurement %ld:\n", id);
   }
 
   // now combine results from all nodes
   for (z=0; z<z_max; z++) {
-    for (k=0; k<n_meas_z; k++) {
+    for (int k=0; k<n_meas_z; k++) {
       meas[z][k] = reduce_sum(meas[z][k], l->comm);
     }
   }
 
-  // write to file
+  // write plane averaged measurements to file
   for (z=0; z<z_max; z++) {
     if (!l->rank) {
       fprintf(file, "%ld ", z);
 
-      for (k=0; k<n_meas_z; k++) {
+      for (int k=0; k<n_meas_z; k++) {
         fprintf(file, "%g ", meas[z][k] / ((double)l->area) );
       }
 
       fprintf(file, "\n");
-  		fflush(file);
     }
   }
 
@@ -266,15 +293,12 @@ void measure_along_z(lattice const* l, fields const* f, params const* p, long id
   }
 
   free_field(meas);
-
-  #endif
 }
 
 
 /* Create an initial configuration where two phases coexist, separated by
 * an interface at z = L[z_dir] / 2. The field values here need to be
-* adjusted depending on the field content.
-*/
+* adjusted depending on the field content. */
 void prepare_wall(lattice* l, fields* f, params const* p) {
 
   long z_max = l->sliceL[l->z_dir];
@@ -285,16 +309,22 @@ void prepare_wall(lattice* l, fields* f, params const* p) {
       long i = l->site_at_z[z][x];
       if (z + l->offset_z < 0.5 * l->L[l->z_dir]) {
         // for small z:
-        #ifdef HIGGS
-        f->su2doublet[i][0] = 0.2 + 0.01*dran();
-        f->su2doublet[i][1] = 0.01*dran();
-        f->su2doublet[i][2] = 0.01*dran();
-        f->su2doublet[i][3] = 0.01*dran();
+        #if (NHIGGS > 0)
+          for (int db=0; db<NHIGGS; db++) {
+            f->su2doublet[db][i][0] = 0.2 + 0.01*dran();
+            f->su2doublet[db][i][1] = 0.01*dran();
+            f->su2doublet[db][i][2] = 0.01*dran();
+            f->su2doublet[db][i][3] = 0.01*dran();
+          }
+          
         #endif
         #ifdef TRIPLET
-        f->su2triplet[i][0] = 1.5 + 0.05*dran();
-        f->su2triplet[i][1] = 0.05*dran();
-        f->su2triplet[i][2] = 0.05*dran();
+          f->su2triplet[i][0] = 1.5 + 0.05*dran();
+          f->su2triplet[i][1] = 0.05*dran();
+          f->su2triplet[i][2] = 0.05*dran();
+        #endif
+        #ifdef SINGLET
+          f->singlet[i][0] = 0.8 + 0.01*dran();
         #endif
         // also set gauge links to (hopefully) help with thermalization
         for (int dir=0; dir<l->dim; dir++) {
@@ -304,18 +334,26 @@ void prepare_wall(lattice* l, fields* f, params const* p) {
     			f->su2link[i][dir][2] = 0.0;
     			f->su2link[i][dir][3] = 0.0;
     		}
+
       } else {
         // for large z:
-        #ifdef HIGGS
-        f->su2doublet[i][0] = 1.5 + 0.05*dran();
-        f->su2doublet[i][1] = 0.05*dran();
-        f->su2doublet[i][2] = 0.05*dran();
-        f->su2doublet[i][3] = 0.05*dran();
+
+        #if (NHIGGS > 0)
+          for (int db=0; db<NHIGGS; db++) {
+            f->su2doublet[db][i][0] = 1.2 + 0.05*dran();
+            f->su2doublet[db][i][1] = 0.05*dran();
+            f->su2doublet[db][i][2] = 0.05*dran();
+            f->su2doublet[db][i][3] = 0.05*dran();
+          }
+          
         #endif
         #ifdef TRIPLET
-        f->su2triplet[i][0] = 0.2 + 0.01*dran();
-        f->su2triplet[i][1] = 0.01*dran();
-        f->su2triplet[i][2] = 0.01*dran();
+          f->su2triplet[i][0] = 0.2 + 0.01*dran();
+          f->su2triplet[i][1] = 0.01*dran();
+          f->su2triplet[i][2] = 0.01*dran();
+        #endif
+        #ifdef SINGLET
+          f->singlet[i][0] = 0.1 + 0.01*dran();
         #endif
         // gauge links:
         for (int dir=0; dir<l->dim; dir++) {
@@ -331,7 +369,7 @@ void prepare_wall(lattice* l, fields* f, params const* p) {
   // wall initialized, now just need to sync halo fields
   sync_halos(l, f);
 
-  printf0(*l, "Wall profile initialized.\n");
+  printf0("Wall profile initialized.\n");
 
 }
 

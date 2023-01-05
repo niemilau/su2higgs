@@ -328,6 +328,11 @@ void get_parameters(char *filename, lattice* l, params *p) {
     p->flow_t_max = GetDouble(config, "flow_t_max");
   #endif
 
+  #ifdef MEASURE_Z
+    p->do_z_meas = GetInt(config, "do_z_meas");
+    p->setup_wall = GetInt(config, "setup_wall");
+  #endif
+
   // Reads done!
   if (myRank == 0) fclose(config);
 }
