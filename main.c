@@ -89,10 +89,6 @@ int main(int argc, char *argv[]) {
 	int do_prints = 1;
   	layout(&l, do_prints, p.run_checks); // allocs all tables and comlist
 
-	#ifdef MEASURE_Z
-		print_z_labels(&l, &p);
-		printf0("Measuring profiles along direction %d every %d iterations\n", l.z_dir+1, p.meas_interval_z);
-	#endif
 
 	#ifdef CORRELATORS
 		int corr_dir = l.longest_dir;
@@ -193,6 +189,7 @@ int main(int argc, char *argv[]) {
 		// Will we be doing separate measurements along the z axis?
 		if (p.do_z_meas) {
 			print_z_labels(&l, &p);
+			printf0("Measuring profiles along direction %d every %d iterations\n", l.z_dir+1, p.meas_interval_z);
 			// measure_along_z(&l, &f, &p, 0); // initial measurements
 		}  
 	#endif
