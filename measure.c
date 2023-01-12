@@ -24,12 +24,12 @@ void print_labels() {
 		fprintf(f, "%d U(1) Wilson (divided by beta)\n", k); k++;
 	#endif
 	#if (NHIGGS > 0)
-		fprintf(f, "%d 2*(phi^2 - phi^+(x+i) U_i(x) phi(x)) (avg over directions)\n", k); k++;
+		fprintf(f, "%d 2*(phi^2 - phi^+(x) U_i(x) phi(x+i)) (avg over directions)\n", k); k++;
 		fprintf(f, "%d phi^2\n", k); k++;
 		fprintf(f, "%d phi^4\n", k); k++;
 	#endif
 	#if (NHIGGS == 2)
-		fprintf(f, "%d 2*(phi^2 - phi^+(x+i) U_i(x) phi(x)) for phi_2 (avg over directions)\n", k); k++;
+		fprintf(f, "%d 2*(phi^2 - phi^+(x) U_i(x) phi(x+i)) for phi_2 (avg over directions)\n", k); k++;
 		fprintf(f, "%d phi2^2\n", k); k++;
 		fprintf(f, "%d phi2^4\n", k); k++;
 		fprintf(f, "%d R = Re phi1^+ phi2\n", k); k++;
