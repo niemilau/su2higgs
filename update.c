@@ -320,7 +320,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 	} // gauge links done
 
 
-	/* scalar updates. We update all scalar fields p->scalar_sweeps times
+	/* Scalar updates. We update all scalar fields p->scalar_sweeps times
 	* per iteration. Ordering is such that each field gets a full sweep before
 	* moving on to the next field. Additionally, each individual field
 	* can be sweeped over k times per "scalar sweep", where k is specified in
@@ -330,12 +330,11 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 	* reserved for special use (such as keeping the Higgs constant).
 	* parity loop uses EVEN = 0, ODD = 1; defined in su2.h */
 
-	// how many sweeps before forcing metropolis, for ergodicity
-	int metro_interval = 5;
-	int metro; // no effect if p.algorithm is set to METROPOLIS
+	// One more thing: If using overrelaxation update, then need metropolis sweep for ergodicity. 
+	// For this I increase the number of scalar sweeps by one and force metropolis on the last sweep if needed.
 
-
-	for (int s=0; s<p->scalar_sweeps; s++) {
+	int nsweeps = p->scalar_sweeps + 1;
+	for (int s=0; s<nsweeps; s++) {
 
 		// Parity ordering, default par_a[EVEN, ODD].
 		int par_a[2];
@@ -348,66 +347,76 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 		}
 
 		#if (NHIGGS > 0)
-		for (int k=0; k<p->update_su2doublet; k++) {
+			for (int k=0; k<p->update_su2doublet; k++) {
 
-			if (c->higgs_sweeps >= metro_interval-1) {
-				metro = 1;
-				c->higgs_sweeps = 0;
-			} else {
-				metro = 0;
-				c->higgs_sweeps++;
-			}
-
-			// first EVEN and ODD for doublet 1, then repeat for doublet 2 etc
-			for (int db=0; db<NHIGGS; db++) {
-				for (int j=0; j<=1; j++) {
-					int par = par_a[j];
-
-					accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, metro, db);
-					if (accept) update_halo(l, par, f->su2doublet[db], SU2DB);
-					/* NOTE: if using a non-local multicanonical order parameter that depends
-					* on the field at x, x+i, x+2i etc then it is necessary to sync halos
-					* WITHIN the update sweep ! */
+				// Extra metropolis sweep?
+				int forceMetro = 0;
+				if (s >= nsweeps-1) {
+					if (p->algorithm_su2doublet == OVERRELAX) {
+						forceMetro = 1;
+					} else {
+						continue;
+					}
 				}
 
+				// first EVEN and ODD for doublet 1, then repeat for doublet 2 etc
+				for (int db=0; db<NHIGGS; db++) {
+
+					for (int j=0; j<=1; j++) {
+						int par = par_a[j];
+
+						accept = checkerboard_sweep_su2doublet(l, f, p, c, w, par, forceMetro, db);
+						if (accept) update_halo(l, par, f->su2doublet[db], SU2DB);
+						/* NOTE: if using a non-local multicanonical order parameter that depends
+						* on the field at x, x+i, x+2i etc then it is necessary to sync halos
+						* WITHIN the update sweep ! */
+					}
+				}
 			}
-		}
 		#endif
 
 		#ifdef TRIPLET
 		for (int k=0; k<p->update_su2triplet; k++) {
 
-			if (c->triplet_sweeps >= metro_interval-1) {
-				metro = 1;
-				c->triplet_sweeps = 0;
-			} else {
-				metro = 0;
-				c->triplet_sweeps++;
+			// Extra metropolis sweep?
+			int forceMetro = 0;
+			if (s >= nsweeps-1) {
+				if (p->algorithm_su2triplet == OVERRELAX) {
+					forceMetro = 1;
+				} else {
+					continue;
+				}
 			}
+
 
 			for (int j=0; j<=1; j++) {
 				int par = par_a[j];
-				accept = checkerboard_sweep_su2triplet(l, f, p, c, w, par, metro);
+
+				accept = checkerboard_sweep_su2triplet(l, f, p, c, w, par, forceMetro);
 				// if the sweep was rejected, no need to sync halos
 				if (accept) update_halo(l, par, f->su2triplet, SU2TRIP);
-
 			}
+
 		}
 		#endif
 
 		#ifdef SINGLET
 		for (int k=0; k<p->update_singlet; k++) {
-			if (c->singlet_sweeps >= metro_interval-1) {
-				metro = 1;
-				c->singlet_sweeps = 0;
-			} else {
-				metro = 0;
-				c->singlet_sweeps++;
+
+			// Extra metropolis sweep?
+			int forceMetro = 0;
+			if (s >= nsweeps-1) {
+				if (p->algorithm_singlet== OVERRELAX) {
+					forceMetro = 1;
+				} else {
+					continue;
+				}
 			}
 
 			for (int j=0; j<=1; j++) {
 				int par = par_a[j];
-				accept = checkerboard_sweep_singlet(l, f, p, c, w, par, metro);
+
+				accept = checkerboard_sweep_singlet(l, f, p, c, w, par, forceMetro);
 				// if the sweep was rejected, no need to sync halos
 				if (accept) update_halo(l, par, f->singlet, 1);
 			}
@@ -417,6 +426,7 @@ void update_lattice(lattice* l, fields* f, params const* p, counters* c, weight*
 		#endif // singlet
 
 	} // end scalar_sweeps loop
+
 }
 
 

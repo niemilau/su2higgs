@@ -168,13 +168,6 @@ void init_counters(counters* c) {
 
 	c->iter = 1;
 
-	c->higgs_sweeps = 0;
-	c->triplet_sweeps = 0;
-
-	#ifdef SINGLET
-		c->singlet_sweeps = 0;
-	#endif
-
 	c->accepted_su2link = 0;
 	c->accepted_u1link = 0;
 

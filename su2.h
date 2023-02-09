@@ -209,12 +209,6 @@ typedef struct {
 
 	long iter;
 
-	// keep track of when a metropolis sweep should be forced
-	int higgs_sweeps, triplet_sweeps;
-	#ifdef SINGLET
-		int singlet_sweeps;
-	#endif
-
 	// count metropolis updates
 	long total_su2link, accepted_su2link;
 	long total_u1link, accepted_u1link;
