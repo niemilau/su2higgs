@@ -1,8 +1,8 @@
 # non-parallel makefile
 
-CC := mpicc -g -O3 -march=native
+CC := gcc -g -O3
 
-CFLAGS := -D MPI -D NHIGGS=1 -D SINGLET
+CFLAGS := -D NHIGGS=1 -D SINGLET
 
 LIBS := -lm
 

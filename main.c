@@ -2,6 +2,11 @@
 #include "su2.h"
 #include "comms.h"
 
+#ifndef MPI
+	// No MPI, define global dummy
+	MPI_Comm MPI_COMM_WORLD = {};
+#endif
+
 int main(int argc, char *argv[]) {
 
 	// temp

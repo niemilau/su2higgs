@@ -932,6 +932,10 @@ void bcast_int(int *res, MPI_Comm comm) {
 	return;
 }
 
+void bcast_double(double *res, MPI_Comm comm) {
+	return;
+}
+
 void bcast_long(long *res, MPI_Comm comm) {
 	return;
 }

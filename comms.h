@@ -4,6 +4,14 @@
 #define SEND 0
 #define RECV 1
 
+#ifdef MPI
+	#include <mpi.h>
+#else
+	// No MPI, define dummy communicator (not actually used in serial)
+	typedef struct {} MPI_Comm;
+  extern MPI_Comm MPI_COMM_WORLD;
+#endif
+
 typedef struct {
   int node;               /* node index to send to/received from */
   long even, odd, sites;   /* number of sites to be sent or received */
