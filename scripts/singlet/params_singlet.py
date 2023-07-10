@@ -91,6 +91,25 @@ def getAllParams(paramList, T):
 
     return res
 
+
+## Scale all 3D parameters dimensionless by T
+def ScaleParamsByT(params):
+    p_scaled = params.copy()
+    T = p_scaled["T"]
+    p_scaled["gsq"] /= T
+    p_scaled["gpsq"] /= T
+    p_scaled["mphisq"] /= T**2
+    p_scaled["lambda"] /= T
+    p_scaled["mSsq"] /= T**2
+    p_scaled["b1"] /= T**(5.0/2.0)
+    p_scaled["b3"] /= T**(3.0/2.0)
+    p_scaled["b4"] /= T
+    p_scaled["a1"] /= T**(3.0/2.0)
+    p_scaled["a2"] /= T
+
+    return p_scaled
+
+
 ## Calculate dp/dT ~ (p2 - p1) / (T2 - T1) for each parameter p in the input dictionaries. 
 ## Assumes that both dictionaries contain element named 'T', the temperature
 def CalcTDerivatives(paramDict1, paramDict2):
@@ -226,6 +245,45 @@ def convert_lattice(p_cont, spacing, r_u1):
     return res
 
 
+## Calculate scalar/gauge masses at tree level to estimate volume, spacing requirements
+def TreeLevelMasses(params_cont):
+    msqPhi = params_cont["mphisq"]
+    lam = params_cont["lambda"]
+    a1 = params_cont["a1"]
+    a2 = params_cont["a2"]
+    '''
+    Float A = msqPhi + 3*v2*lambda + 0.5*a1*x + 0.5*a2*x2;
+	Float B = b2 + 3*b4*x2 + 2*b3*x + 0.5*a2*v2;
+	Float C = 0.5*a1*v + a2*v*x;
+
+	Float st = sin(theta);
+	Float ct = cos(theta);
+
+	Float mh1sq = A*ct*ct + B*st*st + 2.* C *st*ct;
+	Float mh2sq = A*st*st + B*ct*ct - 2.* C *st*ct;
+
+	// Can check that for A > B one gets mh1sq > mh2sq.
+
+
+	/* // Old calculation that doesn't care about mixing angle => always mh2 >= mh1, 
+	   // which does not work at 2-loop because of how the vertex rules are set up!! 
+	double A = msqPhi + 3*v2*lambda + 0.5*a1*x + 0.5*a2*x2;
+	double B = b2 + 3*b4*x2 + 2*b3*x + 0.5*a2*v2;
+	double C = 0.5*a1*v + a2*v*x;
+
+	// This is always >= 0 => no issues with taking square root
+	double DD = A*A - 2*A*B + B*B + 4*C*C;
+
+	// Lighter Higgs mode
+	double mh1sq = 0.5 * (A + B - sqrt(DD));
+	// Heavier Higgs mode
+	double mh2sq = 0.5 * (A + B + sqrt(DD));
+	*/
+    '''
+
+
+
+
 ####### Begin main #########
 
 def main(): 
@@ -243,6 +301,8 @@ def main():
         help="""Fix the lattice spacing from beta = 4/(ag_3^2) instead of aT. Using this option will override the value given for aT.""")
     parser.add_argument('--write', '-w', type=str, default=None,
         help="""Write the lattice parameters directly to a config file, filename specified by the string. Takes backup of the file first.""")
+    parser.add_argument('--latent', '-l', action='store_true',
+        help="""Print 'latent string' at the input T and aT. Includes dominant condensates only (tadpoles and mass terms).""")
 
 
     global args
@@ -272,8 +332,9 @@ def main():
 
     print('\n---- Read in continuum 3d parameters at T = '+str(T)+' ----')
     print(params_cont)
-    ## write these into a file
-    write_params('params_continuum.dat', params_cont)
+    if (args.write != None):
+        ## write these into a file
+        write_params('params_continuum.dat', params_cont)
 
 
     ## Calculate lattice spacing here, keep fixed when computing T-derivatives
@@ -281,7 +342,7 @@ def main():
 
     spacing = None
     if (args.beta != None):
-        eprint(" === Using beta = %g and g3^2 = %g to fix lattice spacing ===" % (args.beta, gsq_cont))
+        print(" === Using beta = %g and g3^2 = %g to fix lattice spacing ===" % (args.beta, gsq_cont))
         spacing = 4.0 / (args.beta * gsq_cont)
         aT = T * spacing
     else:
@@ -296,7 +357,9 @@ def main():
 
     print('\n---- Lattice parameters for aT = '+str(aT)+' ----')
     print(params_lat)
-    write_params('params_lattice.dat', params_lat)
+
+    if (args.write != None):
+        write_params('params_lattice.dat', params_lat)
 
 
     print('\nScales (GeV): g^2 T %g, gT %g, a2 T %g, lattice cutoff %g' % (gsq_cont, math.sqrt(gsq_cont) * math.sqrt(T), params_cont["a2"], math.pi/spacing))
@@ -331,6 +394,33 @@ def main():
         #  #n is the nth column in measure file.
     ## end if args.volume
 
+    if (args.latent):
+        ## Latent heat as calculated in CONTINUUM MS-bar. The lattice result differs from this by O(a). 
+        ## However I only take the mass and tadpole terms, because condensate differences for those are RG invariant so 
+        ## it's easy to use lattice condensates here.  
+
+        ## First get continuum parameters at two nearby temperatures
+        i = nearest_indexOf(temperatures, T)
+        T1 = temperatures[i-1]
+        T2 = temperatures[i+1]
+        p1_cont = getAllParams(paramList, T1)
+        p2_cont = getAllParams(paramList, T2)
+
+        ## Scale dimensionless by T 
+        p1_scaled = ScaleParamsByT(p1_cont)
+        p2_scaled = ScaleParamsByT(p2_cont)
+        dpdT = CalcTDerivatives(p1_scaled, p2_scaled)
+
+        a = spacing
+
+        ## generalize eq 5.14 in hep-lat/0009025. 
+        # Their condensates are in 4D units but mine are in 3D lattice units -> need rescaling
+
+        print('\n---- Approx latent heat L/Tc^4 (take phase1 - phase2) ----\n')
+        print( """%.16g * ( %.16g*#7 + %.16g*#10 + %.16g*#11 )""" 
+            % (T, dpdT["mphisq"] / (a*T), dpdT["b1"] / np.sqrt(a*T), 0.5*dpdT["mSsq"] / (a*T)))
+
+
 
     if (args.write != None):
         eprint("\nWriting lattice parameters to file %s" % args.write)
@@ -340,24 +430,24 @@ def main():
         file = open(args.write, "rt")
         lines = file.read()
 
-        ## Pattern match to find lines containg key, value pairs (value = int or float) 
-        regex_float = "[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)"
+        ## Pattern match to find lines containg key, value pairs. This regex should match number of any kind: int, signed, float, scientific notation etc
+        regex_number = "(([\+\-]*\d*\.*\d+[eE])?([\+\-]*\d*\.*\d+))"
         # "header"
-        lines = re.sub("## at T = %s, a = %s" % (regex_float, regex_float), "## at T = %.15g, a = %.15g" % (params_lat["T"],params_lat['spacing']), lines)
+        lines = re.sub("## at T = %s, a = %s" % (regex_number, regex_number), "## at T = %.15g, a = %.15g" % (params_lat["T"],params_lat['spacing']), lines)
 
-        lines = re.sub("betasu2 %s" % (regex_float), "betasu2 %.15g" % params_lat["beta"], lines)
-        lines = re.sub("betau1 %s" % (regex_float), "betau1 %.15g" % params_lat["betaU1"], lines)
-        lines = re.sub("r_u1 %s" % (regex_float), "r_u1 %.15g" % params_lat["r_U1"], lines)
+        lines = re.sub("betasu2 %s" % (regex_number), "betasu2 %.15g" % params_lat["beta"], lines)
+        lines = re.sub("betau1 %s" % (regex_number), "betau1 %.15g" % params_lat["betaU1"], lines)
+        lines = re.sub("r_u1 %s" % (regex_number), "r_u1 %.15g" % params_lat["r_U1"], lines)
 
-        lines = re.sub("msq %s" % (regex_float), "msq %.15g" % params_lat["mphisq"], lines)
-        lines = re.sub("lambda %s" % (regex_float), "lambda %.15g" % params_lat["lambda"], lines)
+        lines = re.sub("msq %s" % (regex_number), "msq %.15g" % params_lat["mphisq"], lines)
+        lines = re.sub("lambda %s" % (regex_number), "lambda %.15g" % params_lat["lambda"], lines)
         
-        lines = re.sub("msq_s %s" % (regex_float), "msq_s %.15g" % params_lat["mSsq"], lines)
-        lines = re.sub("b1_s %s" % (regex_float), "b1_s %.15g" % params_lat["b1"], lines)
-        lines = re.sub("b3_s %s" % (regex_float), "b3_s %.15g" % params_lat["b3"], lines)
-        lines = re.sub("b4_s %s" % (regex_float), "b4_s %.15g" % params_lat["b4"], lines)
-        lines = re.sub("a1_s %s" % (regex_float), "a1_s %.15g" % params_lat["a1"], lines)
-        lines = re.sub("a2_s %s" % (regex_float), "a2_s %.15g" % params_lat["a2"], lines)
+        lines = re.sub("msq_s %s" % (regex_number), "msq_s %.15g" % params_lat["mSsq"], lines)
+        lines = re.sub("b1_s %s" % (regex_number), "b1_s %.15g" % params_lat["b1"], lines)
+        lines = re.sub("b3_s %s" % (regex_number), "b3_s %.15g" % params_lat["b3"], lines)
+        lines = re.sub("b4_s %s" % (regex_number), "b4_s %.15g" % params_lat["b4"], lines)
+        lines = re.sub("a1_s %s" % (regex_number), "a1_s %.15g" % params_lat["a1"], lines)
+        lines = re.sub("a2_s %s" % (regex_number), "a2_s %.15g" % params_lat["a2"], lines)
 
 
         file.close()
