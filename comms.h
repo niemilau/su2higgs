@@ -9,7 +9,7 @@
 #else
 	// No MPI, define dummy communicator (not actually used in serial)
 	typedef struct {} MPI_Comm;
-  extern MPI_Comm MPI_COMM_WORLD;
+  	extern MPI_Comm MPI_COMM_WORLD;
 #endif
 
 typedef struct {

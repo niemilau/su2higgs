@@ -11,14 +11,6 @@
 
 #include "mersenne.h"
 
-#ifdef MPI
-	#include <mpi.h>
-#else
-	// No MPI, define dummy communicator (not actually used in serial)
-	typedef struct {} MPI_Comm;
-	MPI_Comm MPI_COMM_WORLD = {};
-#endif
-
 // Globals
 int myRank; // MPI rank. Also 'rank' in lattice struct 
 int MPISize; // also 'l.size'
