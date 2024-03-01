@@ -4,7 +4,16 @@ CC := mpicc -O3
 
 #CC := mpicc -ggdb3 -g -O3 -D MPI
 
-## CFLAGS is implicitly added after OBJECTS, so make sure to use the correct CFLAGS...
+## CFLAGS is implicitly added after OBJECTS. Use -D flags to control what fields / features are included:
+# -DU1 : include compact hypercharge field
+# -DNHIGGS=<int> : number of Higgs doublets, but only 0, 1, 2 are supported
+# -DTRIPLET : include adjoing Higgs field
+# -DSINGLET : include real gauge singlet scalar
+# -DCORRELATORS : measure some two-point functions
+# -DBLOCKING : do blocking transformations on the lattice to reduce noise (with correlation measurements only)
+# -DGRADFLOW : do gradient flow smoothing
+#
+# Note that not all of the above flags work together.
  
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET #-D U1
 #CFLAGS := -D MPI -D HIGGS -D TRIPLET
@@ -13,9 +22,9 @@ CFLAGS := -D MPI -D NHIGGS=1 -D SINGLET -D U1
 
 LIBS := -lm
 
-OBJECTS := main.o generic/mersenne.o layout.o comms.o alloc.o init.o parameters.o su2u1.o staples.o measure.o \
-	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o \
-	blocking.o z_coord.o magfield.o gradflow.o correlation.o hb_trajectory.o
+OBJECTS := src/main.o src/generic/mersenne.o src/layout.o src/comms.o src/alloc.o src/init.o src/parameters.o src/su2u1.o src/staples.o src/measure.o \
+	src/update.o src/checkpoint.o src/metropolis.o src/heatbath.o src/overrelax.o src/multicanonical.o \
+	src/blocking.o src/z_coord.o src/magfield.o src/gradflow.o src/correlation.o src/hb_trajectory.o
 
 BINARY := build/su2
 
