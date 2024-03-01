@@ -23,17 +23,21 @@
 \definecolor{myorange}{rgb}{1,0.5,0}
 \newcommand\lauri[1]{{\color{myorange}#1}}
 
-\title{Documentation for lattice simulations}
+\title{Miscellaneous documentation}
 \author{Lauri Niemi}
 \date{\today}
 
 \begin{document}
 \maketitle
 
+\setcounter{section}{-1}
+\section{Preface}
+
+These are miscellaneous notes explaining implementation details etc technical things. The contents are not necessarily up to date with what the code does.
 
 \section{Multicanonical algorithm}
 
-In a first-order phase transition, mixed-phase configurations are exponentially suppressed by a factor proportional to the volume, $p \sim e^{-V}$. Thus, for large lattices it becomes necessary to enhance tunneling probability in order to study phase transitions. For this we use the multicanonical method \cite{Berg:1991cf}: our action is modified by a weight function $W(R)$, where $R$ is a suitable order parameter that distinguishes all relevant phases. We choose sign convention $S' = S_\text{canonical} + W(R)$, so that weight \textit{increases} when a certain configuration is to be suppressed and the ideal weight function is just the canonical probability distribution for $R$. Once we obtain a multicanonical distribution from a simulation, the canonical distribution is obtained simply by reweighting. Remember, however, that the simulation is formally correct with any $W$, as reweighting "removes" the weight in the end. \textbf{In the measurement file, we measure $-W(R)$ instead of $W(R)$ to ensure compability with Kari.}
+In a first-order phase transition, mixed-phase configurations are exponentially suppressed by a factor proportional to system size. Thus, for large lattices it becomes necessary to enhance tunneling probability in order to study phase transitions. For this we use the multicanonical method \cite{Berg:1991cf}: our action is modified by a weight function $W(R)$, where $R$ is a suitable order parameter that distinguishes all relevant phases. We choose sign convention $S' = S_\text{canonical} + W(R)$, so that weight \textit{increases} when a certain configuration is to be suppressed and the ideal weight function is just the canonical probability distribution for $R$. Once we obtain a multicanonical distribution from a simulation, the canonical distribution is obtained simply by reweighting. Remember, however, that the simulation is formally correct with any $W$, as reweighting "removes" the weight in the end. \textbf{In the measurement file, we measure $-W(R)$ instead of $W(R)$.}
 
 In practice the weight function is implemented by specifying a range $R_\text{min} \leq R \leq R_\text{max}$ that we want to enhance with multicanonical, and dividing this range into bins of equal length so that the system is in bin $i$ when $R_{i} \leq R < R_{i+1}$, and $R_0 = R_\text{min}$. Inside bin $i$, we approximate $W$ by a linear interpolation. Denoting $W(R_i) = w_i$, for $R_{i} \leq R < R_{i+1}$ we have 
 \begin{align}
@@ -41,7 +45,7 @@ W(R) = w_i + (R - R_i) \frac{w_{i+1} - w_i}{R_{i+1} - R_i},
 \end{align}
 and in the last bin we simply use constant weight. Outside the binning range the weight is chosen to be constant and equal to $w_i$ in the nearest bin.
 
-Since the weight function generally depends on a \textit{global} parameter $R$ (ex. volume average of $\phi^\dagger\phi$), parallelization of multicanonical algorithms is not straightforward. We use the following method, adapted from Kari: 
+Since the weight function generally depends on a \textit{global} parameter $R$ (ex. volume average of $\phi^\dagger\phi$), parallelization of multicanonical algorithms is not straightforward. We use the following method, adapted from \cite{Kajantie:1995kf}: 
 
 \begin{itemize}
 	
@@ -51,7 +55,9 @@ Since the weight function generally depends on a \textit{global} parameter $R$ (
 	
 \end{itemize}
 
-For the "easy" order parameter $\phi^\dagger\phi$, the acceptance rate of the multicanonical update is generally good, $>90\%$. This is in agreement with Kari's acceptance rates in the SM and MSSM. \textbf{To do:} optimize the algorithm for more complicated order parameters. It should be safe to do perform the multicanonical step in parts, so that if we choose hopping term as the order parameter, we can first update half of the links, do global acc/rej, then update half of the Higgs and do acc/rej again etc.
+For the "easy" order parameter $\phi^\dagger\phi$, the acceptance rate of the multicanonical update is generally good, $>90\%$. This is in agreement with rates reported in \cite{Kajantie:1995kf,Laine:1998qk}. 
+
+\textbf{To do:} optimize the algorithm for more complicated order parameters. It should be safe to do perform the multicanonical step in parts, so that if we choose hopping term as the order parameter, we can first update half of the links, do global acc/rej, then update half of the Higgs and do acc/rej again etc.
 
 \subsection{Calculation of the weight function}
 
@@ -60,7 +66,7 @@ Since the canonical probability distribution (and the weight) is not known \text
 	
 	\item Recursive computation of Berg. The detailed recipe for performing (a variation of) this algorithm has been described in \cite{Laine:1998qk} (small detail: weight in the first bin can be set arbitrary, because weights in all other bins are calculated relative to it). This method is very general and will eventually converge to the correct weight function, but is somewhat complicated and can be hard to implement well. \textbf{We will not use this.}
 	
-	\item The Landau-Wang method. We use a variation of this, basically copied from Kari's old lecture notes (he also uses it in his current SUSY code). 
+	\item The Landau-Wang method. We use a variation of this, basically copied from old lecture notes by Kari Rummukainen. 
 	
 \end{itemize}
 
@@ -99,7 +105,7 @@ A possible downside of this method is that it may not be possible to produce a c
 \section{Lattice actions and parametrization}
 
 
-By default, the code assumes that all physical input parameters and fields are in natural lattice units, i.e. scaled dimensionless by the lattice spacing $a$. Here we describe the procedure for converting the continuum parameters into input parameters for the code for some implemented models. 
+By default, the code assumes that all physical input parameters and fields are in natural lattice units, i.e. scaled dimensionless by the lattice spacing $a$. Here we describe the procedure for converting the continuum parameters into input parameters for the code for some implemented models. All examples here are for 3D theories.
 
 
 \subsection{SU(2) + fundamental Higgs}
@@ -121,9 +127,7 @@ and the code uses the RHS components $h_0, h_k$. They are related to the vector 
 \begin{align}
 h_0 = \RE H_2, \quad h_1 = \IM H_1, \quad h_2 = \RE H_1. \quad h_3 = -\IM H_2.
 \end{align}
-This can be checked by comparing hopping terms in the two parametrizations as the ordering does make a difference. Note that $\frac12 \Tr \he\Phi\Phi = \he\phi\phi = \frac12 \phi_\mu \phi_\mu$. \lauri{In David's code, the components are ordered differently as the vector notation is preferred, leading to a seemingly different implementation of the hopping term.}
-
-
+This can be checked by comparing hopping terms in the two parametrizations as the ordering does make a difference. Note that $\frac12 \Tr \he\Phi\Phi = \he\phi\phi = \frac12 \phi_\mu \phi_\mu$.
 
 
 The discretized action reads ($i,j$ denote directions)
@@ -244,7 +248,8 @@ with $\sigma_0$ again being the $2\times 2$ identity matrix.
 
 In scalar theories, the common procedure for updating fields seems to be $4-5 \times $overrelaxation, followed by a Metropolis update to obtain ergodicity. Gauge fields are updated using heat bath algorithms. We adapt this procedure, and the details are given in this section. An important thing to keep in mind is the fact that for flat potentials (especially Higgs in the broken phase), substantial improvement can be obtained by optimizing the updates for radial parts of the scalar fields (e.g. $\Phi = R V$, with $R \geq 0, V \in SU(2)$). 
 
-As a side note, we point out that the global radial update for the Higgs advertised in \cite{Kajantie:1995kf} is most likely not worth implementing, because it scales very badly with volume. \lauri{Kari also ditched it already a long time ago.}
+As a side note, we point out that the global radial update for the Higgs advertised in \cite{Kajantie:1995kf} is most likely not worth implementing because it scales very badly with volume, and it does not seem to be included in more recent works of the authors.
+
 
 \subsection{Overrelaxation for the scalars}
 
@@ -252,14 +257,13 @@ Consider first a simple overrelaxation update based on Gaussian approximation of
 \begin{align}
 V(\Phi(x)) = s_a \phi_a + B R^2 + C R^4,
 \end{align}
-where the components $\phi_a$ are as defined in Eq.~(\ref{eq:Higgsfield}), $R^2 = \frac12 \Tr\Phi^\dagger\Phi$ and $s_a$ is the hopping term staple. Neglecting the $R^4$ term for now, it is straightforward to overrelax $\phi_a$ by solving the new field components $\phi'_a$ from
+where the components $\phi_a$ are as defined in Eq.~(\ref{eq:Higgs-matrix}) \lauri{(TODO fix notation)}, $R^2 = \frac12 \Tr\Phi^\dagger\Phi$ and $s_a$ is the hopping term ``staple''. Neglecting the $R^4$ term for now, it is straightforward to overrelax $\phi_a$ by solving the new field components $\phi'_a$ from
 \begin{align}
 \phi'_a + \frac{s_a}{2B} = -(\phi_a + \frac{s_a}{2B}).
 \end{align}
-To account for the quartic term, we simply do an accept/reject based on the difference $C (R')^4 - C R^4$. If $C$ is small, the acceptance rate is high and the algorithm can be expected to work well. In my tests in the SM case $x=0.034$ (very small $C$) I obtained acceptance of $\sim 95\%$. \lauri{I believe Guy Moore used this update for SM nucleation.} Note that this update generalizes very simply to e.g. adjoint scalars.
+To account for the quartic term, we simply do an accept/reject based on the difference $C (R')^4 - C R^4$. If $C$ is small, the acceptance rate is high and the algorithm can be expected to work well. In my tests in the SM case $x=0.034$ (very small $C$) I obtained acceptance of $\sim 95\%$. Note that this update generalizes very simply to e.g. adjoint scalars.
 
-We can, however, do better by adapting the overrelaxation presented in \cite{Kajantie:1995kf} (has slight error in $Y^2$ parts) and \cite{Laine:1998qk} (no error). Because the algorithm is described in detail in the aforementioned references, I will not bother writing it here. The basic idea is to perform separate updates on Cartesian parametrization of the Higgs field, which also is very efficient in updating the radial part. This update yields acceptance rate of whopping $99.8\%$ or better, and I have tested that it facilitates tunneling much more effectively than the Gaussian approximation above, at least in the SM $x = 0.034$ case. \textbf{I use this optimized update for both Higgs and the adjoint scalar}. \lauri{(slightly confusing thing here: in Kari's code he does not seem to overrelax the $Y$ component at all, or at least this is not very obvious. Perhaps updating the $X$ part really is enough in practice?)}
-
+We can, however, do better by adapting the overrelaxation presented in \cite{Kajantie:1995kf} (has slight error in $Y^2$ parts) and \cite{Laine:1998qk} (no error). Because the algorithm is described in detail in the aforementioned references, I will not bother writing it here. The basic idea is to perform separate updates on Cartesian parametrization of the Higgs field, which also is very efficient in updating the radial part. This update yields acceptance rate of whopping $99.8\%$ or better, and I have tested that it facilitates tunneling much more effectively than the Gaussian approximation above, at least in the SM $x = 0.034$ case. \textbf{I use this optimized update for both Higgs and the adjoint scalar}.
 \subsection{$\gr{SU(2)}$ gauge link heat bath}
 
 An efficient update for the $\gr{SU(2)}$ gauge links is the standard Kennedy-Pendleton heatbath \cite{Kennedy:1985nu}. The logic is as follows:
@@ -270,7 +274,7 @@ An efficient update for the $\gr{SU(2)}$ gauge links is the standard Kennedy-Pen
 \hat{S} =& - \frac12 \beta_G \sum_{j \neq i} \Big[ U_j(x+i) U^\dagger_i(x+j) U^\dagger_j(x) \nonumber \\ 
  &+ U^\dagger_j(x+i-j) U^\dagger_i(x-j) U_j(x-j) \Big] - \Phi(x+i)e^{-i \alpha_j(x) \sigma_3}\he\Phi(x). 
 \end{align} 
-Note that the $\gr{U(1)}$ field does contribute to the hopping term, but the modification to code is minimal; simply write $e^{-i \alpha_j(x) \sigma_3} = \cos \alpha_j(x) \sigma_0 - i \sin\alpha_j(x) \sigma_3$ and do the multiplication with the Higgs.
+Note that the $\gr{U(1)}$ field does contribute to the hopping term. In code it's useful to write $e^{-i \alpha_j(x) \sigma_3} = \cos \alpha_j(x) \sigma_0 - i \sin\alpha_j(x) \sigma_3$.
 
 	\item Normalize $\hat{S}$ to produce an $\gr{SU(2)}$ matrix: $V = -\hat{S} /k$ where $k = \sqrt{\det \hat{S}}$. Accounting for the minus sign, the distribution to be generated for $U$ is $\sim \exp[k \RE\Tr U V] dU$. Because the Haar measure stays invariant under right multiplication with $V^{-1}$, the distribution for $U V^{-1}$ is just 
 \begin{align}
@@ -286,7 +290,7 @@ where we wrote $U = a_0 \sigma_0 + i a_i \sigma_i$.
 If an adjoint scalar is present, this simple recipe no longer works because the adjoint hopping term is quadratic in $U_i(x)$. Instead, we generate a new link candidate following the above recipe, and then accept it with the probability $\min[1, \exp(H - H')]$, where $H$ and $H'$ are the adjoint hopping terms before and after the link update. Acceptance rate is typically good, $>80\%$.
 
 
-\section{Sample histograms and comparison to old results}
+\section{Sample histograms and comparisons to old results}
 
 
 \subsection{$\gr{SU(2)} + $Higgs in 3d}
@@ -304,9 +308,6 @@ For the histogram in Fig.~6 of Ref.~\cite{Kajantie:1995kf} (left figure), our la
 \lambda = 0.00915047 \quad m^2_\phi = -0.207404.
 \end{align}
 Some histograms produced with my code using these inputs are shown in Fig.~\ref{fig:SM_hgrams}.
-
-\lauri{Note that David's code takes in $g = 0.707107$ instead of $\beta_G$. Note also that David's conversion.py script defined $a g^2 = 2/\beta_G$ instead of the usual $a g^2 = 4/\beta_G$, and correspondingly the Wilson term was normalized differently in the code. Now that we use the standard convention, the conversion script is outdated. }
-
 
 \begin{figure}[H]
 	\includegraphics[scale=0.5]{hgrams_beta8_mH35}
@@ -346,83 +347,20 @@ x =& 0.04, \beta_G = 32: m^2_\Sigma = -0.123686, b_4 = 0.005 \\
 x =& 0.12, \beta_G = 8: m^2_\Sigma = -0.54502, b_4 = 0.06 \\
 x =& 0.20, \beta_G = 16: m^2_\Sigma = -0.315858, b_4 = 0.05.
 \end{align}   
-Histograms corresponding to these are shown in Fig~\ref{fig:A0_only}. \lauri{To do: normalize these properly...}
+Histograms corresponding to these are shown in Fig~\ref{fig:A0_only}.
 \begin{figure}[H]
 	\centering
 	\subfloat[$x=0.04, V = 18^3$]{\includegraphics[width=0.33\textwidth]{A0_x-0_04}\label{}}
 	\subfloat[$x=0.12, V = 12^3$]{\includegraphics[width=0.33\textwidth]{A0_x-0_12}\label{}}
 	\subfloat[$x=0.20, V = 28^3$]{\includegraphics[width=0.33\textwidth]{A0_x-0_20}\label{}}
-	\caption{Histograms obtained with the inputs of Eq.~(\ref{eq:inputs-A0}) (unnormalized...). Horizontal axis is $\langle\Tr\Sigma^2\rangle$ in lattice regularization. (a) and (b) were obtained with multicanonical weighting. In Ref.~\cite{Kajantie:1997tt} they give the histograms in Fig~4 in terms of the continuum condensate $\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle$. Because the condensates in \MSbar and on the lattice are related by additative renormalization, the relation between \textit{differences} in our and their histograms is $\Delta\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle_\text{Kari} = \frac{\beta_G}{4}\Delta\langle \Tr\Sigma^2\rangle_\text{latt}$. It is straightforward to check that the separation of the pure phases in our histograms matches what they have. \lauri{Note that (c) does NOT give the same relative probabilities as in Ref.~\cite{Kajantie:1997tt}. A possible explanation is that since their fit for $y_c(x)$ is performed at $V \rightarrow \infty$ limit, my value for the mass parameter may be slightly off here.}} 
+	\caption{Histograms obtained with the inputs of Eq.~(\ref{eq:inputs-A0}). Horizontal axis is $\langle\Tr\Sigma^2\rangle$ in lattice regularization. (a) and (b) were obtained with multicanonical weighting. In Ref.~\cite{Kajantie:1997tt} they give the histograms in Fig~4 in terms of the continuum condensate $\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle$. Because the condensates in \MSbar and on the lattice are related by additative renormalization, the relation between \textit{differences} in our and their histograms is $\Delta\langle \frac{A^a_0 A^a_0}{2g^2_3} \rangle_\text{Kari} = \frac{\beta_G}{4}\Delta\langle \Tr\Sigma^2\rangle_\text{latt}$. It is straightforward to check that the separation of the pure phases in our histograms matches what they have. \lauri{Note that (c) does NOT give the same relative probabilities as in Ref.~\cite{Kajantie:1997tt}. A possible explanation is that since their fit for $y_c(x)$ is performed at $V \rightarrow \infty$ limit, my value for the mass parameter may be slightly off here.}} 
 	\label{fig:A0_only}
 \end{figure}
 
 
-\subsection{Comparing to Kari's simulations in Higgs + $A_0$ theory}
-
-We can compare the full fundamental + adjoint case to the histograms in Fig.~23 of Ref.~\cite{Kajantie:1995kf}, with $\Sigma$ again being the $A_0$ field. Our DR suggests that the parameters need to be fixed (in terms of 4d parameters) as 
-\begin{align}
-\mu^2_\Sigma =& m^2_D = g_4^2 T^2 \left( \frac{5}{6} + \frac{N_f}{3} \right) , \quad b_4 = T \frac{g_4^4}{16\pi^2} \left( \frac{17+N_f}{3} \right), \nonumber \\
-\quad a_2 =& 2 h_3 = \frac12 g^2_4 T \Big[ 1 + \frac{1}{16\pi^2} \Big( \frac{17}{2} - 4 (4 \ln 2 -1 ) \Big)g_4^2 - 6 y_t^2 + 12\lambda_4 \Big]
-\end{align}
-These follow simply from 1-loop DR in the SM. However, this is not quite what they use in Ref.~\cite{Kajantie:1995kf}, instead they have made some approximations.
-
-Converting their action to our notation, we see that their $a_2$-term reads 
-\begin{align}
-\sum_{\textbf{x}} \frac14 a g^2 (a A^a_0 A^a_0) (a \phi^\dagger\phi),
-\end{align}
-i.e. they fix $h_3 = \frac12 a_2 = \frac14 g_3^2$, which is just the leading-order result from DR.
-
-Performing a similar conversion for the $b_4$ term, we find that their quartic coupling is
-\begin{align*}
-\beta^A_4 = 4 \frac{b_4}{g^4_3 a},
-\end{align*}
-and judging from Ref.~\cite{Farakos:1994kx} it seems that they fix 
-\begin{align}
-b_4 \equiv \lambda_A = \frac{17 g_4^4 T}{48\pi^2},
-\end{align}
-i.e. they ignore the fermionic contribution from DR. Similarly their mass in the continuum seems to be simply 
-\begin{align}
-m^2_D = \frac56 g^2_4 T^2. 
-\end{align}
-\textbf{Note that all parameters in the $A_0$ sector are quite small, and the doublet will dominate the simulations.} Nevertheless, to my knowledge there are no other simulations in the literature performed with both Higgs and an adjoint scalar.
-
-Now for some complications: in Ref.~\cite{Kajantie:1995kf} they do not actually list the explicit input parameters for the $A_0$ simulations. They give values for $m^*_H$ and $T^*$, but only give the relations to $x,y$ in terms of these \textbf{in the case of a fundamental Higgs only}, i.e. the relations already include the integration over $A_0$. So we would need to figure out what they used for $x,y$... 
-
-Instead, I asked Kari to search through his old files and he found the following inputs for the fundamental + adjoint case:
-\begin{align}
-\beta_G = 12, \quad \beta_R = 0.00124, \quad \beta^A_2 = 1.136, \quad \beta^A_4 = 0.1914, 
-\end{align}
-with only $\beta_H$ varying. According to Ref.~\cite{Kajantie:1995kf} the $A_0$ histograms there are evaluated at $\beta_H = 0.34771$. In terms of these, a straightforward conversion to our lattice parameters gives: 
-\begin{align}
-m^2_\phi &= 2\left( \frac{1}{\beta_H} - 3 - \frac{2\beta_R}{\beta_H}\right) = -0.262345\\
-\lambda &= \frac{4\beta_R}{\beta_H^2} = 0.0410249 \\
-m^2_\Sigma &= -\frac{2\beta_2^A}{\beta_G} = -0.189333 \\
-b_4 &= \frac{4\beta_4^A}{\beta_G^2} = 0.00531667 \\
-a_2 &= \frac{2}{\beta_G} = \frac16 = 0.16666667.
-\end{align}
-Running simulations with these, we obtain histograms shown in Fig~\ref{fig:hgrams_SM_A0}. We see that although the small-volume histograms agree quite well with Kari, the histograms for $32^3$ and $40^3$ lattices \textbf{do not agree}. I am tempted to think that this is because the inputs are off (since I have no means of really verifying what they used). Note that it looks like the temperature is just slightly off here (insufficient numerical accuracy in the inputs??).
-
-Some possible explanations for the discrepancy: 
-\begin{itemize}
-
-	\item Kari's original simulations with $A_0$ are based on their older paper, Ref.~\cite{Farakos:1994kj}. It is possible that their lattice-continuum relations used in these runs are not complete (at some point they only had 1-loop counterterms). However I took the inputs directly in Kari's lattice parametrization, so this does not explain why I get different histograms, assuming that my inputs really correspond to what Kari used. 
-
-	\item Thermalization seems to occur quite slowly especially in the large-volume runs, so perhaps Kari had worse statistics? 
-
-	\item Kari ran these simulations with his old Fortran code, could it have a bug in it? Kari mumbled something about using a wrong heatbath update in one of his early papers...
-
-\end{itemize}
-In any case, Kari did not seem  too worried about this discrepancy, especially since the small-volume histograms agree well. 
-
-
-\begin{figure}[H]
-	\includegraphics[scale=0.5]{hgrams_SM+A0}
-	\caption{Histograms for $\gr{SU(2)}$ + Higgs + $A_0$ field, with inputs as given in the text. All of these were done without multicanonical weight, because the suppression was always quite small. It's easy to check that the condensate discontinuity agrees with that of Ref.~\cite{Kajantie:1995kf} (after conversion). \lauri{However, the large-volume histograms do not agree!! Wrong inputs?}}
-\label{fig:hgrams_SM_A0}
-\end{figure}
-
-
 \section{Measuring physical stuff}
+
+\paragraph{Warning.} The following can contain errors in the details. If you're reading this in 2024 or later, see my recent papers instead.
 
 \subsection{Reweighting}
 
@@ -432,7 +370,7 @@ p_x(O) \propto e^{-S(x)}.
 \end{align}
 Suppose we then want to study the system with a slightly different value $x'$. Expanding $S$ around this point we have
 \begin{align}
-S(x) = S(x') + \frac{dS}{dx}\Big\vert_{x=x'} (x-x') + \mathcal{O(x-x')^2},
+S(x) = S(x') + \frac{dS}{dx}\Big\vert_{x=x'} (x-x') + \mathcal{O}(x-x')^2,
 \end{align}
 and in practice we can often approximate the derivative to be constant, at least if the values of $x$ are not very far from each other: $\frac{dS}{dx}\Big\vert_{x=x'} (x-x') \equiv k = \text{const}$. 
 
@@ -623,7 +561,7 @@ If the hypercharge field is included, the counterterms are instead
 & + 3\lambda(3g^2 + {g'}^2)  \Big( \frac14 \Sigma^2 - \delta \Big) + \lauri{A {g'}^4 + B g^2 {g'}^2 }\nonumber \\
 & + \frac34 g^4 \Big( \frac{15}{16}\Sigma^2 + \frac{\pi}{3} \Sigma + \frac54 - \frac72 \delta - 4\rho +4\kappa_1 - \kappa_2 - \kappa_3 - 3\kappa_4  \Big) \Big].
 \end{align}
-These were taken from \cite{Kajantie:1996qd}, with some guessing based on similarity of $\gr{SU(2)}$ and $\gr{U(1)}$ Feynman diagrams. This was necessary because they only gave numerical values for terms on the last two rows. \lauri{I did not manage to figure out exact expressions for the coefficients $A$ and $B$!!}
+These were taken from \cite{Kajantie:1996qd}, with some guessing based on similarity of $\gr{SU(2)}$ and $\gr{U(1)}$ Feynman diagrams. This was necessary because they only gave numerical values for terms on the last two rows. \lauri{(See our 2024 paper for exact expressions.)}
 
 \subsection{$\gr{SU(2)}$ + adjoint scalar}
 
@@ -712,13 +650,13 @@ Neglecting $\mathcal{O}(a)$, the counterterms are:
 	
 	\item Fields are dynamic arrays of doubles (double*, double**, double***) that are accessed as field[site index][direction][component] for gauge links, field[site index][component] for non-gauge fields. Gauge singlets are simply field[site]. Memory for fields is allocated contiguously. 
 	
-	\item OpenMPI is used for parallelization. The lattice is split into hypercubes of equal sizes with side lengths $L^\text{slice}_i$, and these are then laid out based on their MPI ranks with same indexing logic as for lattice sites. We treat each node as being a hypercube with side lengths $L^\text{slice}_i + 2$, where the two extra sites are halos that need to be updated using MPI communications. Halo site indexes come after real sites, but otherwise follow same ordering logic. Due to periodicity, it can happen that the physical site corresponding to a halo is actually a real site in the same node. These "self halos" are removed by simply changing the neighbor lookup table to point to the real site instead. All this is implemented in layout.c. 
+	\item Open MPI is used for parallelization. The lattice is split into hypercubes of equal sizes with side lengths $L^\text{slice}_i$, and these are then laid out based on their MPI ranks with same indexing logic as for lattice sites. We treat each node as being a hypercube with side lengths $L^\text{slice}_i + 2$, where the two extra sites are halos that need to be updated using MPI communications. Halo site indexes come after real sites, but otherwise follow same ordering logic. Due to periodicity, it can happen that the physical site corresponding to a halo is actually a real site in the same node. These "self halos" are removed by simply changing the neighbor lookup table to point to the real site instead. All this is implemented in layout.c. 
 	
 	\item Communication between nodes is implemented in comms.c. We use a "comlist" structure to store information of what site indices our node is supposed to send to which nodes, and what halo site indices do we update with data received from them. Send/receive data is copied into temporary buffers each time we update halos. Each update, we first send our data to all neighbors using nonblocking sends, then proceed with blocking receives to update our halos, and finally wait for all of our sends to go through (usually done by the time we get to the wait loop). Variable c.comms\_time keeps track of the time spent on MPI communications (excluding global multicanonical checks).
 	
 	\item Updating the lattice is done with checkerboard style sweeps (imagine a chessboard). We specify parity of a site to be EVEN if $x + y + z + \dots $ is an even number, ODD otherwise. When sweeping, we first update all sites with EVEN parity, including halos, and then repeat for ODD sites. Gauge links are updated one direction at a time, because the directions are not independent (think of the Wilson plaquette).  
 	
-	\item \textbf{18.9.2019:} I have crosschecked carefully against David's code using the same seed for drand48(), and verified that our programs produce exactly the same numbers with $\gr{SU(2)}$ links, Higgs and real triplet all included in the simulation. By "same numbers" I mean that starting from the same initial configuration, fields change exactly the same way in all local updates in both programs, and consequently the measured values for all observables are exactly the same (some care was needed with precision, since David inputs $g$ instead of $\beta_G$). The comparison was done by arranging update routines in David's version so that everything happens in the same order as in my implementation. I used serial version of David's code and parallel version of my code (but with 1 MPI node) on a $32 \times 32 \times 32$ lattice. I performed separate tests on full Metropolis and scalar Metropolis + gauge heatbath, and both work (did not compare overrelaxation).
+	\item \textbf{Update 18.9.2019:} I have crosschecked carefully against David Weir's code using the same seed for drand48(), and verified that our programs produce exactly the same numbers with $\gr{SU(2)}$ links, Higgs and real triplet all included in the simulation. By "same numbers" I mean that starting from the same initial configuration, fields change exactly the same way in all local updates in both programs, and consequently the measured values for all observables are exactly the same (some care was needed with precision, since David inputs $g$ instead of $\beta_G$). The comparison was done by arranging update routines in David's version so that everything happens in the same order as in my implementation. I used serial version of David's code and parallel version of my code (but with 1 MPI node) on a $32 \times 32 \times 32$ lattice. I performed separate tests on full Metropolis and scalar Metropolis + gauge heatbath, and both work (did not compare overrelaxation).
 
 	
 \end{itemize}
