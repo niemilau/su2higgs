@@ -1,14 +1,14 @@
 # non-parallel makefile
 
-CC := gcc -g -O3
+CC := gcc -O3
 
 CFLAGS := -D NHIGGS=1 -D SINGLET
 
 LIBS := -lm
 
-OBJECTS := main.o generic/mersenne.o layout.o comms.o alloc.o init.o parameters.o su2u1.o staples.o measure.o \
-        update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o \
-        blocking.o z_coord.o magfield.o gradflow.o correlation.o hb_trajectory.o
+OBJECTS := src/main.o src/generic/mersenne.o src/layout.o src/comms.o src/alloc.o src/init.o src/parameters.o src/su2u1.o src/staples.o src/measure.o \
+        src/update.o src/checkpoint.o src/metropolis.o src/heatbath.o src/overrelax.o src/multicanonical.o \
+        src/blocking.o src/z_coord.o src/magfield.o src/gradflow.o src/correlation.o src/hb_trajectory.o
 
 BINARY := build/su2_serial
 
