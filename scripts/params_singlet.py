@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
-## This script reads in 3d continuum parameters from 'input file' at a given temperature,
-## then converts and prints out the corresponding lattice parameters.
-## Logic is such that spacing is fixed by specifying T and beta = 4/(a g_3^2(T)).
-## If also the lattice volume is given, the script also calculates the 'reweight string',
-## which is the temperature dependence of lattice action multiplied by volume (= number of lattice sites).
-## Here also the T-dependence of beta is included, while spacing 'a' is kept fixed.
+"""
+This script reads in 3d continuum parameters from 'input file' at a given temperature,
+then converts and prints out the corresponding lattice parameters.
+Logic is such that spacing is fixed by specifying T and beta = 4/(a g_3^2(T)).
+If also the lattice volume is given, the script also calculates the 'reweight string',
+which is the temperature dependence of lattice action multiplied by number of lattice sites.
+Here also the T-dependence of beta is included, while spacing 'a' is kept fixed.
+"""
 
 import sys
 import numpy as np
 import math
-from pylab import genfromtxt
-
 import argparse 
-
 import subprocess
 import re ## regex
 
@@ -33,7 +32,7 @@ def nearest(array, value):
     index = (np.abs(array - value)).argmin()
     return array[index]
 
-
+## linear interpolation
 def lin_int(x, b, k):
 	return b + k*x
 
@@ -245,49 +244,9 @@ def convert_lattice(p_cont, spacing, r_u1):
     return res
 
 
-## Calculate scalar/gauge masses at tree level to estimate volume, spacing requirements
-def TreeLevelMasses(params_cont):
-    msqPhi = params_cont["mphisq"]
-    lam = params_cont["lambda"]
-    a1 = params_cont["a1"]
-    a2 = params_cont["a2"]
-    '''
-    Float A = msqPhi + 3*v2*lambda + 0.5*a1*x + 0.5*a2*x2;
-	Float B = b2 + 3*b4*x2 + 2*b3*x + 0.5*a2*v2;
-	Float C = 0.5*a1*v + a2*v*x;
-
-	Float st = sin(theta);
-	Float ct = cos(theta);
-
-	Float mh1sq = A*ct*ct + B*st*st + 2.* C *st*ct;
-	Float mh2sq = A*st*st + B*ct*ct - 2.* C *st*ct;
-
-	// Can check that for A > B one gets mh1sq > mh2sq.
-
-
-	/* // Old calculation that doesn't care about mixing angle => always mh2 >= mh1, 
-	   // which does not work at 2-loop because of how the vertex rules are set up!! 
-	double A = msqPhi + 3*v2*lambda + 0.5*a1*x + 0.5*a2*x2;
-	double B = b2 + 3*b4*x2 + 2*b3*x + 0.5*a2*v2;
-	double C = 0.5*a1*v + a2*v*x;
-
-	// This is always >= 0 => no issues with taking square root
-	double DD = A*A - 2*A*B + B*B + 4*C*C;
-
-	// Lighter Higgs mode
-	double mh1sq = 0.5 * (A + B - sqrt(DD));
-	// Heavier Higgs mode
-	double mh2sq = 0.5 * (A + B + sqrt(DD));
-	*/
-    '''
-
-
-
-
 ####### Begin main #########
 
 def main(): 
-
 
     parser = argparse.ArgumentParser()
     parser.add_argument('infile', type=str, help="File containing the continuum couplings as functions of temperature")
@@ -318,7 +277,7 @@ def main():
         print("!!! r_u1 = %.16f is not an integer, does not define U(1) irrep\n" % r_u1)
     '''
 
-    paramList = genfromtxt(datafile, names=True)
+    paramList = np.genfromtxt(datafile, names=True)
 
     ## Will interpolate if the requested T was not found in file
     temperatures = paramList['T']
@@ -358,7 +317,7 @@ def main():
     print('\n---- Lattice parameters for aT = '+str(aT)+' ----')
     print(params_lat)
 
-    if (args.write != None):
+    if (args.write):
         write_params('params_lattice.dat', params_lat)
 
 
@@ -422,7 +381,7 @@ def main():
 
 
 
-    if (args.write != None):
+    if (args.write):
         eprint("\nWriting lattice parameters to file %s" % args.write)
         ## Write the lattice parameters directly to config file. first backup:
         subprocess.run("cp %s %s.bu" % (args.write, args.write), shell=True)
@@ -458,6 +417,5 @@ def main():
         file.close()
 
 
-## Don't run the main function if imported to another file
 if __name__ == "__main__":
     main()
