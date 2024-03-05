@@ -1,30 +1,59 @@
 # parallel makefile, requires MPI
 
-CC := mpicc -O3
+## Use -D flags to control what fields / features are included:
+# -DU1 : include compact hypercharge field
+# -DNHIGGS=<int> : number of Higgs doublets, but only 0, 1, 2 are supported
+# -DTRIPLET : include adjoing Higgs field
+# -DSINGLET : include real gauge singlet scalar
+# -DCORRELATORS : measure some two-point functions
+# -DBLOCKING : do blocking transformations on the lattice to reduce noise (with correlation measurements only)
+# -DGRADFLOW : do gradient flow smoothing
+#
+# Note that not all of the above flags work together.
 
-#CC := mpicc -ggdb3 -g -O3 -D MPI
+PROGRAM_CFLAGS := -DNHIGGS=1 -DSINGLET -DU1
+#PROGRAM_CFLAGS := -DHIGGS -DTRIPLET
+#PROGRAM_CFLAGS := -DTRIPLET -DCORRELATORS -DBLOCKING -DGRADFLOW
 
-## CFLAGS is implicitly added after OBJECTS, so make sure to use the correct CFLAGS...
- 
-#CFLAGS := -D MPI -D HIGGS -D TRIPLET #-D U1
-#CFLAGS := -D MPI -D HIGGS -D TRIPLET
-CFLAGS := -D MPI -D NHIGGS=1 -D SINGLET -D U1
-#CFLAGS := -D MPI -D TRIPLET -D CORRELATORS -D BLOCKING -D GRADFLOW
+
+## For non-MPI builds use 'make SERIAL=1'
+ifdef SERIAL
+	CFLAGS := $(PROGRAM_CFLAGS)
+	CC := gcc -O3
+else
+	CFLAGS := -DMPI $(PROGRAM_CFLAGS)
+	CC := mpicc -O3
+endif
 
 LIBS := -lm
 
-OBJECTS := main.o generic/mersenne.o layout.o comms.o alloc.o init.o parameters.o su2u1.o staples.o measure.o \
-	update.o checkpoint.o metropolis.o heatbath.o overrelax.o multicanonical.o \
-	blocking.o z_coord.o magfield.o gradflow.o correlation.o hb_trajectory.o
 
-BINARY := build/su2
+SRC_DIR := src
+BUILD_DIR := build
+BINARY_DIR := bin
 
-FILES := $(OBJECTS) $(BINARY)
+SOURCES := main.c generic/mersenne.c layout.c comms.c alloc.c init.c parameters.c su2u1.c staples.c measure.c \
+	update.c checkpoint.c metropolis.c heatbath.c overrelax.c multicanonical.c \
+	blocking.c z_coord.c magfield.c gradflow.c correlation.c hb_trajectory.c
 
-all: su2
+OBJECTS := $(addprefix $(BUILD_DIR)/,$(SOURCES:.c=.o))
 
-su2: $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $(BINARY)
+BINARY := bin/su2
+
+
+.PHONY: makedirs all clean
+
+all: makedirs $(BINARY)
+
+makedirs:
+	mkdir -p $(BUILD_DIR) $(BUILD_DIR)/generic $(BINARY_DIR)
+
+$(BINARY): $(OBJECTS)
+	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
+
+# Compile sources to .o
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm $(OBJECTS)
+	rm -rf $(BUILD_DIR)

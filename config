@@ -1,0 +1,156 @@
+### ------- Config file for su2higgs simulation program
+
+
+# lattice dimensions: dim = number of Euclidean dimensions. L1, L2 etc specify length in each direction
+dim 3
+
+L1 12
+L2 12
+L3 12
+
+# reset update counters etc? initial configuration is still read from latticefile
+reset 0
+
+# iterations
+iterations 200000
+
+# how many thermalization sweeps before starting measurements/weighting
+n_thermalize 200
+
+# how often to write measurements
+interval 5
+
+# how often to write lattice configuration to file 
+checkpoint 50000
+
+# perform initial sensibility checks on lattice layout?
+run_checks 1
+
+# where results are written
+resultsfile measure
+
+# where lattice configuration is stored at checkpoint
+latticefile lattice
+
+## ---- Action parameters ---- ##
+# These should be in a=1 units
+
+# gauge couplings
+betasu2 8.0
+betau1 8.0
+
+# U(1) representation parameter (integer)
+r_u1 1 
+
+# doublet
+msq -0.194549221785
+lambda 0.016095347348
+
+## two Higgs potential parameters
+msq_phi2 0.2
+m12sq_re 0.4
+m12sq_im 0.6
+lam2 2
+lam3 3
+lam4 4
+lam5_re 5.0
+lam5_im 5.5
+lam6_re 6.0
+lam6_im 6.5
+lam7_re 7.0
+lam7_im 7.5
+
+# triplet
+msq_triplet -0.5032354703283564
+b4 0.11666666666666665
+a2 2.6953060227675745
+
+# singlet
+msq_s -0.1
+b1_s 3
+b3_s 2
+b4_s 0.3
+a1_s 3
+a2_s 0.25
+
+# initial values for fields (overwritten by existing lattice file)
+phi0 0.2
+sigma0 0.2
+singlet0 0.2
+
+
+## ---- Update algorithms ---- ##
+
+# gauge links: metropolis or heatbath
+algorithm_su2link heatbath
+algorithm_u1link metropolis
+
+# SU(2) doublets: metropolis or overrelax
+algorithm_su2doublet overrelax
+# SU(2) triplet: metropolis or overrelax
+algorithm_su2triplet overrelax
+# singlets: metropolis or overrelax
+algorithm_singlet overrelax
+
+# how many times per sweep to update the fields
+scalar_sweeps 5
+update_singlet 1
+update_doublet 1
+update_triplet 1
+update_links 1
+
+
+## ---- Multicanonical ---- ##
+# parameters here are used to initialize a new weight if no existing weightfile is found
+
+# enable/disable multicanonical
+multicanonical 0
+bins 80
+# [min, max] specifies the weighting range
+min 0.418
+max 3.57
+# where to store the weight?
+weightfile weight
+
+# how many global multicanonical checks per update sweep
+checks_per_sweep 1
+
+## order parameter for multicanonical
+# choose from: phisq, Sigmasq, phi2minusSigma2
+orderparam phisq
+
+## Options for weight updating: 0 = read only, 1 = fast & dirty, 2 = slow & safe
+# NB: slow & safe method has not been fully tested!
+muca_mode 1
+
+# initial weight update factor (if weight exists, uses the value there instead)
+muca_delta 0.3
+
+
+## ---- Gradient flow ----- ##
+
+do_flow 0
+flow_meas_interval 10
+flow_dt 0.05
+flow_interval 1000
+flow_t_max 10
+
+measure_local 0
+
+
+## ---- Correlators and blocking ---- ##
+
+do_correlators 0
+correlator_interval 10
+blocks 4
+
+
+## ---- Measurements along z-direction ---- ##
+
+do_z_meas 1
+
+# How often to do the z-measurements
+interval_z 100
+
+# Prepare an initial configuration with phase boundary?
+setup_wall 1

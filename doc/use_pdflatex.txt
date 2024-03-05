@@ -1,0 +1,1 @@
+.tex should compile directly with pdflatex
