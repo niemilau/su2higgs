@@ -21,6 +21,8 @@ Simply run ```make``` in the repository root. The resulting binary will go to ``
 
 ```-D``` flags can be used to specify what field content and other features to include in simulations. See the Makefile for examples.
 
+Compiles without warnings on GCC 9.4.0.
+
 ## Running
 
 The program takes a configuration file as command line argument. This is where you can specify things like lattice size, input parameters to the lattice action (in ```a=1``` units) and whether a multicanonical algorithm should be used.  A sample config file is included in the repo.
