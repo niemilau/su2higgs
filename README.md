@@ -37,5 +37,5 @@ The program computes volume averages (averages over all lattice sites) of local 
 For physics background example usage see [Niemi et al 2024] (TBA).
 
 Scientific papers that utilize this code:
-- Kainulainen et al, JHEP 06 (2019) 075 (arXiv: 1904.01329)
 - Niemi et al, Phys.Rev.Lett. 126 (2021) 17, 171802 (arXiv: 2005.11332)
+- Niemi et al, JHEP 02 (2023) 212 (arXiv: 2206.14487)
