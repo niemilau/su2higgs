@@ -1,6 +1,3 @@
-# Inactivity warning!
-This repository is not being actively maintained and mainly exists for archiving purposes.
-
 # su2higgs
 
 This is an MPI-powered parallel C-program for Monte Carlo simulations of statistical and quantum field theories with SU(2) gauge symmetry and Higgs fields in different representations. Particular focus is placed on studying first-order phase transitions with multicanonical sampling.
