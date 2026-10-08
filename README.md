@@ -13,7 +13,7 @@ This is an MPI-powered parallel C-program for Monte Carlo simulations of statist
 
 ## Compiling
 
-Simply run ```make``` in the repository root. The resulting binary will go to ```bin``` directory. By default we build a parallel MPI program (requires ```OpenMPI```). A non-MPI, serial program can be compiled with ```make SERIAL=1```.
+Simply run ```make``` in the repository root. The resulting binary will go to ```bin``` directory. By default we build a parallel MPI program (requires a working MPI installation). A non-MPI, serial program can be compiled with ```make SERIAL=1```.
 
 ```-D``` flags can be used to specify what field content and other features to include in simulations. See the Makefile for examples.
 
